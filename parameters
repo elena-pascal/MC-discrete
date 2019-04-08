@@ -1,0 +1,6 @@
+from scimath.units.energy import J, eV, KeV
+
+# incident energy
+material['E'] = UnitScalar(20000, units="eV")
+# 5..100
+material['Ec'] = UnitScalar(10., units="eV")
