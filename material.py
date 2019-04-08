@@ -1,0 +1,112 @@
+from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scimath.units.energy import J, eV, KeV
+from scimath.units.electromagnetism import coulomb, farad
+from scimath.units.length import m, cm, km, angstrom
+from scimath.units.time import s
+from scimath.units.mass import g, kg
+from scimath.units.density import g_per_cm3, kg_per_m3
+from scimath.units.substance import mol
+from scimath.units.dimensionless import dim
+
+##### Scattering variables for Al
+
+# number of valence electrons
+n_val_Al = 3
+
+E_val_Al = UnitScalar(72.55, units="eV")
+
+# energy levels for core electrons
+name_s_Al = ['1s', '2s', '2p']
+# binding energies
+Ei_Al = UnitArray((1559, 118, 73.5), units="eV")
+# number of electrons per shell
+ni_Al = np.array([2, 2, 6])
+
+Z_Al = 13
+density_Al = UnitScalar(2.70, units="g_per_cm3")
+atwt_Al = UnitScalar(26.98154, units="g/mol")
+
+# modified Bethe k value from Joy and Luo, Scanning 1989
+k_Al = 0.815
+
+# incident energy
+E_Al = UnitScalar(20000, units="eV")
+# 5..100
+Ec_Al = UnitScalar(10., units="eV")
+
+
+##### Scattering variables for Si
+# number of valence electrons
+n_val_Si = 4
+
+E_val_Si = UnitScalar(99.42, units="eV")
+
+# energy levels for core electrons
+name_s_Si = ['1s', '2s', '2p']
+# binding energies
+Ei_Si = UnitArray((1189, 149, 100), units="eV")
+# number of electrons per shell
+ni_Si = np.array([2, 2, 6])
+
+Z_Si = 14
+density_Si = UnitScalar(2.33, units="g_per_cm3")
+atwt_Si = UnitScalar(28.085, units="g/mol")
+
+# modified Bethe k value from Joy and Luo, Scanning 1989
+k_Si = 0.822
+
+# incident energy
+E_Si = UnitScalar(20000, units="eV")
+# 5..100
+Ec_Si = UnitScalar(10., units="eV")
+
+
+#### Scattering variables for Cu
+# number of valence electrons
+n_val_Cu = 11
+
+E_val_Cu = UnitScalar(75.1, units="eV")
+
+# energy levels for core electrons
+name_s_Cu = ['1s', '2s2p', '3s', '3p']
+# binding energies
+Ei_Cu = UnitArray((8980, 977, 120, 74), units="eV")
+# number of electrons per shell
+ni_Cu = np.array([2, 8, 2, 6])
+
+Z_Cu = 29
+density_Cu = UnitScalar(8.96, units="g_per_cm3")
+atwt_Cu = UnitScalar(63.546, units="g/mol")
+
+# modified Bethe k value from Joy and Luo, Scanning 1989
+k_Cu = 0.83
+
+# incident energy
+E_Cu = UnitScalar(20000, units="eV")
+# 5..100
+Ec_Cu = UnitScalar(10., units="eV")
+
+
+
+#### Scattering variables for Au
+# number of valence electrons
+n_val_Au = 11
+
+# energy levels for core electrons
+name_s_Au = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
+# binding energies
+Ei_Au = UnitArray((12980, 2584, 624, 341, 178, 85, 72, 54), units="eV")
+# number of electrons per shell
+ni_Au = np.array([8, 18, 8, 10, 2, 14, 2, 4])
+
+Z_Au = 79
+density_Au = UnitScalar(19.30, units="g_per_cm3")
+atwt_Au = UnitScalar(196.967, units="g/mol")
+
+# modified Bethe k value from Joy and Luo, Scanning 1989
+k_Au = 0.851
+
+# incident energy
+E_Au = UnitScalar(20000, units="eV")
+# 5..100
+Ec_Au = UnitScalar(10., units="eV")
