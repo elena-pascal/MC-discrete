@@ -2,6 +2,21 @@
 # for generating the discrete cross section integral tables
 import numpy as np
 
+# define some Python errors for the m values
+class Error(Exception):
+    ''' Bare class for exceptions'''
+    pass
+
+class mTooSmall(Error):
+    ''' Raised when the iteration step m is negative'''
+    pass
+
+class mTooLarge(Error):
+    ''' Raised when the iteration step m becomes too large'''
+    pass
+
+
+
 def extF_limits_moller(E, Ec):
     '''
 	returns the limits of intergration for the moller excitation function
@@ -45,40 +60,43 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
     intT = ( ext_func(E, a, n_e, *Wc) + ext_func(E, b, n_e, *Wc) )*dx/2. + dx*sum_inner
     return intT
 
-def trapez_refine(a, b, E, n_e, ext_func, m, Wc):
+def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):
     '''
     m step of refinement for the recursive trapezoidal integration
     ext_func is the function to be integrated between the limits a and b
     when called with m=0 the function returns the trapezoidal integration with one bin
-    subsequent calls with higher n increase the number of bins by 2**m
+    subsequent calls with higher m increase the number of bins by 2**m
+    and return the new terms in this step
     '''
-    if (m < 0):
-        write ( *, '(a)' ) ' ------------------------------'
-        write ( *, '(a)' ) ' Fatal error! in trapez_refine'
-        write ( *, '(a)' ) ' Illegal input value of m.'
-        write ( *, '(a)' ) ' Stopping.'
-        write ( *, '(a)' ) ' ------------------------------'
-        return none
+    try:
+        if (m < 0):
+            raise mTooSmall
+            sys.exit()
+    except mTooSmall:
+        print ' Fatal error! in trapez_refine'
+        print ' Illegal input value of m.'
+        print ' Stopping.'
 
-    else if (m == 0):
-    # usual trapezoidal integration
-        intm = 0.5*(b - a) * ( ext_func(E, a, n_e, Wc) + ext_func(E, b, n_e, Wc) )
+    if (m == 0):
+        # usual trapezoidal integration
+        newTerms = 0.5*(b - a) * ( ext_func(E, a, n_e, *Wc) + ext_func(E, b, n_e, *Wc) )
 
-    else if ( m >= 1 ):
-	# step size is
-	h = (b-a)/ 2**m
+    elif ( m >= 1 ):
+    	# step size is
+        h = (b-a)/ 2**m
+        sum_m = 0.
+        for i in np.arange(1, 2**(m-1)):
+            x = a + (2*i - 1)*h
+            sum_m = sum_m + ext_func(E, x, n_e, *Wc)
 
-	sum_m = 0.
-	for i in np.arange(1, 2**(m-1)):
-	   x = a + (2*i - 1)*h
-	   sum_m = sum_m + ext_func(E, x, n_e, Wc)
+	    #intm = trapez_refine(a, b, E, n_e, ext_func, m-1, Wc) * 0.5 + h * sum_m
+        newTerms = h * sum_m
 
-	intm = trapez_refine(a, b, E, n_e, ext_func, m-1, Wc) * 0.5 + h * sum_m
-    return intm
+    return newTerms
 
 
 
-def trapez_tol(a, b, E, n_e, ext_func, tol, intT, Wc):
+def trapez_tol(a, b, E, n_e, ext_func, tol, *Wc):
     '''
     call trapez_refine with increasing m until tolerance is reached
     m is the step number, will need this to determine the number of
@@ -87,11 +105,37 @@ def trapez_tol(a, b, E, n_e, ext_func, tol, intT, Wc):
     evaluated at all the steps m
     '''
 
+    # set the max value of m steps before we decide they are too many
+    maxm = 20
+
+    tolReached = False
+    fatalError = False
+
+    # array to contain the integral at step m
+    totalInt = np.empty(maxm)
+
+    totalInt[0] = trapez_refine(a, b, E, n_e, ext_func, 0, *Wc)
+
     m = 1
-    tolReached = FALSE
-    fatalError = FALSE
+    while ((not tolReached) and (not fatalError)):
+        newTerms = trapez_refine(a, b, E, n_e, ext_func, m, *Wc)
+        totalInt[m] = newTerms + 0.5 * totalInt[m-1]
+        print 'm:', m
+        rel_diff = abs((totalInt[m]-totalInt[m-1])/totalInt[m])
+        print 'diff', rel_diff
+        if (rel_diff < tol):
+            tolReached = True
 
-    do while ((.NOT.tolReached).AND.(.NOT.fatalError))
+        try:
+            m += 1
+            if (m >= maxm):
+                raise mTooLarge
+        except mTooLarge:
+            fatalError = True
+            print
+            print 'Failed to converge in 20 steps in trapez_tol'
+            print
+        
 
-    end do
-     
+
+    return totalInt[m-1]
