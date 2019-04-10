@@ -23,8 +23,8 @@ def extF_limits_moller(E, Ec):
 	in  :: E, Ec
 	out :: a, b
 	'''
-    a = Ec/E
-    b = 0.5
+    a = Ec
+    b = 0.5 * E
     return (a, b)
 
 def extF_limits_gryz(E, Ei):
@@ -33,8 +33,8 @@ def extF_limits_gryz(E, Ei):
 	in  :: E, Ei
 	out :: a, b
 	'''
-    a = Ei/E
-    b = (1. + Ei/E)/2.
+    a = Ei
+    b = (E + Ei) * 0.5
     return (a, b)
 
 
@@ -53,12 +53,48 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
     #initialise the sum of f(x) for inner values (1..n-1) of x
     sum_inner = 0.
 
-    for indx in np.arange(1, nSect-1):
+    for indx in np.arange(1, nSect): # [1, nSect) = [1, nSect-1]
         W = a + indx*dx
         sum_inner +=  ext_func(E, W, n_e, *Wc)
 
     intT = ( ext_func(E, a, n_e, *Wc) + ext_func(E, b, n_e, *Wc) )*dx/2. + dx*sum_inner
     return intT
+
+
+def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsE, nBinsW, *Wc):
+    '''
+    As above but return a table of integrals for different energy losses and incident energies
+    int_0^Wi for all incident energies Ei and all energy losses Wi
+    The way the binning is considered is that the value of the bin is taken to be upper
+    bound of the bin
+    '''
+
+    int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
+
+    # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
+    dW = (Wmax - Wmin)/nBinsW
+
+    # the size of a step in incident energy E is determined by the number of chosen sections nBinsE
+    dE = (Emax - Emin)/nBinsE
+
+    # initialise the sum of f(x) for inner values (1..n-1) of x
+    sum_innerW = np.zeros(nBinsW)
+
+    for indx_E in np.arange(nBinsE): # [1, nSectE]
+        Ei = Emin + indx_E*dE
+
+        for indx_W in np.arange(nBinsW-1):
+            Wi = Wmin + indx_W*dW
+            sum_innerW[indx_W] = sum_innerW[indx_W-1] + ext_func(Ei, Wi, n_e, *Wc) # sum_inner[0] = 0
+
+            int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin, n_e, *Wc) + ext_func(Ei, Wi, n_e, *Wc) )*dW/2. \
+                                                    + dW * sum_innerW[indx_W-1]
+        # last value and total area integral
+        int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin, n_e, *Wc) + ext_func(Ei, Wmax, n_e, *Wc) )*dW/2. \
+                                                + dW * sum_innerW[nBinsW-2]
+
+    return int_extFunc[1:nBinsE, 1:nBinsW]
+
 
 def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):
     '''
@@ -120,11 +156,11 @@ def trapez_tol(a, b, E, n_e, ext_func, tol, *Wc):
     while ((not tolReached) and (not fatalError)):
         newTerms = trapez_refine(a, b, E, n_e, ext_func, m, *Wc)
         totalInt[m] = newTerms + 0.5 * totalInt[m-1]
-        print 'm:', m
+
         rel_diff = abs((totalInt[m]-totalInt[m-1])/totalInt[m])
-        print 'diff', rel_diff
         if (rel_diff < tol):
             tolReached = True
+            return totalInt[m]
 
         try:
             m += 1
@@ -135,7 +171,80 @@ def trapez_tol(a, b, E, n_e, ext_func, tol, *Wc):
             print
             print 'Failed to converge in 20 steps in trapez_tol'
             print
-        
 
 
-    return totalInt[m-1]
+
+def int_Romberg(a, b, E, n_e, ext_func, *Wc):
+    '''
+    Romberg procedure uses extrapolation to calculate numerical
+    estimates of the definite integral R = int_a^b{f(x)dx}.
+    The input is the function f, the endpoints of the interval
+    [a,b], the acceptable error untill which iterations are added.
+    '''
+    tolReached = False
+    fatalError = False
+
+    maxm = 20
+
+    tableR = np.zeros((maxm, maxm), dtype=np.float64)
+    pow_4 = 4 ** np.arange(maxm, dtype=np.float64) - 1
+
+    # trapezoidal integral for R[0,0]
+    h = b - a
+    tableR[0, 0] = h * (ext_func(E, a, n_e, *Wc) + ext_func(E, b, n_e, *Wc)) / 2
+
+    for m in np.arange(1, maxm):
+        h = h/2.
+
+        # extended trapezoidal rule
+        tableR[m, 0] = tableR[m - 1, 0] / 2
+        tableR[m, 0] += h * np.sum(ext_func(E, a + i*h, n_e, *Wc) \
+                                    for i in range(1, 2**m + 1, 2))
+
+        # richardson extrapolation
+        for k in np.arange(1, m + 1):
+            tableR[m, k] = tableR[m, k - 1] + \
+                  (tableR[m, k - 1] - tableR[m - 1, k - 1]) / pow_4[k]
+
+
+    return tableR[-1, -1]
+
+
+def logSpace(a, b, E, n_e, ext_func, nSeg, *Wc):
+    '''
+    if the function looks linear in log-log space
+    we could do the intergral there instead
+    as this should require fewer steps
+    '''
+    # the size of a step is determined by the number of chosen sections
+    x = np.logspace(a, b, num=nSeg+1)
+    print a, b, x
+    # the left edge of first segment in log space
+    logx = np.log(x)
+
+    # the value of the function at this point:
+    logy = np.log(ext_func(E, logx, n_e, *Wc))
+
+    intT = 0.
+
+    # calculate the slopes mi of all the segments in log-log space
+    for i in np.arange(1, nSeg):
+
+        # calculate the slope of this segment in log space
+        m = (logy[i]- logy[i+1])/ (logx[i]- logx[i+1])
+
+        mp1 = m + 1
+
+        # calculate the y-intercept in log space
+        n = logy[i] - (m*logx[i])
+
+        # now compute the integral under the segment in linear space
+        if(m is -1):# put a tolerance here
+            intSeg = np.exp(n) * np.log(x[i+1]/x[i])
+        else:
+            intSeg = np.exp(n) * (x[i+1]**mp1 - x[i]**mp1) / mp1
+            #intSeg = np.exp(n) * (x[i+1]**m - x[i]**m)/m
+
+        intT = intT + intSeg
+
+    return intT

@@ -10,6 +10,54 @@ from scimath.units.substance import mol
 from scimath.units.dimensionless import dim
 
 
+
+class material:
+    ''' material is a class containing all the necessary
+        material parameters for a small predified subset of species
+    '''
+    def __init__(self, species):
+        self.species = species
+        self.params = scattering_params(species)
+
+    def get_nval(self):
+        ''' number of valence electrons '''
+        return self.params['n_val']
+
+    def get_Eval(self):
+        ''' energy of valence shell '''
+        return self.params['E_val']
+
+    def get_name_s(self):
+        ''' array of names of core shells '''
+        return self.params['name_s']
+
+    def get_Es(self):
+        ''' array of energies of core shells as UnitArray'''
+        return self.params['Ei']
+
+    def get_ns(self):
+        ''' array with number of electrons in core shells'''
+        return self.params['ns']
+
+    def get_Z(self):
+        ''' atomic  number'''
+        return self.params['Z']
+
+    def get_density(self):
+        ''' material density as UnitScalar'''
+        return self.params['density']
+
+    def get_atwt(self):
+        ''' atomic weight as UnitScalar'''
+        return self.params['atwt']
+
+    def get_Bethe_k(self):
+        ''' modified Bethe k value from Joy and Luo, Scanning 1989'''
+        return self.params['k']
+
+
+
+
 def scattering_params(species):
     if species=='Al':
         material = {'species': 'Al'}
@@ -21,9 +69,9 @@ def scattering_params(species):
         # energy levels for core electrons
         material['name_s'] = ['1s', '2s', '2p']
         # binding energies
-        material['Ei'] = UnitArray((1559, 118, 73.5), units="eV")
+        material['Es'] = UnitArray((1559, 118, 73.5), units="eV")
         # number of electrons per shell
-        material['ni'] = np.array([2, 2, 6])
+        material['ns'] = np.array([2, 2, 6])
 
         material['Z'] = 13
         material['density'] = UnitScalar(2.70, units="g_per_cm3")
