@@ -110,6 +110,10 @@ def mfp_from_sigma(sigma, n):
     mfp = 1./(n*sigma) * angstrom*cm**2/m**3
     return mfp
 
+
+#####################################################################
+####################### Scatter class ###############################
+#####################################################################
 class scatter:
     ''' Scattering can be Rutherford, Browning, Moller, Gryzinski, Quinn or Bethe
     '''
@@ -120,31 +124,16 @@ class scatter:
         self.free_param = free_param
         self.rn = random_number
 
-    def get_Eloss(self):
-        if (self.e.type == 'Rutherford'):
-            self.e_loss = 0.
-            print 'Rutherford elastic scattering has no energy loss'
-
-        if (self.e.type == 'Browning'):
-            self.e_loss = 0.
-            print 'Browning elastic scattering has no energy loss'
-
-        elif(self.e.type == 'Moller'):
-
-        elif(self.e.type == 'Gryzinski'):
-
-        elif(self.e.type == 'Quinn'):
-
-        elif:
-            print 'I did not understand the scattering type in scatter.get_Eloss'
-
+    # some very useful parameters
+    pl_e = plasmon_energy(atnd, material.get_nval(), u_hbar, u_me, u_e, u_eps0)
+    f_e = fermi_energy(atnd, material.get_nval(), u_hbar, u_me)
+    atnd = at_num_dens(self.material.get_density(), self.material.get_atwt())
 
     def get_pathl(self):
         '''
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
-        atnd = at_num_dens(self.material.get_density(), self.material.get_atwt())
 
         if (e.type == 'Rutherford'):
             sigma = ruther_sigma(self.e.energy, self.material.get_Z())
@@ -157,25 +146,65 @@ class scatter:
             self.pathl = -mfp * log(self.rn)
 
         elif(e.type == 'Gryzinski'):
-            sigma = gryz_sigma(self.e.energy, self.free_param['Ec'], self.material.get_nval(), c_pi_efour)
+            sigma = gryz_sigma(self.e.energy, self.material.get_Es(), self.material.get_ns(), c_pi_efour)
             mfp = mfp_from_sigma(sigma, atnd)
             self.pathl = -mfp * log(self.rn)
 
-        elif(e.type == 'Quinn'):
+        elif(e.type == 'Quinn'): (E, Epl, Ef, n, bohr_r)
+            sigma = gryz_sigma(self.e.energy, pl_e, f_e, atnd, bohr_r)
+            mfp = mfp_from_sigma(sigma, atnd)
+            self.pathl = -mfp * log(self.rn)
 
         elif:
-            print 'I did not understand the scattering type in scatter.get_pathl'
+            print 'I did not understand the type of scattering in scatter.get_pathl'
 
+
+    def get_Eloss(self):
+        '''
+        energy loss is calculated from tables for the Moller and Gryz type
+        '''
+        if (self.e.type == 'Rutherford'):
+            self.e_loss = 0.
+            print 'Rutherford elastic scattering has no energy loss'
+
+        if (self.e.type == 'Browning'):
+            self.e_loss = 0.
+            print 'Browning elastic scattering has no energy loss'
+
+        elif(self.e.type == 'Bethe'):
+            return self.get_path    
+
+        elif(self.e.type == 'Moller'):
+            a, b = u2n(extF_limits_moller(self.e.energy, self.free_param['Ec']))
+            tables_WE = trapez_table(a, b, self.free_param['Ec'], self.e.energy, self.material.get_nval(), moller_dCS, 100, 1000, self.free_param['Ec'])
+
+            return
+
+        elif(self.e.type == 'Gryzinski'):
+            a, b = u2n(extF_limits_gryz(experiment['E'], experiment['Ec']))
+            return
+
+        elif(self.e.type == 'Quinn'):
+            return pl_e
+
+        elif:
+            print 'I did not understand the type of scattering in scatter.get_Eloss'
 
     def get_phi(self):
         if (e.type == 'Rutherford'):
-            self.e_loss = 0.
-            print 'Rutherford elastic scattering has no energy loss'
+            return
+
+        elif(e.type == 'Bethe'):
+            return
+
         elif(e.type == 'Moller'):
+            return
 
         elif(e.type == 'Gryzinski'):
+            return
 
         elif(e.type == 'Quinn'):
+            return
 
         elif:
             print 'I did not understand the scattering type in scatter.get_phi'

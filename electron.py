@@ -18,9 +18,29 @@ def exp_params():
 
 class electron:
     ''' An electron is an object with defined energy position and
-        direction in the beam frameself.
+        direction in the sample frame.
         Input can have units.'''
-    def __init__(self, energy, position, direction):
+    def __init__(self, energy=[], position=[], direction=[]):
         self.energy = energy
         self.xyz = position
         self.dir = direction
+
+
+    def update(self, energyLoss, pathLength, scatterAngle):
+        ''' update electron after every scattering
+            keep record of the history by appending new iformation to lists
+        '''
+
+        newEnergy = self.energy[-1] - energyLoss
+        self.energy.append(newEnergy)
+
+        self.dir.append(newDirection)
+
+        newPosition = self.xyz[-1] + pathLength * self.dir[-1]
+        self.xyz.append(newPosition)
+
+
+
+
+    def totalPathLenght(self):
+        return sum(self.xyz)
