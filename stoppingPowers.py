@@ -6,7 +6,7 @@
 # 2a) Moller stopping power for free electrons
 @has_units
 def moller_sp(E, Emin, nfree, n, c_pi_efour):
-    """ Calculate the Moller stopping power
+    """ Calculate the Moller stopping power per unit length
 
         Parameters
         ----------
@@ -33,7 +33,7 @@ def moller_sp(E, Emin, nfree, n, c_pi_efour):
 # 2b) Gryzinski stopping power for core shell electrons
 @has_units
 def gryz_sp(E, Enl, nsi, n, c_pi_efour):
-    """ Calculate the Gryzinski inelastic cross section
+    """ Calculate the Gryzinski inelastic cross section per unit length
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ def gryz_sp(E, Enl, nsi, n, c_pi_efour):
 # 2c) Quinn stopping power for plasmons
 @has_units
 def quinn_sp(E, Epl, Ef, n, bohr_r):
-    """ Calculate the Quinn inelastic stopping power
+    """ Calculate the Quinn inelastic stopping power per unit length
         Patrick's formula
 
         Parameters
@@ -99,7 +99,7 @@ def quinn_sp(E, Epl, Ef, n, bohr_r):
 @has_units
 def bethe_cl_sp(Z,E,n,c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
-        per atom
+        per unit length
 
         Parameters
         ----------
@@ -132,7 +132,7 @@ def bethe_cl_sp(Z,E,n,c_pi_efour):
 @has_units
 def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
-        per atom
+        per unit length
 
         Parameters
         ----------
@@ -162,9 +162,9 @@ def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
 
 
 @has_units
-def bethe_mod_sp(E,n, Zi, Ei, Zval, Eval, c_pi_efour):
+def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
-        per atom
+        per unit length
 
         Parameters
         ----------
@@ -179,6 +179,12 @@ def bethe_mod_sp(E,n, Zi, Ei, Zval, Eval, c_pi_efour):
 
         Ei     : array : units = eV
                 binding energy of shell i
+
+        Zval   : array : units = dim
+               occupancy of valence shell
+
+        Ei     : array : units = eV
+               binding energy of valence electrons           
 
         c_pi_efour: scalar: units = cm**2 * eV**2
 

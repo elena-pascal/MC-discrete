@@ -61,7 +61,7 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
     return intT
 
 
-def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsE, nBinsW, *Wc):
+def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, *Wc):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
@@ -70,6 +70,7 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsE, nBinsW, *Wc):
     '''
 
     int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
+
 
     # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
     dW = (Wmax - Wmin)/nBinsW
@@ -93,7 +94,10 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsE, nBinsW, *Wc):
         int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin, n_e, *Wc) + ext_func(Ei, Wmax, n_e, *Wc) )*dW/2. \
                                                 + dW * sum_innerW[nBinsW-2]
 
-    return int_extFunc[1:nBinsE, 1:nBinsW]
+    x = np.linspace(Wmin, Wmax, nBinsW)
+    y = np.linspace(Emin, Emax, nBinsE)
+    xx, yy = np.meshgrid(x, y)
+    return [xx, yy, int_extFunc[1:nBinsE, 1:nBinsW]]
 
 
 def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):

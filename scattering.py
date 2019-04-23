@@ -1,6 +1,11 @@
 from math import log, isnan
 import numpy as np
+import random
+
+import operator
+import collections # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
+from scipy.interpolate import Rbf
 
 from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour
 from electron import electron
@@ -110,6 +115,50 @@ def mfp_from_sigma(sigma, n):
     mfp = 1./(n*sigma) * angstrom*cm**2/m**3
     return mfp
 
+#####################################################################
+####################### Travel class ###############################
+#####################################################################
+
+class travel:
+    ''' Let the electron travel a path lenght untill
+       an elastic scattering event or a discrete inelastic scattering
+       event occurs. Type of travelling can be CSDA or discrete
+    '''
+    def __init__(self, model, electron, material):
+        self.e = electron
+        self.type = model
+        self.material = material
+        self.pathl = pathl
+
+    pl_e = plasmon_energy(atnd, material.get_nval(), u_hbar, u_me, u_e, u_eps0)
+    f_e = fermi_energy(atnd, material.get_nval(), u_hbar, u_me)
+    atnd = at_num_dens(self.material.get_density(), self.material.get_atwt())
+
+    def compute_pathl(self):
+        '''
+        Path length is calculated from the cross section
+        path_length = - mean_free_path * log(rn)
+        '''
+
+        sigma_R = ruther_sigma(self.e.energy, self.material.get_Z())
+        mfp_R = mfp_from_sigma(sigma_R, atnd)
+
+        sigma_M = moller_sigma(self.e.energy, self.free_param['Ec'], self.material.get_nval(), c_pi_efour)
+        mfp_M = mfp_from_sigma(sigma_M, atnd)
+
+        sigma_G = gryz_sigma(self.e.energy, self.material.get_Es(), self.material.get_ns(), c_pi_efour)
+        mfp_G = mfp_from_sigma(sigma_G, atnd)
+
+        sigma_Q = quinn_sigma(self.e.energy, pl_e, f_e, atnd, bohr_r)
+        mfp_Q = mfp_from_sigma(sigma_Q, atnd)
+        self.pathl = -mfp * log(random.random())
+
+    elif(self.type == 'Bethe'):
+    if (self.pathl == 0.):
+        print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+    else:
+        self.E_loss = self.path * u2n(bethe_mod_sp(self.e.energy, atnd, self.material.get_ns(), \
+                                        self.material.get_Es(), self.material.get_Zval(), self.material.get_Eval(), c_pi_efour))
 
 #####################################################################
 ####################### Scatter class ###############################
@@ -117,94 +166,126 @@ def mfp_from_sigma(sigma, n):
 class scatter:
     ''' Scattering can be Rutherford, Browning, Moller, Gryzinski, Quinn or Bethe
     '''
-    def __init__(self, type, electron, material, free_param, random_number):
-        self.type = type
+    def __init__(self, electron, material, *free_param, *tables_EW):
         self.e = electron
         self.material = material
         self.free_param = free_param
-        self.rn = random_number
+
+        if ((self.type == 'Moller') or (self.type == 'Gryzinski')):
+            # Moller tables are [Ei, Wi, Int(Ei, Wi)]
+            # Gryz tables are [ni, Ei, Wi, Int(Ei, Wi)]
+            self.tables_EW = tables_EW
+
+        # intitalise
+        self.sigma = {} # dictionary keeping all sigmas
+        self.mfp = {} # dictionary keeping all mfp
+
+        self.pathl = 0.
+        self.type = 'type'
+        self.E_loss = 0.
+        self.c2_halfPhi = 0.
+        self.halfTheta = 0.
+
 
     # some very useful parameters
     pl_e = plasmon_energy(atnd, material.get_nval(), u_hbar, u_me, u_e, u_eps0)
     f_e = fermi_energy(atnd, material.get_nval(), u_hbar, u_me)
     atnd = at_num_dens(self.material.get_density(), self.material.get_atwt())
 
-    def get_pathl(self):
+    sigma['Rutherford'] = ruther_sigma(self.e.energy, self.material.get_Z())
+    mfp['Rutherford'] = mfp_from_sigma(sigma['Rutherford'], atnd)
+
+    sigma['Moller'] = moller_sigma(self.e.energy, self.free_param['Ec'], self.material.get_nval(), c_pi_efour)
+    mfp['Moller'] = mfp_from_sigma(sigma['Moller'], atnd)
+
+    for i in len(self.material.get_Es()):
+        sigma['Gryzinski' + name_s[i]] = gryz_sigma(self.e.energy, self.material.get_Es()[i], self.material.get_ns()[i], c_pi_efour)
+        mfp['Gryzinski' + name_s[i]] = mfp_from_sigma(sigma['Gryzinski' + name_s[i]], atnd)
+
+    sigma['Quinn'] = quinn_sigma(self.e.energy, pl_e, f_e, atnd, bohr_r)
+    mfp['Quinn'] = mfp_from_sigma(sigma['Quinn'], atnd)
+
+    sigma_total = sum(sigma.values())
+    mfp_total = 1. /sum(1./mfp.values())
+
+    def compute_pathl(self):
         '''
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
 
-        if (e.type == 'Rutherford'):
-            sigma = ruther_sigma(self.e.energy, self.material.get_Z())
-            mfp = mfp_from_sigma(sigma, atnd)
-            self.pathl = -mfp * log(self.rn)
+        self.pathl = -mfp_total * log(random.random())
 
-        elif(e.type == 'Moller'):
-            sigma = moller_sigma(self.e.energy, self.free_param['Ec'], self.material.get_nval(), c_pi_efour)
-            mfp = mfp_from_sigma(sigma, atnd)
-            self.pathl = -mfp * log(self.rn)
+    def det_type(self):
+        # bisect for a random number a sorted instance of a dictionary containing
+        # scattering cumulative probabilities. if R <= cum.prob.scatter.type - > scatter is of type type
+        sorted_sigma = OrderedDict(sorted(sigma.items(), key=operator.itemgetter(1)))
+        scatProb = {x: np.cumsum(sorted_sigma.values()[::-1])/sigma_total for x ordered_sigma}
 
-        elif(e.type == 'Gryzinski'):
-            sigma = gryz_sigma(self.e.energy, self.material.get_Es(), self.material.get_ns(), c_pi_efour)
-            mfp = mfp_from_sigma(sigma, atnd)
-            self.pathl = -mfp * log(self.rn)
+        prob = bisect.bisect_left(scatProb.values(), random.random(()))
 
-        elif(e.type == 'Quinn'): (E, Epl, Ef, n, bohr_r)
-            sigma = gryz_sigma(self.e.energy, pl_e, f_e, atnd, bohr_r)
-            mfp = mfp_from_sigma(sigma, atnd)
-            self.pathl = -mfp * log(self.rn)
+        self.type = scatProb.keys()[mydict.values().index(prob)]
 
-        elif:
-            print 'I did not understand the type of scattering in scatter.get_pathl'
-
-
-    def get_Eloss(self):
+    def compute_Eloss(self):
         '''
         energy loss is calculated from tables for the Moller and Gryz type
         '''
-        if (self.e.type == 'Rutherford'):
-            self.e_loss = 0.
+        if (self.type == 'Rutherford'):
+            self.E_loss = 0.
             print 'Rutherford elastic scattering has no energy loss'
 
-        if (self.e.type == 'Browning'):
-            self.e_loss = 0.
+        elif (self.type == 'Browning'):
+            self.E_loss = 0.
             print 'Browning elastic scattering has no energy loss'
 
-        elif(self.e.type == 'Bethe'):
-            return self.get_path    
 
-        elif(self.e.type == 'Moller'):
-            a, b = u2n(extF_limits_moller(self.e.energy, self.free_param['Ec']))
-            tables_WE = trapez_table(a, b, self.free_param['Ec'], self.e.energy, self.material.get_nval(), moller_dCS, 100, 1000, self.free_param['Ec'])
 
-            return
+        elif(self.type == 'Moller'):
+            # get the limits of W integration
+            # a, b = u2n(extF_limits_moller(self.e.energy, self.free_param['Ec']))
+            # populate integral table[Ei, Wi]
+            # tables_EW = trapez_table(a, b, self.free_param['Ec'], self.e.energy, self.material.get_nval(), \
+            #                            moller_dCS, 100, 1000, self.free_param['Ec'])
 
-        elif(self.e.type == 'Gryzinski'):
-            a, b = u2n(extF_limits_gryz(experiment['E'], experiment['Ec']))
-            return
 
-        elif(self.e.type == 'Quinn'):
-            return pl_e
+            #wi = np.linear(a, b, 100)
+            #ei = np.linear( self.free_param['Ec'], self.e.energy, 1000)
+            # rbfi = Rbf(tables_EW[0], tables_EW[1], tables_EW[2])  # radial basis function interpolator instance
 
-        elif:
-            print 'I did not understand the type of scattering in scatter.get_Eloss'
+            # integral(E, Wi) is rr * total integral
+            integral = random.random() * tables_EW[2][self.e.energy, -1]
+            return bisect.bisect_left(tables_EW[1][:, 1], integral)
 
-    def get_phi(self):
-        if (e.type == 'Rutherford'):
-            return
 
-        elif(e.type == 'Bethe'):
-            return
+        elif(self.type == 'Gryzinski'):
+            for i, ishell in enumerate(self.material.get_ns()):
+                integral = random.random() * tables_EW[2][self.e.energy, -1]
+                return bisect.bisect_left(tables_EW[1][:, 1], integral)
 
-        elif(e.type == 'Moller'):
-            return
 
-        elif(e.type == 'Gryzinski'):
-            return
-
-        elif(e.type == 'Quinn'):
-            return
+        elif(self.type == 'Quinn'):
+            self.E_loss = pl_e
 
         elif:
-            print 'I did not understand the scattering type in scatter.get_phi'
+            print 'I did not understand the type of scattering in scatter.calculate_Eloss'
+
+
+    def calculate_sAngles(self):
+        if (self.type == 'Rutherford'):
+            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/self.e.energy
+            self.c2_halfPhi = 1. - alpha*random.random()/(1.+alpha-random.random())
+            self.halfTheta = pi*random.random
+
+        elif(self.type == 'Bethe'):
+
+            self.halfTheta = pi*random.random
+
+        elif((self.type == 'Moller') OR (e.type == 'Gryzinski')):
+            if (self.E_loss == 0.):
+                print "I'm not telling you how to live your life, but it helps to calculate the lost energy before the scattering angles for inelastic events"
+            else:
+                self.c2_halfPhi = 0.5*((1.-(self.Eloss/self.e.energy))**0.5 + 1)
+                self.halfTheta = pi*random.random
+
+        elif:
+            print 'I did not understand the scattering type in scatter.calculate_sAngles'
