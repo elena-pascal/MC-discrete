@@ -23,8 +23,8 @@ def extF_limits_moller(E, Ec):
 	in  :: E, Ec
 	out :: a, b
 	'''
-    a = Ec
-    b = 0.5 * E
+    a = np.array([Ec])
+    b = np.array([0.5 * E])
     return (a, b)
 
 def extF_limits_gryz(E, Ei):
@@ -61,43 +61,47 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
     return intT
 
 
-def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, *Wc):
+def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
     The way the binning is considered is that the value of the bin is taken to be upper
     bound of the bin
     '''
+    tables = np.zeros(len(n_e))
 
-    int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
+    for shell in range(len(n_e)):
+        int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
 
 
-    # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
-    dW = (Wmax - Wmin)/nBinsW
+        # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
+        dW = (Wmax[shell] - Wmin[shell])/nBinsW
 
-    # the size of a step in incident energy E is determined by the number of chosen sections nBinsE
-    dE = (Emax - Emin)/nBinsE
+        # the size of a step in incident energy E is determined by the number of chosen sections nBinsE
+        dE = (Emax - Emin)/nBinsE
 
-    # initialise the sum of f(x) for inner values (1..n-1) of x
-    sum_innerW = np.zeros(nBinsW)
+        # initialise the sum of f(x) for inner values (1..n-1) of x
+        sum_innerW = np.zeros(nBinsW)
 
-    for indx_E in np.arange(nBinsE): # [1, nSectE]
-        Ei = Emin + indx_E*dE
+        for indx_E in np.arange(nBinsE): # [1, nSectE]
+            Ei = Emin + indx_E*dE
 
-        for indx_W in np.arange(nBinsW-1):
-            Wi = Wmin + indx_W*dW
-            sum_innerW[indx_W] = sum_innerW[indx_W-1] + ext_func(Ei, Wi, n_e, *Wc) # sum_inner[0] = 0
+            for indx_W in np.arange(nBinsW-1):
+                Wi = Wmin[shell] + indx_W*dW
+                sum_innerW[indx_W] = sum_innerW[indx_W-1] + ext_func(Ei, Wi, n_e[shell], *Wmin[shell]) # sum_inner[0] = 0
 
-            int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin, n_e, *Wc) + ext_func(Ei, Wi, n_e, *Wc) )*dW/2. \
+                int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wi, n_e[shell]), *Wmin[shell] )*dW/2. \
                                                     + dW * sum_innerW[indx_W-1]
-        # last value and total area integral
-        int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin, n_e, *Wc) + ext_func(Ei, Wmax, n_e, *Wc) )*dW/2. \
+                # last value and total area integral
+                int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wmax[shell], n_e[shell]), *Wmin[shell] )*dW/2. \
                                                 + dW * sum_innerW[nBinsW-2]
 
-    x = np.linspace(Wmin, Wmax, nBinsW)
-    y = np.linspace(Emin, Emax, nBinsE)
-    xx, yy = np.meshgrid(x, y)
-    return [xx, yy, int_extFunc[1:nBinsE, 1:nBinsW]]
+                x = np.linspace(Wmin[shell], Wmax[shell], nBinsW)
+                y = np.linspace(Emin, Emax, nBinsE)
+                xx, yy = np.meshgrid(x, y)
+
+                tables[shell] = [xx, yy, int_extFunc[1:nBinsE, 1:nBinsW]]
+    return tables
 
 
 def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):

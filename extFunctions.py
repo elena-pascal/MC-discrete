@@ -1,3 +1,4 @@
+from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 
 
 ###################################################################
@@ -34,7 +35,7 @@ def moller_dCS(E, W, nfree, c_pi_efour):
 
 # 2b) Gryzinski differential cross section for core shell electrons
 @has_units
-def gryz_dCS(E, W, Ebi, nsi, c_pi_efour):
+def gryz_dCS(E, W, nsi, c_pi_efour, Ebi):
     """ Calculate the Moller inelastic cross section
 
         Parameters

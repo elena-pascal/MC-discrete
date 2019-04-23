@@ -33,7 +33,7 @@ class material:
 
     def get_Es(self):
         ''' array of energies of core shells as UnitArray'''
-        return self.params['Ei']
+        return self.params['Es']
 
     def get_ns(self):
         ''' array with number of electrons in core shells'''
@@ -55,6 +55,18 @@ class material:
         ''' modified Bethe k value from Joy and Luo, Scanning 1989'''
         return self.params['k']
 
+    # some very useful parameters
+    def get_atnd(self):
+        ''' atomic number density'''
+        return at_num_dens(self.params['density'], self.params['atwt'])
+
+    def get_pl_e(self):
+        ''' plasmon energy'''
+        return plasmon_energy(self.get_atnd(), self.params['n_val'], u_hbar, u_me, u_e, u_eps0)
+
+    def get_fermi_e(self):
+        ''' fermi energy'''
+        return fermi_energy(self.get_atnd(), self.params['n_val'], u_hbar, u_me)
 
 
 
