@@ -76,7 +76,7 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
             return lambda E, W, nfree, c_pi_efour: ext_func(E, W, nfree)
         else:
             # Gryz dCS
-            return lambda E, W, nfree, c_pi_efour: ext_func(E, W, nfree)
+            return lambda E, W, Ebi, nshell, c_pi_efour: ext_func(E, W, nshell, )
 
     for shell in range(len(n_e)):
         int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
