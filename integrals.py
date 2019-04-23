@@ -68,7 +68,15 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
     The way the binning is considered is that the value of the bin is taken to be upper
     bound of the bin
     '''
-    tables = np.zeros(len(n_e))
+    tables = []
+
+    def funct(E, W, n_e):
+        if (len(n_e) == 1):
+            # Moller dCS
+            return lambda E, W, nfree, c_pi_efour: ext_func(E, W, nfree)
+        else:
+            # Gryz dCS
+            return lambda E, W, nfree, c_pi_efour: ext_func(E, W, nfree)
 
     for shell in range(len(n_e)):
         int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
@@ -90,17 +98,17 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
                 Wi = Wmin[shell] + indx_W*dW
                 sum_innerW[indx_W] = sum_innerW[indx_W-1] + ext_func(Ei, Wi, n_e[shell], *Wmin[shell]) # sum_inner[0] = 0
 
-                int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wi, n_e[shell]), *Wmin[shell] )*dW/2. \
+                int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wi, n_e[shell]), *Wmin[shell])*dW/2. \
                                                     + dW * sum_innerW[indx_W-1]
                 # last value and total area integral
-                int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wmax[shell], n_e[shell]), *Wmin[shell] )*dW/2. \
+                int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wmax[shell], n_e[shell]), *Wmin[shell])*dW/2. \
                                                 + dW * sum_innerW[nBinsW-2]
 
                 x = np.linspace(Wmin[shell], Wmax[shell], nBinsW)
                 y = np.linspace(Emin, Emax, nBinsE)
                 xx, yy = np.meshgrid(x, y)
 
-                tables[shell] = [xx, yy, int_extFunc[1:nBinsE, 1:nBinsW]]
+        tables.append([xx, yy, int_extFunc[1:nBinsE, 1:nBinsW]])
     return tables
 
 
