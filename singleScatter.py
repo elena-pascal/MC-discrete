@@ -1,4 +1,10 @@
 import numpy as np
+
+from scimath.units.energy import J, eV, KeV
+from scimath.units.length import m, cm, km, angstrom
+from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+
+
 from electron import electron
 from material import material
 from scattering import scatter
@@ -9,17 +15,17 @@ from parameters import c_pi_efour
 material = material('Al')
 
 num_el = 100
-E0 = 20000 # eV
-Emin = 10000 # eV
+E0 = UnitScalar(20000, units = 'eV') # eV
+Emin = UnitScalar(10000, units = 'eV') # eV
 tilt = 60 # degrees
-pos0 = [0., 0., 0.,]
-dir0 = [-np.sin(np.radians(tilt)), 0. , np.cos(np.radians(tilt))]
+pos0 = np.array([0., 0., 0.,])
+dir0 = np.array([-np.sin(np.radians(tilt)), 0. , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
 nBinsW = 10
 nBinsE = 10
 
-Wc = 100
+Wc = UnitScalar(100, units = 'eV')
 
 def u2n(value_with_units):
     '''
@@ -33,15 +39,15 @@ funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, material.get_nval(), c_pi_
 
 print '---- calculating Moller tables'
 a_M, b_M = u2n(extF_limits_moller(E0, Wc))
-tables_moller = trapez_table(a_M, b_M, Emin, E0, material.get_nval(), funcToint_M, nBinsW, nBinsE)
+tables_moller = trapez_table(a_M, b_M, np.array(Emin), np.array(E0), material.get_nval(), funcToint_M, nBinsW, nBinsE)
 # print tables_moller
 
 print '---- calculating Gryzinski tables'
 a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()) )
 tables_gryz = []
 for ishell in range(len(material.get_ns())):
-    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, E, material.get_ns()[ishell], c_pi_efour, Ebi[ishell]))
-    tables_gryz.append(trapez_table(a_G, b_G, Emin, E0, material.get_ns()[ishell], funcToint_M, nBinsW, nBinsE) )
+    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns()[ishell], c_pi_efour, Ebi[ishell]))
+    tables_gryz.append(trapez_table(a_G, b_G, np.array(Emin), np.array(E0), material.get_ns()[ishell], funcToint_M, nBinsW, nBinsE) )
 
 for i in range(num_el):
     print '-------- starting electron:', i
@@ -54,25 +60,28 @@ for i in range(num_el):
         scatter_i = scatter(e_i, material, Wc, tables_moller, tables_gryz)
 
         # let the electron travel depending on the model used
-        scatter_i.compute_patl()
+        scatter_i.compute_pathl()
         print 'Path length is:', scatter_i.pathl
 
         # update electron position
-        electron_i.update_xyz(scatter_i.pathl)
+        e_i.update_xyz(scatter_i.pathl)
+        print 'new position is', e_i.xyz
 
         # determine scattering type
         scatter_i.det_type()
         print 'Scatter type is:', scatter.type
 
+        print 'electron energy is:', e_i.energy
         # determine energy loss
         scatter.compute_Eloss()
         print 'Energy loss is:', scatter_i.E_loss
 
         # update electron energy
         e_i.update_energy(scatter_i.E_loss)
+        print 'new energy is:', e_i.energy
 
         # determine scattering angles
-        scatter_i.calculate_sAngles()
+        scatter_i.compute_sAngles()
         print 'cos square half phi is:', scatter_i.c2_halfPhi
         print 'half theta is:', scatter_i.halfTheta
 

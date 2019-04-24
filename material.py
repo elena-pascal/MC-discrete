@@ -9,7 +9,7 @@ from scimath.units.density import g_per_cm3, kg_per_m3
 from scimath.units.substance import mol
 from scimath.units.dimensionless import dim
 
-from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
+from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
 from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour
 
 @has_units
@@ -29,7 +29,7 @@ def at_num_dens(dens, atom_mass):
                    n = dens*A/atom_mass
       """
     A = Avogadro
-    n = dens*A/atom_mass * cm**-3/m**-3
+    n = dens*A/atom_mass * cm**(-3)/m**-3
     return n
 
 
@@ -161,7 +161,7 @@ def scattering_params(species):
         # binding energies
         material['Es'] = UnitArray((1559, 118, 73.5), units="eV")
         # number of electrons per shell
-        material['ns'] = np.array([2, 2, 6])
+        material['ns'] = UnitArray((2, 2, 6), units="dim")
 
         material['Z'] = 13
         material['density'] = UnitScalar(2.70, units="g_per_cm3")
@@ -171,6 +171,7 @@ def scattering_params(species):
         material['k'] = 0.815
 
     return material
+
 
 
 # ##### Scattering variables for Si

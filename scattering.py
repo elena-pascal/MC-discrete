@@ -1,13 +1,14 @@
 from math import log, isnan
 import numpy as np
 import random
+import bisect
 
 import operator
-import collections # sweet sweet ordered dictionaries
+from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
 from scipy.interpolate import Rbf
 
-from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, bohr_r
+from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, u_bohrr
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 
@@ -117,11 +118,11 @@ class scatter:
             self.sigma['Gryzinski' + material.get_name_s()[i]] = gryz_sigma(electron.energy, material.get_Es()[i], material.get_ns()[i], c_pi_efour)
             self.mfp['Gryzinski' + material.get_name_s()[i]] = mfp_from_sigma(self.sigma['Gryzinski' + material.get_name_s()[i]], atnd)
 
-        self.sigma['Quinn'] = quinn_sigma(electron.energy, pl_e, f_e, atnd, bohr_r)
+        self.sigma['Quinn'] = quinn_sigma(electron.energy, pl_e, f_e, atnd, u_bohrr)
         self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], atnd)
 
         self.sigma_total = sum(self.sigma.values())
-        self.mfp_total = 1. /sum(1./self.mfp.values())
+        self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
 
 
     def compute_pathl(self):
@@ -130,7 +131,7 @@ class scatter:
         path_length = - mean_free_path * log(rn)
         '''
 
-        self.pathl = -mfp_total * log(random.random())
+        self.pathl = -self.mfp_total * log(random.random())
 
     def det_type(self):
         '''
@@ -138,12 +139,20 @@ class scatter:
         scattering cumulative probabilities. if R <= cum.prob.scatter.type - > scatter is of type type
         Set the type of scattering after determining type
         '''
-        sorted_sigma = OrderedDict(sorted(self.sigma.items(), key=operator.itemgetter(1)))
-        scatProb = {x: np.cumsum(sorted_sigma.values()[::-1])/sigma_total for x in ordered_sigma.values}
+        # ordered dicitonary of sigmas
+        sorted_sigmas = OrderedDict(sorted(self.sigma.items(), key=operator.itemgetter(1), reverse=True))
+        # probabilities to compare the random number against are cumulative sums of the
+        # reversed ordered dictionary
+        print 'sorted dict',sorted_sigmas
+        probs = np.cumsum(sorted_sigmas.values())/np.array(self.sigma_total)
 
-        prob = bisect.bisect_left(scatProb.values(), random.random(()))
+        print 'here', [probs[i] for i, (k,v) in enumerate(sorted_sigmas.items())]
+        scatProb = {k: probs[i] for i, (k, v) in enumerate(sorted_sigmas.items())}
+        print scatProb.keys()
 
-        self.type = scatProb.keys()[mydict.values().index(prob)]
+        this_prob = bisect.bisect_left(scatProb.values(), random.random())
+        print 'this prob', this_prob
+        self.type = scatProb.keys()[scatProb.values().index(this_prob)]
 
         if (self.type == 'Moller'):
             # Moller tables are [Ei, Wi, Int(Ei, Wi)]
@@ -204,7 +213,7 @@ class scatter:
             print 'I did not understand the type of scattering in scatter.calculate_Eloss'
 
 
-    def calculate_sAngles(self):
+    def compute_sAngles(self):
         if (self.type == 'Rutherford'):
             alpha =  3.4e-3*(self.material.get_Z()**(0.67))/self.e.energy
             self.c2_halfPhi = 1. - alpha*random.random()/(1.+alpha-random.random())
