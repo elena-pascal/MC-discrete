@@ -9,6 +9,84 @@ from scimath.units.density import g_per_cm3, kg_per_m3
 from scimath.units.substance import mol
 from scimath.units.dimensionless import dim
 
+from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
+from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour
+
+@has_units
+def at_num_dens(dens, atom_mass):
+    """ Calculate the atomic number density for given
+        density and atomic mass/weight
+
+        Parameters
+        ----------
+        dens      : array : units = g_per_cm3
+
+        atom_mass : array : units = g/mol
+
+        Returns
+        -------
+        n         : array : units = m**-3
+                   n = dens*A/atom_mass
+      """
+    A = Avogadro
+    n = dens*A/atom_mass * cm**-3/m**-3
+    return n
+
+
+@has_units
+def fermi_energy(atNumDens, nvalence, u_hbar, u_me):
+    """ Calculate the Fermi energy of a material
+        from its density, atomic weight and
+        the number of valence electrons
+
+        Parameters
+        ----------
+        atNumDens : array  : units = m**-3
+
+        u_hbar    : scalar : units = J*s
+
+        u_me      : scalar : units = kg
+
+        Returns
+        -------
+        Ef        : array : units = eV
+                    Ef = hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*me)
+      """
+
+    n = nvalence * atNumDens
+
+    Ef = u_hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*u_me) * m**2*kg*s**-2/ eV
+    return Ef
+
+
+@has_units
+def plasmon_energy(atNumDens, nvalence, u_hbar, u_me, u_e, u_eps0):
+    """ Calculate the plasmon energy of a material
+        from its density, atomic weight and
+        the number of valence electrons
+
+        Parameters
+        ----------
+        atNumDens : array  : units = m**-3
+
+        u_hbar    : scalar : units = J*s
+
+        u_me      : scalar : units = kg
+
+        u_e       : scalar : units = coulomb
+
+        u_eps0    : scalar : units = farad*m**-1
+
+        Returns
+        -------
+        Epl        : array : units = eV
+                    Ef = hbar * ((n * e**2)/(u_eps0 * u_me))**0.5
+      """
+
+    n = nvalence * atNumDens
+
+    Epl = u_hbar * e * (n/(u_eps0 * u_me))**0.5  * m**2*kg*s**-2/ eV
+    return Epl
 
 
 class material:

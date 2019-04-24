@@ -1,3 +1,7 @@
+from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scipy.constants import pi
+
+import numpy as np
 ###################################################################
 #                       Total cross section                       #
 ###################################################################

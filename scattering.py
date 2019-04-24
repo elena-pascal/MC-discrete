@@ -7,8 +7,9 @@ import collections # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
 from scipy.interpolate import Rbf
 
-from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour
+from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, bohr_r
 from electron import electron
+from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 from scimath.units.energy import J, eV, KeV
@@ -20,81 +21,6 @@ from scimath.units.density import g_per_cm3, kg_per_m3
 from scimath.units.substance import mol
 from scimath.units.dimensionless import dim
 
-@has_units
-def at_num_dens(dens, atom_mass):
-    """ Calculate the atomic number density for given
-        density and atomic mass/weight
-
-        Parameters
-        ----------
-        dens      : array : units = g_per_cm3
-
-        atom_mass : array : units = g/mol
-
-        Returns
-        -------
-        n         : array : units = m**-3
-                   n = dens*A/atom_mass
-      """
-    A = Avogadro
-    n = dens*A/atom_mass * cm**-3/m**-3
-    return n
-
-
-@has_units
-def fermi_energy(atNumDens, nvalence, u_hbar, u_me):
-    """ Calculate the Fermi energy of a material
-        from its density, atomic weight and
-        the number of valence electrons
-
-        Parameters
-        ----------
-        atNumDens : array  : units = m**-3
-
-        u_hbar    : scalar : units = J*s
-
-        u_me      : scalar : units = kg
-
-        Returns
-        -------
-        Ef        : array : units = eV
-                    Ef = hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*me)
-      """
-
-    n = nvalence * atNumDens
-
-    Ef = u_hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*u_me) * m**2*kg*s**-2/ eV
-    return Ef
-
-
-@has_units
-def plasmon_energy(atNumDens, nvalence, u_hbar, u_me, u_e, u_eps0):
-    """ Calculate the plasmon energy of a material
-        from its density, atomic weight and
-        the number of valence electrons
-
-        Parameters
-        ----------
-        atNumDens : array  : units = m**-3
-
-        u_hbar    : scalar : units = J*s
-
-        u_me      : scalar : units = kg
-
-        u_e       : scalar : units = coulomb
-
-        u_eps0    : scalar : units = farad*m**-1
-
-        Returns
-        -------
-        Epl        : array : units = eV
-                    Ef = hbar * ((n * e**2)/(u_eps0 * u_me))**0.5
-      """
-
-    n = nvalence * atNumDens
-
-    Epl = u_hbar * e * (n/(u_eps0 * u_me))**0.5  * m**2*kg*s**-2/ eV
-    return Epl
 
 
 @has_units
@@ -165,10 +91,6 @@ class scatter:
         self.material = material
         self.free_param = free_param
 
-        # intitalise
-        self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {} # dictionary keeping all mfp
-
         self.pathl = 0.
         self.type = None
         self.E_loss = 0.
@@ -178,25 +100,29 @@ class scatter:
 
         # some very useful parameters
         atnd = material.get_atnd()
-        pl_e = material.get_plasmon_e()
+        pl_e = material.get_pl_e()
         f_e = material.get_fermi_e()
 
+        # intitalise
+        self.sigma = {} # dictionary keeping all sigmas
+        self.mfp = {} # dictionary keeping all mfp
 
-        self.sigma['Rutherford'] = ruther_sigma(e.energy, material.get_Z())
-        self.mfp['Rutherford'] = mfp_from_sigma(sigma['Rutherford'], atnd)
+        self.sigma['Rutherford'] = ruther_sigma(electron.energy, material.get_Z())
+        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], atnd)
 
-        self.sigma['Moller'] = moller_sigma(e.energy, free_param['Ec'], material.get_nval(), c_pi_efour)
-        self.mfp['Moller'] = mfp_from_sigma(sigma['Moller'], atnd)
+        self.sigma['Moller'] = moller_sigma(electron.energy, free_param, material.get_nval(), c_pi_efour)
+        self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], atnd)
 
-        for i in len(material.get_Es()):
-            self.sigma['Gryzinski' + name_s[i]] = gryz_sigma(e.energy, material.get_Es()[i], material.get_ns()[i], c_pi_efour)
-            self.mfp['Gryzinski' + name_s[i]] = mfp_from_sigma(sigma['Gryzinski' + name_s[i]], atnd)
+        for i in range(len(material.get_Es())):
+            self.sigma['Gryzinski' + material.get_name_s()[i]] = gryz_sigma(electron.energy, material.get_Es()[i], material.get_ns()[i], c_pi_efour)
+            self.mfp['Gryzinski' + material.get_name_s()[i]] = mfp_from_sigma(self.sigma['Gryzinski' + material.get_name_s()[i]], atnd)
 
-        self.sigma['Quinn'] = quinn_sigma(e.energy, pl_e, f_e, atnd, bohr_r)
-        self.mfp['Quinn'] = mfp_from_sigma(sigma['Quinn'], atnd)
+        self.sigma['Quinn'] = quinn_sigma(electron.energy, pl_e, f_e, atnd, bohr_r)
+        self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], atnd)
 
         self.sigma_total = sum(self.sigma.values())
         self.mfp_total = 1. /sum(1./self.mfp.values())
+
 
     def compute_pathl(self):
         '''

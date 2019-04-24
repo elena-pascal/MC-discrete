@@ -38,13 +38,14 @@ def extF_limits_gryz(E, Ei):
     return (a, b)
 
 
-def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
+def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
     '''
     the usual numerical trapezoidal integration
     a, b are the limits of integration
     f is a function of energy
     nSect is the number of sections
     intT is the cummulative integral at point n
+    gryz ext function has one extra parameter for each shell: the binding energy
     '''
 
     #the size of a step is determined by the number of chosen sections
@@ -55,9 +56,9 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Wc):
 
     for indx in np.arange(1, nSect): # [1, nSect) = [1, nSect-1]
         W = a + indx*dx
-        sum_inner +=  ext_func(E, W, n_e, *Wc)
+        sum_inner +=  ext_func(E, W, n_e, *Ebi)
 
-    intT = ( ext_func(E, a, n_e, *Wc) + ext_func(E, b, n_e, *Wc) )*dx/2. + dx*sum_inner
+    intT = ( ext_func(E, a, n_e, *Ebi) + ext_func(E, b, n_e, *Ebi) )*dx/2. + dx*sum_inner
     return intT
 
 
@@ -70,17 +71,8 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
     '''
     tables = []
 
-    def funct(E, W, n_e):
-        if (len(n_e) == 1):
-            # Moller dCS
-            return lambda E, W, nfree, c_pi_efour: ext_func(E, W, nfree)
-        else:
-            # Gryz dCS
-            return lambda E, W, Ebi, nshell, c_pi_efour: ext_func(E, W, nshell, )
-
-    for shell in range(len(n_e)):
+    for shell in range(len(np.array([n_e]))):
         int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
-
 
         # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
         dW = (Wmax[shell] - Wmin[shell])/nBinsW
@@ -91,17 +83,25 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE):
         # initialise the sum of f(x) for inner values (1..n-1) of x
         sum_innerW = np.zeros(nBinsW)
 
+        # simplify the excitation function to depend only on E and W
+        if (len(np.array([n_e])) == 1):
+            # Moller dCS
+            func = lambda E, W: ext_func(E, W, n_e)
+        else:
+            # Gryz dCS
+            func = lambda E, W: ext_func( E, W, n_e[shell], Ebi[shell] )
+
         for indx_E in np.arange(nBinsE): # [1, nSectE]
             Ei = Emin + indx_E*dE
 
             for indx_W in np.arange(nBinsW-1):
                 Wi = Wmin[shell] + indx_W*dW
-                sum_innerW[indx_W] = sum_innerW[indx_W-1] + ext_func(Ei, Wi, n_e[shell], *Wmin[shell]) # sum_inner[0] = 0
+                sum_innerW[indx_W] = sum_innerW[indx_W-1] + func(Ei, Wi) # sum_inner[0] = 0
 
-                int_extFunc[indx_E, indx_W] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wi, n_e[shell]), *Wmin[shell])*dW/2. \
+                int_extFunc[indx_E, indx_W] = ( func(Ei, Wmin[shell]) + func(Ei, Wi) * Wmin[shell] )*dW/2. \
                                                     + dW * sum_innerW[indx_W-1]
                 # last value and total area integral
-                int_extFunc[indx_E, nBinsW-1] = ( ext_func(Ei, Wmin[shell], n_e[shell], *Wmin[shell]) + ext_func(Ei, Wmax[shell], n_e[shell]), *Wmin[shell])*dW/2. \
+                int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin[shell]) + func(Ei, Wmax[shell]) ) * dW/2. \
                                                 + dW * sum_innerW[nBinsW-2]
 
                 x = np.linspace(Wmin[shell], Wmax[shell], nBinsW)

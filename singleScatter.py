@@ -16,10 +16,10 @@ pos0 = [0., 0., 0.,]
 dir0 = [-np.sin(np.radians(tilt)), 0. , np.cos(np.radians(tilt))]
 model = 'DS' # discrete scattering
 
-nBinsW = 100
-nBinsE = 1000
+nBinsW = 10
+nBinsE = 10
 
-Wc = 10
+Wc = 100
 
 def u2n(value_with_units):
     '''
@@ -28,51 +28,53 @@ def u2n(value_with_units):
     '''
     return np.array(value_with_units)
 
-def funcToint_M(const):
-    ''' remove units and dependence on constant '''
-    return lambda x, y, z : u2n(moller_dCS(x, y, z, const))
+# remove the function dependece on the constant and get rid of units
+funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, material.get_nval(), c_pi_efour))
 
-def funcToint_G(const):
-    ''' remove units and dependence on constant '''
-    return lambda x, y, z, w : u2n(gryz_dCS(x, y, z, const, w))
-
+print '---- calculating Moller tables'
 a_M, b_M = u2n(extF_limits_moller(E0, Wc))
-a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()))
+tables_moller = trapez_table(a_M, b_M, Emin, E0, material.get_nval(), funcToint_M, nBinsW, nBinsE)
+# print tables_moller
 
-ext_func_M = funcToint_M(c_pi_efour)
-ext_func_G = funcToint_G(c_pi_efour)
+print '---- calculating Gryzinski tables'
+a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()) )
+tables_gryz = []
+for ishell in range(len(material.get_ns())):
+    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, E, material.get_ns()[ishell], c_pi_efour, Ebi[ishell]))
+    tables_gryz.append(trapez_table(a_G, b_G, Emin, E0, material.get_ns()[ishell], funcToint_M, nBinsW, nBinsE) )
 
-tables_moller = trapez_table(a_M, b_M, Emin, E0, material.get_ns(), ext_func_M, nBinsW, nBinsE)
-tables_gryz = trapez_table(a_G, b_G, Emin, E0, material.get_nval(), ext_func_G, nBinsW, nBinsE)
+for i in range(num_el):
+    print '-------- starting electron:', i
+    e_i = electron(E0, pos0, dir0)
 
-for i in num_el:
-    ei = electron(E, pos0, dir0)
-    while ((electron.xyz[2]>=0.) and (electron.energy>=Emin)):# not backscattered
+    while ((e_i.xyz[2]>=0.) and (e_i.energy>=Emin)):# not backscattered
+        print ' electron at position', e_i.xyz
+
         # new instance of scatter
-        scatter = scatter(electron, material, Ec, tables_moller, tables_gryz)
+        scatter_i = scatter(e_i, material, Wc, tables_moller, tables_gryz)
 
         # let the electron travel depending on the model used
-        scatter.compute_patl()
-        print 'Path length is:', scatter.pathl
+        scatter_i.compute_patl()
+        print 'Path length is:', scatter_i.pathl
 
         # update electron position
-        electron.update_xyz(scatter.pathl)
+        electron_i.update_xyz(scatter_i.pathl)
 
         # determine scattering type
-        scatter.det_type()
+        scatter_i.det_type()
         print 'Scatter type is:', scatter.type
 
         # determine energy loss
         scatter.compute_Eloss()
-        print 'Energy loss is:', scatter.E_loss
+        print 'Energy loss is:', scatter_i.E_loss
 
         # update electron energy
-        electron.update_energy(scatter.E_loss)
+        e_i.update_energy(scatter_i.E_loss)
 
         # determine scattering angles
-        scatter.calculate_sAngles()
-        print 'cos square half phi is:', scatter.c2_halfPhi
-        print 'half theta is:', scatter.halfTheta
+        scatter_i.calculate_sAngles()
+        print 'cos square half phi is:', scatter_i.c2_halfPhi
+        print 'half theta is:', scatter_i.halfTheta
 
         # update electron new traveling direction
-        electron.update_dir(scatter.c2_halfPhi, scatter.halfTheta)
+        e_i.update_dir(scatter.c2_halfPhi, scatter.halfTheta)
