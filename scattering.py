@@ -191,21 +191,37 @@ class scatter:
             # rbfi = Rbf(tables_EW[0], tables_EW[1], tables_EW[2])  # radial basis function interpolator instance
 
             # integral(E, Wi) is rr * total integral
-            # tables_moller are of the form [(ee, ww), Int(E, W)]
-            integral = random.random() * self.tables_EW_M[1][self.e.energy, -1]
-            return bisect.bisect_left(self.tables_EW_M[0][0, :], integral)
-
+            # tables_moller are of the form [ee, ww, Int(E, W)]
+            energies = self.tables_EW_M[0][0]
+            print 'energies', energies
+            Ei_table = bisect.bisect_left(energies, self.e.energy)
+            integral = random.random() * self.tables_EW_M[2][Ei_table, -1]
+            energylosses = self.tables_EW_M[1][:, 0]
+            int_enlosses = self.tables_EW_M[2][Ei_table, :]
+            print 'integrals energy losses', int_enlosses
+            print 'integral', integral
+            Wi_table = bisect.bisect_left(int_enlosses, integral)
+            self.Eloss = energylosses[Wi_table]
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
-            shell = self.type.strip('Gryzinski')
+            shell = self.type.replace('Gryzinski', '')
             ishell = self.material.get_name_s().index(shell)
-
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
-            integral = random.random() * self.tables_EW_G[ishell][1][self.e.energy, -1]
-            return bisect.bisect_left(self.tables_EW_G[ishell][0][:, 1], integral)
-
+            energies = self.tables_EW_G[ishell][0][0]
+            print 'energies',  energies
+            Ei_table = bisect.bisect_left(energies, self.e.energy)
+            print Ei_table
+            print self.tables_EW_G[ishell][2][:, -1]
+            integral = random.random() * self.tables_EW_G[ishell][2][Ei_table, -1]
+            energylosses = self.tables_EW_G[ishell][1][:, 0]
+            int_enlosses = self.tables_EW_G[ishell][2][Ei_table, :]
+            print 'integrals energy losses', int_enlosses
+            print 'integral', integral
+            Wi_table = bisect.bisect_left(int_enlosses, integral)
+            print 'Wi table', Wi_table
+            self.E_loss = energylosses[Wi_table]
 
         elif(self.type == 'Quinn'):
             self.E_loss = self.material.get_pl_e()

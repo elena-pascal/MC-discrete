@@ -89,7 +89,7 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None
         # Moller dCS
         func = lambda E, W: ext_func(E, W, n_e)
 
-    for indx_E in np.arange(nBinsE): # [1, nSectE]
+    for indx_E in np.arange(nBinsE):
         Ei = Emin + indx_E*dE
 
         for indx_W in np.arange(nBinsW-1):
@@ -98,15 +98,15 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None
 
             int_extFunc[indx_E, indx_W] = ( func(Ei, Wmin) + func(Ei, Wi) * Wmin )*dW/2. \
                                                     + dW * sum_innerW[indx_W-1]
-            # last value and total area integral
-            int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
-                                                + dW * sum_innerW[nBinsW-2]
+        # last value and total area integral
+        int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
+                                                + dW * sum_innerW[nBinsW-1]
 
     e = np.linspace(Emin, Emax, nBinsE)
     w = np.linspace(Wmin, Wmax, nBinsW)
     ee, ww = np.meshgrid(e, w)
 
-    tables = ([ee, ww, int_extFunc[1:nBinsE, 1:nBinsW]])
+    tables = ([ee, ww, int_extFunc])#[1:nBinsE, 1:nBinsW]])
     return tables
 
 
