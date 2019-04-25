@@ -45,7 +45,7 @@ class electron:
         self.energy_hist.append(newEnergy)
 
     def update_xyz(self, pathLength):
-        newPosition = self.xyz + pathLength * self.dir
+        newPosition = self.xyz + float(pathLength) * self.dir
         self.xyz = newPosition
         self.xyz_hist.append(newPosition)
 

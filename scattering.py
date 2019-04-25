@@ -38,7 +38,7 @@ def mfp_from_sigma(sigma, n):
         -------
         mfp    : array : units = angstrom
     """
-    mfp = 1./(n*sigma) * angstrom*cm**2/m**3
+    mfp = 1./(n*sigma) * m**3/cm**2/angstrom
     return mfp
 
 # #####################################################################
@@ -104,7 +104,6 @@ class scatter:
         atnd = material.get_atnd()
         pl_e = material.get_pl_e()
         f_e = material.get_fermi_e()
-
         # intitalise
         self.sigma = {} # dictionary keeping all sigmas
         self.mfp = {} # dictionary keeping all mfp
@@ -124,7 +123,7 @@ class scatter:
 
         self.sigma_total = sum(self.sigma.values())
         self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
-
+        #self.mfp_total = 1. / self.sigma_total
 
     def compute_pathl(self):
         '''
@@ -132,7 +131,7 @@ class scatter:
         path_length = - mean_free_path * log(rn)
         '''
 
-        self.pathl = -self.mfp_total * log(random.random())
+        self.pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
 
     def det_type(self):
         '''
@@ -232,18 +231,18 @@ class scatter:
 
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):
-            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/self.e.energy
+            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/float(self.e.energy)
             self.c2_halfPhi = 1. - alpha*random.random()/(1.+alpha-random.random())
             self.halfTheta = pi*random.random()
 
         elif(self.type == 'Bethe'):
             self.halfTheta = pi*random.random()
 
-        elif((self.type == 'Moller') or (self.type == 'Gryzinski')):
+        elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
                 print "I'm not telling you how to live your life, but it helps to calculate the lost energy before the scattering angles for inelastic events"
             else:
-                self.c2_halfPhi = 0.5*((1.-(self.Eloss/self.e.energy))**0.5 + 1)
+                self.c2_halfPhi = 0.5*((1.-(self.E_loss/float(self.e.energy)))**0.5 + 1)
                 self.halfTheta = pi*random.random() # radians
 
         elif(self.type == 'Quinn'):
