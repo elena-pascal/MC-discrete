@@ -17,13 +17,13 @@ material = material('Al')
 num_el = 1000
 E0 = UnitScalar(20000, units = 'eV') # eV
 Emin = UnitScalar(10000, units = 'eV') # eV
-tilt = 60 # degrees
+tilt = 0 # degrees
 pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([-np.sin(np.radians(tilt)), 0. , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
 nBinsW = 500
-nBinsE = 50
+nBinsE = 200
 
 Wc = UnitScalar(100, units = 'eV')
 
@@ -80,8 +80,8 @@ for i in range(num_el):
         #print 'new position is', e_i.xyz
         if (e_i.xyz[2]<= 0.):
             backscattered = True
-            #print 'backscattered'
-            BSE.append(e_i.energy)
+            print 'backscattered', e_i.xyz[2]
+            BSE.append(float(e_i.energy))
             count += 1
 
 
@@ -107,4 +107,10 @@ for i in range(num_el):
         e_i.update_direction(scatter_i.c2_halfPhi, scatter_i.halfTheta)
 
 print 'total BSE electrons', count
-print BSE
+
+file = 'BSE_0tilt.out'
+with open(file, 'w') as f:
+    for item in BSE:
+        f.write("%s\n" % item)
+
+print 'BSE data was written to', file

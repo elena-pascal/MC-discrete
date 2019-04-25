@@ -242,7 +242,9 @@ class scatter:
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
-                print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
+                # TODO: Moller integrals are weird
+                error = True
+                #print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
             else:
                 self.c2_halfPhi = 0.5*((1.-(self.E_loss/float(self.e.energy)))**0.5 + 1)
                 self.halfTheta = pi*random.random() # radians
