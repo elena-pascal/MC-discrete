@@ -2,6 +2,10 @@ from scimath.units.energy import J, eV, KeV
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
+from rotation import newdir
+
+from math import sin
+
 
 def exp_params():
     params = {'file': 'parameters.py'}
@@ -45,12 +49,12 @@ class electron:
         self.xyz = newPosition
         self.xyz_hist.append(newPosition)
 
-    def update_drection(self, c2_halfPhi, halfTheta):
+    def update_direction(self, c2_halfPhi, halfTheta):
         shphi = (1. - c2_halfPhi)**0.5
         chphi = c2_halfPhi**0.5
         shpsi = sin(halfTheta)
-        chps = (1. - shpsi)**0.5
-        newDirection = newdir(shphi, chphi, shpsi, chpsi, self.dir[-1])
+        chpsi = (1. - shpsi**2)**0.5
+        newDirection = newdir(shphi, chphi, shpsi, chpsi, self.dir)
         self.dir = newDirection
         self.dir_hist.append(newDirection)
 

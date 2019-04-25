@@ -1,5 +1,5 @@
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-
+import numpy as np
 
 ###################################################################
 #                       Excitation function                       #
@@ -27,9 +27,11 @@ def moller_dCS(E, W, nfree, c_pi_efour):
         dCS_M  : array : units = cm**2/eV
     """
     eps = W*1./E
-    dCS_M =  nfree*c_pi_efour* E**2 *( 1./(eps**2) +
+    if (((1.-eps)**2) > 0.): # 1-eps can be very small
+        dCS_M =  nfree*c_pi_efour* E**2 *( 1./(eps**2) +
                  ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )
-
+    else:
+        dCS_M = 0.
     return dCS_M
 
 
@@ -62,6 +64,9 @@ def gryz_dCS(E, W, nsi, c_pi_efour, Ebi):
     eps = W*1./E
     epsB = Ebi*1./E
 
-    dCS_G = nsi * c_pi_efour * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+    if ((1. - eps)/epsB **(0.5) > 0): # 1-eps can be very small
+        dCS_G = nsi * c_pi_efour * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                4. * epsB * np.log(2.7 + ((1. - eps)/epsB)**(0.5) )/3. )   /(eps**2 * E**2)
+    else:
+        dCS_G = 0.
     return dCS_G

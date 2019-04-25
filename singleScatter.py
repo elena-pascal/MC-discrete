@@ -34,20 +34,28 @@ def u2n(value_with_units):
     '''
     return np.array(value_with_units)
 
-# remove the function dependece on the constant and get rid of units
-funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, material.get_nval(), c_pi_efour))
 
 print '---- calculating Moller tables'
 a_M, b_M = u2n(extF_limits_moller(E0, Wc))
-tables_moller = trapez_table(a_M, b_M, np.array(Emin), np.array(E0), material.get_nval(), funcToint_M, nBinsW, nBinsE)
-# print tables_moller
+
+# remove the function dependece on the constant and get rid of units
+funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, material.get_nval(), c_pi_efour))
+
+tables_moller = trapez_table(a_M, b_M, np.array(Emin), np.array(E0), material.get_nval(), \
+            funcToint_M, nBinsW, nBinsE)
+#print tables_moller
+
 
 print '---- calculating Gryzinski tables'
-a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()) )
 tables_gryz = []
 for ishell in range(len(material.get_ns())):
-    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns()[ishell], c_pi_efour, Ebi[ishell]))
-    tables_gryz.append(trapez_table(a_G, b_G, np.array(Emin), np.array(E0), material.get_ns()[ishell], funcToint_M, nBinsW, nBinsE) )
+    a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()[ishell]))
+    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns()[ishell],\
+                                            c_pi_efour, material.get_Es()[ishell]))
+
+    tables_gryz.append(trapez_table(a_G, b_G, np.array(Emin), np.array(E0),\
+                material.get_ns()[ishell], funcToint_G, nBinsW, nBinsE,  material.get_Es()[ishell]) )
+#print tables_gryz
 
 for i in range(num_el):
     print '-------- starting electron:', i
@@ -69,11 +77,11 @@ for i in range(num_el):
 
         # determine scattering type
         scatter_i.det_type()
-        print 'Scatter type is:', scatter.type
+        print 'Scatter type is:', scatter_i.type
 
         print 'electron energy is:', e_i.energy
         # determine energy loss
-        scatter.compute_Eloss()
+        scatter_i.compute_Eloss()
         print 'Energy loss is:', scatter_i.E_loss
 
         # update electron energy
@@ -86,4 +94,6 @@ for i in range(num_el):
         print 'half theta is:', scatter_i.halfTheta
 
         # update electron new traveling direction
-        e_i.update_dir(scatter.c2_halfPhi, scatter.halfTheta)
+        e_i.update_direction(scatter_i.c2_halfPhi, scatter_i.halfTheta)
+
+        print

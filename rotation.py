@@ -1,5 +1,6 @@
 # calculate scattering direction using quaternions
-
+import numpy as np
+import quaternion
 
 def rotate_vector_Lqv(q, v):
     '''
