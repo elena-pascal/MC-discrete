@@ -162,11 +162,11 @@ class scatter:
         '''
         if (self.type == 'Rutherford'):
             self.E_loss = UnitScalar(0., units='eV')
-            print 'Rutherford elastic scattering has no energy loss'
+            #print 'Rutherford elastic scattering has no energy loss'
 
         elif (self.type == 'Browning'):
             self.E_loss = UnitScalar(0., units='eV')
-            print 'Browning elastic scattering has no energy loss'
+            #print 'Browning elastic scattering has no energy loss'
 
         elif(self.type == 'Bethe'):
             if (self.pathl == 0.):
@@ -192,13 +192,13 @@ class scatter:
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [ee, ww, Int(E, W)]
             energies = self.tables_EW_M[0][0]
-            print 'energies', energies
+            #print 'energies', energies
             Ei_table = bisect.bisect_left(energies, self.e.energy)
             integral = random.random() * self.tables_EW_M[2][Ei_table, -1]
             energylosses = self.tables_EW_M[1][:, 0]
             int_enlosses = self.tables_EW_M[2][Ei_table, :]
-            print 'integrals energy losses', int_enlosses
-            print 'integral', integral
+            #print 'integrals energy losses', int_enlosses
+            #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses, integral)
             self.Eloss = energylosses[Wi_table]
 
@@ -209,17 +209,19 @@ class scatter:
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
             energies = self.tables_EW_G[ishell][0][0]
-            print 'energies',  energies
+            #print 'energies',  energies
             Ei_table = bisect.bisect_left(energies, self.e.energy)
-            print Ei_table
-            print self.tables_EW_G[ishell][2][:, -1]
+            #print 'e losses', self.tables_EW_G[ishell][1][:,0]
+            #print Ei_table
+            #print
+            #print self.tables_EW_G[ishell][2]
+            #print self.tables_EW_G[ishell][2][:, -1]
             integral = random.random() * self.tables_EW_G[ishell][2][Ei_table, -1]
             energylosses = self.tables_EW_G[ishell][1][:, 0]
             int_enlosses = self.tables_EW_G[ishell][2][Ei_table, :]
-            print 'integrals energy losses', int_enlosses
-            print 'integral', integral
+            #print 'integrals energy losses', int_enlosses
+            #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses, integral)
-            print 'Wi table', Wi_table
             self.E_loss = energylosses[Wi_table]
 
         elif(self.type == 'Quinn'):
@@ -240,7 +242,7 @@ class scatter:
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
-                print "I'm not telling you how to live your life, but it helps to calculate the lost energy before the scattering angles for inelastic events"
+                print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
             else:
                 self.c2_halfPhi = 0.5*((1.-(self.E_loss/float(self.e.energy)))**0.5 + 1)
                 self.halfTheta = pi*random.random() # radians

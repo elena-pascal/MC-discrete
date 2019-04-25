@@ -78,8 +78,7 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None
     # the size of a step in incident energy E is determined by the number of chosen sections nBinsE
     dE = (Emax - Emin)/nBinsE
 
-    # initialise the sum of f(x) for inner values (1..n-1) of x
-    sum_innerW = np.zeros(nBinsW)
+
 
     # simplify the excitation function to depend only on E and W
     if (Ebi):
@@ -92,15 +91,19 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None
     for indx_E in np.arange(nBinsE):
         Ei = Emin + indx_E*dE
 
-        for indx_W in np.arange(nBinsW-1):
-            Wi = Wmin + indx_W*dW
-            sum_innerW[indx_W] = sum_innerW[indx_W-1] + func(Ei, Wi) # sum_inner[0] = 0
+        # initialise the sum of f(x) for inner values (1..n-1) of x
+        sum_innerW = np.zeros(nBinsW+1)
 
-            int_extFunc[indx_E, indx_W] = ( func(Ei, Wmin) + func(Ei, Wi) * Wmin )*dW/2. \
-                                                    + dW * sum_innerW[indx_W-1]
+        # actual integral
+        for indx_W in np.arange(nBinsW):
+            Wi = Wmin + (indx_W+1)*dW
+            int_extFunc[indx_E, indx_W] = ( func(Ei, Wmin) + func(Ei, Wi) )*dW/2. \
+                                                    + dW * sum_innerW[indx_W] # sum_inner[0] = 0
+
+            sum_innerW[indx_W+1] = sum_innerW[indx_W] + func(Ei, Wi) # sum_inner[0] = 0
         # last value and total area integral
-        int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
-                                                + dW * sum_innerW[nBinsW-1]
+        #int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
+                                        #        + dW * sum_innerW[nBinsW-1]
 
     e = np.linspace(Emin, Emax, nBinsE)
     w = np.linspace(Wmin, Wmax, nBinsW)
