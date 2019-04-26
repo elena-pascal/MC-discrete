@@ -17,13 +17,13 @@ material = material('Al')
 num_el = 1000
 E0 = UnitScalar(20000, units = 'eV') # eV
 Emin = UnitScalar(10000, units = 'eV') # eV
-tilt = 0 # degrees
+tilt = 50 # degrees
 pos0 = np.array([0., 0., 0.,])
-dir0 = np.array([-np.sin(np.radians(tilt)), 0. , np.cos(np.radians(tilt))])
+dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
 nBinsW = 500
-nBinsE = 200
+nBinsE = 100
 
 Wc = UnitScalar(100, units = 'eV')
 
@@ -59,7 +59,10 @@ for ishell in range(len(material.get_ns())):
 
 count = 0
 BSE = []
+position = []
+
 for i in range(num_el):
+    position.append(pos0)
     if (i% 100 == 0):
         print '-------- starting electron:', i
     e_i = electron(E0, pos0, dir0)
@@ -78,9 +81,11 @@ for i in range(num_el):
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
         #print 'new position is', e_i.xyz
+        position.append(e_i.xyz)
+
         if (e_i.xyz[2]<= 0.):
             backscattered = True
-            print 'backscattered', e_i.xyz[2]
+            #print 'backscattered', e_i.xyz[2]
             BSE.append(float(e_i.energy))
             count += 1
 
@@ -104,13 +109,21 @@ for i in range(num_el):
         #print 'half theta is:', scatter_i.halfTheta
 
         # update electron new traveling direction
-        e_i.update_direction(scatter_i.c2_halfPhi, scatter_i.halfTheta)
+        e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
 print 'total BSE electrons', count
 
-file = 'BSE_0tilt.out'
-with open(file, 'w') as f:
+fileBSE = 'BSE_50tilt.out'
+with open(fileBSE, 'w') as f:
     for item in BSE:
         f.write("%s\n" % item)
 
-print 'BSE data was written to', file
+print 'BSE data was written to', fileBSE
+
+
+file_pos = 'positions_50tilt.out'
+with open(file_pos, 'w') as f:
+        for item in position:
+            f.write("%s\n" % item)
+
+print 'pos data was written to', file_pos

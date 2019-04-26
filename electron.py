@@ -49,12 +49,12 @@ class electron:
         self.xyz = newPosition
         self.xyz_hist.append(newPosition)
 
-    def update_direction(self, c2_halfPhi, halfTheta):
-        shphi = (1. - c2_halfPhi)**0.5
-        chphi = c2_halfPhi**0.5
-        shpsi = sin(halfTheta)
-        chpsi = (1. - shpsi**2)**0.5
-        newDirection = newdir(shphi, chphi, shpsi, chpsi, self.dir)
+    def update_direction(self, c2_halfTheta, halfPhi):
+        s_hTheta = (1. - c2_halfTheta)**0.5
+        c_hTheta = c2_halfTheta**0.5
+        s_hPhi = sin(halfPhi)
+        c_hPhi = (1. - s_hPhi**2)**0.5
+        newDirection = newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, self.dir)
         self.dir = newDirection
         self.dir_hist.append(newDirection)
 

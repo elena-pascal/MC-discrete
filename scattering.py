@@ -41,45 +41,6 @@ def mfp_from_sigma(sigma, n):
     mfp = 1./(n*sigma) * m**3/cm**2/angstrom
     return mfp
 
-# #####################################################################
-# ####################### Travel class ###############################
-# #####################################################################
-#
-# class travel:
-#     ''' Let the electron travel a path lenght untill
-#        an elastic scattering event or a discrete inelastic scattering
-#        event occurs. Type of travelling can be CSDA or discrete
-#     '''
-#     def __init__(self, model, electron, material):
-#         self.e = electron
-#         self.type = model
-#         self.material = material
-#         self.pathl = pathl
-#
-#     pl_e = plasmon_energy(atnd, material.get_nval(), u_hbar, u_me, u_e, u_eps0)
-#     f_e = fermi_energy(atnd, material.get_nval(), u_hbar, u_me)
-#     atnd = at_num_dens(self.material.get_density(), self.material.get_atwt())
-#
-#     def compute_pathl(self):
-#         '''
-#         Path length is calculated from the cross section
-#         path_length = - mean_free_path * log(rn)
-#         '''
-#
-#         sigma_R = ruther_sigma(self.e.energy, self.material.get_Z())
-#         mfp_R = mfp_from_sigma(sigma_R, atnd)
-#
-#         sigma_M = moller_sigma(self.e.energy, self.free_param['Ec'], self.material.get_nval(), c_pi_efour)
-#         mfp_M = mfp_from_sigma(sigma_M, atnd)
-#
-#         sigma_G = gryz_sigma(self.e.energy, self.material.get_Es(), self.material.get_ns(), c_pi_efour)
-#         mfp_G = mfp_from_sigma(sigma_G, atnd)
-#
-#         sigma_Q = quinn_sigma(self.e.energy, pl_e, f_e, atnd, bohr_r)
-#         mfp_Q = mfp_from_sigma(sigma_Q, atnd)
-#         self.pathl = -mfp * log(random.random())
-
-
 #####################################################################
 ####################### Scatter class ###############################
 #####################################################################
@@ -97,8 +58,8 @@ class scatter:
         self.pathl = 0.
         self.type = 0.
         self.E_loss = 0.
-        self.c2_halfPhi = 0.
-        self.halfTheta = 0.
+        self.c2_halfTheta = 0.
+        self.halfPhi = 0.
 
         # some very useful parameters
         atnd = material.get_atnd()
@@ -233,12 +194,12 @@ class scatter:
 
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):
-            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/float(self.e.energy)
-            self.c2_halfPhi = 1. - alpha*random.random()/(1.+alpha-random.random())
-            self.halfTheta = pi*random.random()
+            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/(float(self.e.energy)*1e-3)
+            self.c2_halfTheta = 1. - alpha*random.random()/(1.+alpha-random.random())
+            self.halfPhi = pi*random.random()
 
         elif(self.type == 'Bethe'):
-            self.halfTheta = pi*random.random()
+            self.halfPhi = pi*random.random()
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
@@ -246,12 +207,17 @@ class scatter:
                 error = True
                 #print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
             else:
-                self.c2_halfPhi = 0.5*((1.-(self.E_loss/float(self.e.energy)))**0.5 + 1)
-                self.halfTheta = pi*random.random() # radians
+                # TODO:  energy loss sometimes is larger than current energy
+                if (float(self.E_loss) <= float(self.e.energy)):
+                    self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
+                    self.halfPhi = pi*random.random() # radians
+                else:
+                    self.c2_halfTheta = 0.0
+                    self.halfPhi = pi*random.random() # radians
 
         elif(self.type == 'Quinn'):
-            self.halfTheta = 0. # we assume plasmon scattering does not affect travelling direction
-            self.c2_halfPhi = 0.
+            self.halfPhi = 0. # we assume plasmon scattering does not affect travelling direction
+            self.c2_halfTheta = 0.
 
         else:
             print 'I did not understand the scattering type in scatter.calculate_sAngles'
