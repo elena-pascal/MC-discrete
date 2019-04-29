@@ -31,6 +31,7 @@ def moller_dCS(E, W, nfree, c_pi_efour):
         dCS_M =  nfree*c_pi_efour* E**2 *( 1./(eps**2) +
                  ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )
     else:
+        print '1-eps very small in Moller discrete CS'
         dCS_M = 0.
     return dCS_M
 

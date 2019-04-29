@@ -108,6 +108,7 @@ class scatter:
         this_prob_pos = bisect.bisect_left(probs, random.random())
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
         self.type = sorted_sigmas.keys()[this_prob_pos]
+        #self.type = 'Moller'
 
         if (self.type == 'Moller'):
             # Moller tables are [Ei, Wi, Int(Ei, Wi)]
@@ -136,32 +137,23 @@ class scatter:
                 self.E_loss = self.path * u2n(bethe_mod_sp(self.e.energy, atnd, self.material.get_ns(), \
                                     self.material.get_Es(), self.material.get_Zval(), self.material.get_Eval(), c_pi_efour))
 
-
-
         elif(self.type == 'Moller'):
-            # get the limits of W integration
-            # a, b = u2n(extF_limits_moller(self.e.energy, self.free_param['Ec']))
-            # populate integral table[Ei, Wi]
-            # tables_EW = trapez_table(a, b, self.free_param['Ec'], self.e.energy, self.material.get_nval(), \
-            #                            moller_dCS, 100, 1000, self.free_param['Ec'])
-
-
             #wi = np.linear(a, b, 100)
             #ei = np.linear( self.free_param['Ec'], self.e.energy, 1000)
-            # rbfi = Rbf(tables_EW[0], tables_EW[1], tables_EW[2])  # radial basis function interpolator instance
-
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [ee, ww, Int(E, W)]
-            energies = self.tables_EW_M[0][0]
+            energies = self.tables_EW_M[0]
             #print 'energies', energies
             Ei_table = bisect.bisect_left(energies, self.e.energy)
             integral = random.random() * self.tables_EW_M[2][Ei_table, -1]
-            energylosses = self.tables_EW_M[1][:, 0]
+            energylosses = self.tables_EW_M[1]
             int_enlosses = self.tables_EW_M[2][Ei_table, :]
             #print 'integrals energy losses', int_enlosses
             #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses, integral)
-            self.Eloss = energylosses[Wi_table]
+            #print 'Wi_table', Wi_table
+            self.E_loss = energylosses[Wi_table]
+            #print 'inside', energylosses[Wi_table]
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
@@ -169,16 +161,16 @@ class scatter:
             ishell = self.material.get_name_s().index(shell)
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
-            energies = self.tables_EW_G[ishell][0][0]
+            energies = self.tables_EW_G[ishell][0]
             #print 'energies',  energies
             Ei_table = bisect.bisect_left(energies, self.e.energy)
-            #print 'e losses', self.tables_EW_G[ishell][1][:,0]
+            #print 'e losses', self.tables_EW_G[ishell][1]
             #print Ei_table
             #print
             #print self.tables_EW_G[ishell][2]
-            #print self.tables_EW_G[ishell][2][:, -1]
+            #print self.tables_EW_G[ishell][2][Ei_table, -1]
             integral = random.random() * self.tables_EW_G[ishell][2][Ei_table, -1]
-            energylosses = self.tables_EW_G[ishell][1][:, 0]
+            energylosses = self.tables_EW_G[ishell][1]
             int_enlosses = self.tables_EW_G[ishell][2][Ei_table, :]
             #print 'integrals energy losses', int_enlosses
             #print 'integral', integral
@@ -195,25 +187,27 @@ class scatter:
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):
             alpha =  3.4e-3*(self.material.get_Z()**(0.67))/(float(self.e.energy)*1e-3)
-            self.c2_halfTheta = 1. - alpha*random.random()/(1.+alpha-random.random())
-            self.halfPhi = pi*random.random()
+            self.c2_halfTheta = 1. - alpha*random.random()/(1. + alpha-random.random())
+            #print self.c2_halfTheta
+            self.halfPhi = 2.*pi*random.random()
 
         elif(self.type == 'Bethe'):
-            self.halfPhi = pi*random.random()
+            self.halfPhi = 2.*pi*random.random()
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
-            if (self.E_loss == 0.):
+            #if (self.E_loss == 0.):
                 # TODO: Moller integrals are weird
-                error = True
+            #    error = True
                 #print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
-            else:
+            #else:
                 # TODO:  energy loss sometimes is larger than current energy
-                if (float(self.E_loss) <= float(self.e.energy)):
-                    self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
-                    self.halfPhi = pi*random.random() # radians
-                else:
-                    self.c2_halfTheta = 0.0
-                    self.halfPhi = pi*random.random() # radians
+            if (float(self.E_loss) < float(self.e.energy)):
+                self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
+                #print self.c2_halfTheta
+                self.halfPhi = 2.*pi*random.random() # radians
+            else:
+                self.c2_halfTheta = 0.0
+                self.halfPhi = 2.*pi*random.random() # radians
 
         elif(self.type == 'Quinn'):
             self.halfPhi = 0. # we assume plasmon scattering does not affect travelling direction

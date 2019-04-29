@@ -56,15 +56,17 @@ def moller_sigma(E, Emin, nfree, c_pi_efour):
 
 #### 2b) Inelastic Gryzinski cross section for core shell electrons
 @has_units
-def gryz_sigma(E, Enl, nsi, c_pi_efour):
-    """ Calculate the Moller inelastic cross section
+def gryz_sigma(E, Esi, nsi, c_pi_efour):
+    """ Calculate the Gryzinski inelastic cross section
         per atom
 
         Parameters
         ----------
         E      : array : units = eV
+                primary electron energy
 
-        Enl    : array : units = eV
+        Esi    : array : units = eV
+                shell i binding energy
 
         nsi    : array : units = dim
                  number of electrons in i-shell
@@ -76,9 +78,9 @@ def gryz_sigma(E, Enl, nsi, c_pi_efour):
         s_G    : array : units = cm**2
     """
 
-    U = E*1./Enl
+    U = E*1./Esi
     s_G = nsi * c_pi_efour * ((U - 1.)/(U + 1.))**1.5 * (1. + (2.*(1.-(1./(2.*U)))/3. *\
-              np.log(2.7 + ((U - 1.)**0.5))) ) /(E*Enl)
+              np.log(2.7 + ((U - 1.)**0.5))) ) /(E*Esi)
     return s_G
 
 

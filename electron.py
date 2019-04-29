@@ -56,6 +56,7 @@ class electron:
         c_hPhi = (1. - s_hPhi**2)**0.5
         newDirection = newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, self.dir)
         self.dir = newDirection
+        #print 'new direction', newDirection
         self.dir_hist.append(newDirection)
 
     def totalPathLenght(self):

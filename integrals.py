@@ -23,8 +23,10 @@ def extF_limits_moller(E, Ec):
 	in  :: E, Ec
 	out :: a, b
 	'''
-    a = np.array([Ec])
-    b = np.array([0.5 * E])
+    #a = np.array([Ec])
+    a = Ec
+    #b = np.array([0.5 * E])
+    b = 0.5 * E
     return (a, b)
 
 def extF_limits_gryz(E, Ei):
@@ -91,25 +93,24 @@ def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None
     for indx_E in np.arange(nBinsE):
         Ei = Emin + indx_E*dE
 
-        # initialise the sum of f(x) for inner values (1..n-1) of x
-        sum_innerW = np.zeros(nBinsW+1)
+        # initialise the integral for the recursive function
+        int_extFunc[indx_E, -1] = 0.
 
         # actual integral
         for indx_W in np.arange(nBinsW):
-            Wi = Wmin + (indx_W+1)*dW
-            int_extFunc[indx_E, indx_W] = ( func(Ei, Wmin) + func(Ei, Wi) )*dW/2. \
-                                                    + dW * sum_innerW[indx_W] # sum_inner[0] = 0
+            Wi = Wmin + indx_W*dW
+            Wip1 = Wi + dW
+            int_extFunc[indx_E, indx_W] = ( func(Ei, Wi) + func(Ei, Wip1) )*dW/2. \
+                                                    +  int_extFunc[indx_E, indx_W-1]
 
-            sum_innerW[indx_W+1] = sum_innerW[indx_W] + func(Ei, Wi) # sum_inner[0] = 0
         # last value and total area integral
         #int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
                                         #        + dW * sum_innerW[nBinsW-1]
 
     e = np.linspace(Emin, Emax, nBinsE)
     w = np.linspace(Wmin, Wmax, nBinsW)
-    ee, ww = np.meshgrid(e, w)
 
-    tables = ([ee, ww, int_extFunc])#[1:nBinsE, 1:nBinsW]])
+    tables = ([e, w, int_extFunc])#[1:nBinsE, 1:nBinsW]])
     return tables
 
 

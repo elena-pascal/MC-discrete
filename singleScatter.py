@@ -1,5 +1,5 @@
 import numpy as np
-
+from math import acos
 from scimath.units.energy import J, eV, KeV
 from scimath.units.length import m, cm, km, angstrom
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
@@ -14,16 +14,16 @@ from parameters import c_pi_efour
 
 material = material('Al')
 
-num_el = 1000
+num_el = 100
 E0 = UnitScalar(20000, units = 'eV') # eV
-Emin = UnitScalar(10000, units = 'eV') # eV
-tilt = 50 # degrees
+Emin = UnitScalar(9000, units = 'eV') # eV
+tilt = 50. # degrees
 pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 500
-nBinsE = 100
+nBinsW = 100
+nBinsE = 10
 
 Wc = UnitScalar(100, units = 'eV')
 
@@ -60,6 +60,10 @@ for ishell in range(len(material.get_ns())):
 count = 0
 BSE = []
 position = []
+theta_R = []
+phi_R = []
+theta_G = []
+phi_G = []
 
 for i in range(num_el):
     position.append(pos0)
@@ -69,6 +73,7 @@ for i in range(num_el):
 
     backscattered = False
     while ((not backscattered) and (e_i.energy>=Emin)):# not backscattered
+    #for i in range(2):
         #print ' electron at position', e_i.xyz
 
         # new instance of scatter
@@ -105,12 +110,18 @@ for i in range(num_el):
 
         # determine scattering angles
         scatter_i.compute_sAngles()
-        #print 'cos square half phi is:', scatter_i.c2_halfPhi
-        #print 'half theta is:', scatter_i.halfTheta
+        #print ' half phi is:', scatter_i.halfPhi
+        #print 'cos square half theta is:', scatter_i.c2_halfTheta
+        if (scatter_i.type == 'Rutherford'):
+            phi_R.append(2.*scatter_i.halfPhi)
+            theta_R.append(2.*acos(scatter_i.c2_halfTheta**0.5))
+        elif('Gryzinski' in scatter_i.type):
+            phi_G.append(2.*scatter_i.halfPhi)
+            theta_G.append(2.*acos(scatter_i.c2_halfTheta**0.5))
 
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
-
+        #print
 print 'total BSE electrons', count
 
 fileBSE = 'BSE_50tilt.out'
@@ -127,3 +138,35 @@ with open(file_pos, 'w') as f:
             f.write("%s\n" % item)
 
 print 'pos data was written to', file_pos
+
+
+
+file_phiR = 'phiR_50tilt.out'
+with open(file_phiR, 'w') as f:
+        for item in phi_R:
+            f.write("%s\n" % item)
+
+print 'phi angles for Rutherford was written to', file_phiR
+
+
+file_thetaR = 'thetaR_50tilt.out'
+with open(file_thetaR, 'w') as f:
+        for item in theta_R:
+            f.write("%s\n" % item)
+
+print 'theta angles for Rutherford was written to', file_thetaR
+
+
+file_phiG = 'phiG_50tilt.out'
+with open(file_phiG, 'w') as f:
+        for item in phi_G:
+            f.write("%s\n" % item)
+
+print 'phi angles for Gryzinski was written to', file_phiG
+
+file_thetaG = 'thetaG_50tilt.out'
+with open(file_thetaG, 'w') as f:
+        for item in theta_G:
+            f.write("%s\n" % item)
+
+print 'theta angles for Gryzinski was written to', file_thetaG
