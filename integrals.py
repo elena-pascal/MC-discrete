@@ -1,43 +1,32 @@
 # A number of numerical integration procedures
 # for generating the discrete cross section integral tables
 import numpy as np
-
-# define some Python errors for the m values
-class Error(Exception):
-    ''' Bare class for exceptions'''
-    pass
-
-class mTooSmall(Error):
-    ''' Raised when the iteration step m is negative'''
-    pass
-
-class mTooLarge(Error):
-    ''' Raised when the iteration step m becomes too large'''
-    pass
+from errors import mTooLarge, mTooSmall
 
 
 
-def extF_limits_moller(E, Ec):
+def extF_limits_moller(E, Ec, Ef):
     '''
 	returns the limits of intergration for the moller excitation function
 	in  :: E, Ec
 	out :: a, b
 	'''
     #a = np.array([Ec])
-    a = Ec
-    #b = np.array([0.5 * E])
-    b = 0.5 * E
-    return (a, b)
+    #a = Ec
 
-def extF_limits_gryz(E, Ei):
+    b = np.array([0.5 * E])
+    #b = 0.5 * (E-Ef)
+    return b
+
+def extF_limits_gryz(E, Ei, Ef):
     '''
 	return the limits of intergration of the gryzinski excitation function
 	in  :: E, Ei
 	out :: a, b
 	'''
-    a = Ei
-    b = (E + Ei) * 0.5
-    return (a, b)
+    #a = Ei
+    b = (E - Ef + Ei) * 0.5
+    return b
 
 
 def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
@@ -64,53 +53,62 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
     return intT
 
 
-def trapez_table(Wmin, Wmax, Emin, Emax, n_e, ext_func, nBinsW, nBinsE, Ebi=None):
+def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
     The way the binning is considered is that the value of the bin is taken to be upper
     bound of the bin
+
+    Einc = incident electron energy
+    Emin = minimum energy for which the electrons are still tracked
+    Elossmin = Ec for Moller and is Ei[shell] for Gryzinski
+    Ef = Fermi energy for this material
+    n_e = number of valence electrons for Moller scattering and number of electrons per
+            inner shell n_e[shell]
+    ext_func = excitation function
+    nBinsW = number of W bins
+    nBinsE = number of E bins
     '''
 
-    int_extFunc = np.empty([nBinsE, nBinsW]) # [0:nBinsE-1], [0:nBinsW-1]
+    int_extFunc = np.empty([n_e.size, nBinsE, nBinsW]) # [0:nshells-1], [0:nBinsE-1], [0:nBinsW-1]
 
-    # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
-    dW = (Wmax - Wmin)/nBinsW
+    tables = []
+    # e contains the array of energies for each shell i
+    e = np.linspace(Emin, Einc, nBinsE)
 
-    # the size of a step in incident energy E is determined by the number of chosen sections nBinsE
-    dE = (Emax - Emin)/nBinsE
+    for ishell in np.ndindex(n_e.size):
+        # simplify the excitation function to depend only on E and W
+        if (n_e.size == 1): # Moller
+            func = lambda E, W: ext_func(E, W, n_e[ishell])
+        else: # Gryzinski
+            func = lambda E, W: ext_func(E, W, n_e[ishell], Elossmin[ishell])
+
+        for indx_E in np.ndindex(e.size):
+            Ei = e[indx_E]
+
+            if (n_e.size == 1): # Moller
+                # the upper integral limit depends on Ei
+                Elossmax =  extF_limits_moller(Ei, Elossmin[ishell], Ef)
+                # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
+                dW = (Elossmax - Elossmin[ishell])/nBinsW
+            else: # Gryzinski
+                Elossmax = extF_limits_gryz(Ei, Elossmin[ishell], Ef)
+                dW = (Elossmax - Elossmin[ishell])/nBinsW
+
+            # initialise the integral for the recursive function
+            int_extFunc[ishell, indx_E, -1] = 0.
+
+            w = np.linspace(Elossmin, Elossmax, nBinsW)
+            # actual integral
+            for indx_W in np.ndindex(w.size):
+                Wi = w[indx_W]
+                Wip1 = Wi + dW
+                int_extFunc[ishell, indx_E, indx_W] = ( func(Ei, Wi) + func(Ei, Wip1) )*dW/2. \
+                                                    +  int_extFunc[ishell, indx_E, indx_W[0]-1]
 
 
-
-    # simplify the excitation function to depend only on E and W
-    if (Ebi):
-        # Gryz dCS
-        func = lambda E, W: ext_func( E, W, n_e, Ebi )
-    else:
-        # Moller dCS
-        func = lambda E, W: ext_func(E, W, n_e)
-
-    for indx_E in np.arange(nBinsE):
-        Ei = Emin + indx_E*dE
-
-        # initialise the integral for the recursive function
-        int_extFunc[indx_E, -1] = 0.
-
-        # actual integral
-        for indx_W in np.arange(nBinsW):
-            Wi = Wmin + indx_W*dW
-            Wip1 = Wi + dW
-            int_extFunc[indx_E, indx_W] = ( func(Ei, Wi) + func(Ei, Wip1) )*dW/2. \
-                                                    +  int_extFunc[indx_E, indx_W-1]
-
-        # last value and total area integral
-        #int_extFunc[indx_E, nBinsW-1] = ( func(Ei, Wmin) + func(Ei, Wmax) ) * dW/2. \
-                                        #        + dW * sum_innerW[nBinsW-1]
-
-    e = np.linspace(Emin, Emax, nBinsE)
-    w = np.linspace(Wmin, Wmax, nBinsW)
-
-    tables = ([e, w, int_extFunc])#[1:nBinsE, 1:nBinsW]])
+        tables.append([e, w, int_extFunc])#[1:nBinsE, 1:nBinsW]])
     return tables
 
 
@@ -125,11 +123,11 @@ def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):
     try:
         if (m < 0):
             raise mTooSmall
-            sys.exit()
     except mTooSmall:
         print ' Fatal error! in trapez_refine'
         print ' Illegal input value of m.'
         print ' Stopping.'
+        sys.exit()
 
     if (m == 0):
         # usual trapezoidal integration

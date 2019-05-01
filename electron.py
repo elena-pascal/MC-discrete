@@ -5,7 +5,7 @@ from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
 from rotation import newdir
 
 from math import sin
-
+import numpy as np
 
 def exp_params():
     params = {'file': 'parameters.py'}
@@ -55,6 +55,9 @@ class electron:
         s_hPhi = sin(halfPhi)
         c_hPhi = (1. - s_hPhi**2)**0.5
         newDirection = newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, self.dir)
+        # after many scattering events d will lose its normal property,
+        # so it's good to renormalise
+        newDirection = newDirection / np.linalg.norm(newDirection)
         self.dir = newDirection
         #print 'new direction', newDirection
         self.dir_hist.append(newDirection)

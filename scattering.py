@@ -2,7 +2,7 @@ from math import log, isnan
 import numpy as np
 import random
 import bisect
-
+import sys
 import operator
 from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
@@ -21,7 +21,7 @@ from scimath.units.dimensionless import dim
 from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, u_bohrr
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
-
+from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge
 
 @has_units
 def mfp_from_sigma(sigma, n):
@@ -91,8 +91,24 @@ class scatter:
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
+        pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
+        try:
+            if (pathl < 1.e-3):
+                raise lTooSmall
+            elif (pathl > 1.e4):
+                raise lTooLarge
 
-        self.pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
+        except lTooSmall:
+            print ' Fatal error! in compute_pathl in scattering class'
+            print ' Value of l less than 0.001 Angstroms.'
+            print ' Stopping.'
+            sys.exit()
+        except lTooLarge:
+            print ' Fatal error! in compute_pathl in scattering class'
+            print ' Value of l larger than 10000 Angstroms.'
+            print ' Stopping.'
+            sys.exit()
+        self.pathl = pathl
 
     def det_type(self):
         '''
@@ -141,7 +157,7 @@ class scatter:
             #wi = np.linear(a, b, 100)
             #ei = np.linear( self.free_param['Ec'], self.e.energy, 1000)
             # integral(E, Wi) is rr * total integral
-            # tables_moller are of the form [ee, ww, Int(E, W)]
+            # tables_moller are of the form [0, ee, ww, Int(E, W)]
             energies = self.tables_EW_M[0]
             #print 'energies', energies
             Ei_table = bisect.bisect_left(energies, self.e.energy)
@@ -152,8 +168,26 @@ class scatter:
             #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses, integral)
             #print 'Wi_table', Wi_table
-            self.E_loss = energylosses[Wi_table]
+            E_loss = energylosses[Wi_table]
             #print 'inside', energylosses[Wi_table]
+
+            try:
+                if (E_loss < 1.e-3):
+                    raise E_lossTooSmall
+                elif (E_loss > 1.e4):
+                    raise E_lossTooLarge
+
+            except E_lossTooSmall:
+                print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
+                print ' Value of energy loss less than 0.001 eV.'
+                print ' Stopping.'
+                sys.exit()
+            except E_lossTooLarge:
+                print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
+                print ' Value of energy loss larger than 10000 eV.'
+                print ' Stopping.'
+                sys.exit()
+            self.Eloss = E_loss
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
@@ -175,7 +209,27 @@ class scatter:
             #print 'integrals energy losses', int_enlosses
             #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses, integral)
-            self.E_loss = energylosses[Wi_table]
+            E_loss = energylosses[Wi_table]
+
+
+            try:
+                if (E_loss < 1.e-3):
+                    raise E_lossTooSmall
+                elif (E_loss > self.e.energy*0.5):
+                    raise E_lossTooLarge
+
+            except E_lossTooSmall:
+                print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
+                print ' Value of energy loss less than 0.001 eV.'
+                print ' Stopping.'
+                sys.exit()
+            except E_lossTooLarge:
+                print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
+                print ' Value of energy loss larger half the current energy.'
+                print ' Stopping.'
+                sys.exit()
+
+            self.Eloss = E_loss
 
         elif(self.type == 'Quinn'):
             self.E_loss = self.material.get_pl_e()
@@ -189,25 +243,22 @@ class scatter:
             alpha =  3.4e-3*(self.material.get_Z()**(0.67))/(float(self.e.energy)*1e-3)
             self.c2_halfTheta = 1. - alpha*random.random()/(1. + alpha-random.random())
             #print self.c2_halfTheta
-            self.halfPhi = 2.*pi*random.random()
+            self.halfPhi = pi*random.random()
 
         elif(self.type == 'Bethe'):
-            self.halfPhi = 2.*pi*random.random()
+            self.halfPhi = pi*random.random()
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
-            #if (self.E_loss == 0.):
-                # TODO: Moller integrals are weird
-            #    error = True
-                #print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
-            #else:
-                # TODO:  energy loss sometimes is larger than current energy
+            if (self.E_loss == 0.):
+                print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
+
             if (float(self.E_loss) < float(self.e.energy)):
                 self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
                 #print self.c2_halfTheta
-                self.halfPhi = 2.*pi*random.random() # radians
+                self.halfPhi = pi*random.random() # radians
             else:
                 self.c2_halfTheta = 0.0
-                self.halfPhi = 2.*pi*random.random() # radians
+                self.halfPhi = pi*random.random() # radians
 
         elif(self.type == 'Quinn'):
             self.halfPhi = 0. # we assume plasmon scattering does not affect travelling direction

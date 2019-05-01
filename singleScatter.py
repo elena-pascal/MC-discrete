@@ -22,7 +22,7 @@ pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 100
+nBinsW = 5
 nBinsE = 10
 
 Wc = UnitScalar(100, units = 'eV')
@@ -36,25 +36,25 @@ def u2n(value_with_units):
 
 
 print '---- calculating Moller tables'
-a_M, b_M = u2n(extF_limits_moller(E0, Wc))
+#a_M, b_M = u2n(extF_limits_moller(E0, Wc))
 
 # remove the function dependece on the constant and get rid of units
-funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, material.get_nval(), c_pi_efour))
+funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, np.array(material.get_nval()), c_pi_efour))
 
-tables_moller = trapez_table(a_M, b_M, np.array(Emin), np.array(E0), material.get_nval(), \
-            funcToint_M, nBinsW, nBinsE)
-#print tables_moller
+tables_moller = trapez_table( np.array(E0), np.array([Emin]), np.array([Wc]), material.get_fermi_e(), \
+            np.array([material.get_nval()]), funcToint_M, nBinsW, nBinsE)
+print tables_moller
 
 
 print '---- calculating Gryzinski tables'
 tables_gryz = []
-for ishell in range(len(material.get_ns())):
-    a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()[ishell]))
-    funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns()[ishell],\
-                                            c_pi_efour, material.get_Es()[ishell]))
+#for ishell in range(len(material.get_ns())):
+    #a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()[ishell]))
+funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns(),\
+                                            c_pi_efour, material.get_Es()))
 
-    tables_gryz.append(trapez_table(a_G, b_G, np.array(Emin), np.array(E0),\
-                material.get_ns()[ishell], funcToint_G, nBinsW, nBinsE,  material.get_Es()[ishell]) )
+tables_gryz=trapez_table(np.array(E0), np.array([Emin]), material.get_Es(), material.get_fermi_e(),\
+                material.get_ns(), funcToint_G, nBinsW, nBinsE )
 #print tables_gryz
 
 count = 0
