@@ -124,7 +124,7 @@ class scatter:
         this_prob_pos = bisect.bisect_left(probs, random.random())
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
         self.type = sorted_sigmas.keys()[this_prob_pos]
-        #self.type = 'Moller'
+        #self.type = 'Rutherford'
 
         if (self.type == 'Moller'):
             # Moller tables are [Ei, Wi, Int(Ei, Wi)]
@@ -157,25 +157,27 @@ class scatter:
             #wi = np.linear(a, b, 100)
             #ei = np.linear( self.free_param['Ec'], self.e.energy, 1000)
             # integral(E, Wi) is rr * total integral
-            # tables_moller are of the form [0, ee, ww, Int(E, W)]
-            energies = self.tables_EW_M[0]
+            # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
+            energies = self.tables_EW_M[1]
             #print 'energies', energies
-            Ei_table = bisect.bisect_left(energies, self.e.energy)
-            integral = random.random() * self.tables_EW_M[2][Ei_table, -1]
-            energylosses = self.tables_EW_M[1]
-            int_enlosses = self.tables_EW_M[2][Ei_table, :]
+            Eidx_table = bisect.bisect_left(energies, self.e.energy)
+            enlosses = self.tables_EW_M[2][0, Eidx_table, :]
+            int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
+            integral = random.random() * int_enlosses_table[-1]
             #print 'integrals energy losses', int_enlosses
             #print 'integral', integral
-            Wi_table = bisect.bisect_left(int_enlosses, integral)
+            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
             #print 'Wi_table', Wi_table
-            E_loss = energylosses[Wi_table]
+            E_loss = enlosses[Wi_table]
             #print 'inside', energylosses[Wi_table]
 
             try:
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > 1.e4):
+                elif (E_loss > self.e.energy*0.5):
                     raise E_lossTooLarge
+                else:
+                    self.E_loss = E_loss
 
             except E_lossTooSmall:
                 print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
@@ -184,10 +186,10 @@ class scatter:
                 sys.exit()
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
-                print ' Value of energy loss larger than 10000 eV.'
+                print ' Value of energy loss larger than half the electron energy.'
                 print ' Stopping.'
                 sys.exit()
-            self.Eloss = E_loss
+
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
@@ -195,28 +197,32 @@ class scatter:
             ishell = self.material.get_name_s().index(shell)
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
-            energies = self.tables_EW_G[ishell][0]
+            energies = self.tables_EW_G[1]
             #print 'energies',  energies
-            Ei_table = bisect.bisect_left(energies, self.e.energy)
+            Eidx_table = bisect.bisect_left(energies, float(self.e.energy))
             #print 'e losses', self.tables_EW_G[ishell][1]
-            #print Ei_table
-            #print
+            #print 'Eidx_table', Eidx_table, float(self.e.energy)
             #print self.tables_EW_G[ishell][2]
             #print self.tables_EW_G[ishell][2][Ei_table, -1]
-            integral = random.random() * self.tables_EW_G[ishell][2][Ei_table, -1]
-            energylosses = self.tables_EW_G[ishell][1]
-            int_enlosses = self.tables_EW_G[ishell][2][Ei_table, :]
-            #print 'integrals energy losses', int_enlosses
-            #print 'integral', integral
-            Wi_table = bisect.bisect_left(int_enlosses, integral)
-            E_loss = energylosses[Wi_table]
+            enlosses = self.tables_EW_G[2][ishell, Eidx_table, :]
+            #print 'enlosses', enlosses
 
+            int_enlosses_table = self.tables_EW_G[3][ishell,Eidx_table, :]
+            integral = random.random() * int_enlosses_table[-1]
+            #print 'integrals energy losses', self.tables_EW_G[3][ishell, :, :]
+            #print 'integral', integral
+            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
+            #print 'Wi_table', Wi_table, int_enlosses_table, integral
+            E_loss = enlosses[Wi_table]
+            #print 'E_loss', E_loss
 
             try:
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
                 elif (E_loss > self.e.energy*0.5):
                     raise E_lossTooLarge
+                else:
+                    self.E_loss = E_loss
 
             except E_lossTooSmall:
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
@@ -225,11 +231,11 @@ class scatter:
                 sys.exit()
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
-                print ' Value of energy loss larger half the current energy.'
+                print ' Value of energy loss larger than half the current energy.'
                 print ' Stopping.'
                 sys.exit()
 
-            self.Eloss = E_loss
+
 
         elif(self.type == 'Quinn'):
             self.E_loss = self.material.get_pl_e()

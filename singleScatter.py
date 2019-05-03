@@ -14,7 +14,7 @@ from parameters import c_pi_efour
 
 material = material('Al')
 
-num_el = 100
+num_el = 1000
 E0 = UnitScalar(20000, units = 'eV') # eV
 Emin = UnitScalar(9000, units = 'eV') # eV
 tilt = 50. # degrees
@@ -22,8 +22,8 @@ pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 5
-nBinsE = 10
+nBinsW = 15
+nBinsE = 9
 
 Wc = UnitScalar(100, units = 'eV')
 
@@ -39,22 +39,22 @@ print '---- calculating Moller tables'
 #a_M, b_M = u2n(extF_limits_moller(E0, Wc))
 
 # remove the function dependece on the constant and get rid of units
-funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, np.array(material.get_nval()), c_pi_efour))
+funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, n_e, c_pi_efour))
 
-tables_moller = trapez_table( np.array(E0), np.array([Emin]), np.array([Wc]), material.get_fermi_e(), \
+tables_moller = trapez_table( float(E0), float(Emin), np.array([Wc]), float(material.get_fermi_e()), \
             np.array([material.get_nval()]), funcToint_M, nBinsW, nBinsE)
-print tables_moller
+#print tables_moller
 
 
 print '---- calculating Gryzinski tables'
 tables_gryz = []
 #for ishell in range(len(material.get_ns())):
     #a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()[ishell]))
-funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, material.get_ns(),\
-                                            c_pi_efour, material.get_Es()))
+funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, n_e,\
+                                            c_pi_efour, Ebi))
 
-tables_gryz=trapez_table(np.array(E0), np.array([Emin]), material.get_Es(), material.get_fermi_e(),\
-                material.get_ns(), funcToint_G, nBinsW, nBinsE )
+tables_gryz=trapez_table(float(E0), float(Emin), np.array(material.get_Es()), float(material.get_fermi_e()),\
+                np.array(material.get_ns()), funcToint_G, nBinsW, nBinsE )
 #print tables_gryz
 
 count = 0
@@ -64,6 +64,8 @@ theta_R = []
 phi_R = []
 theta_G = []
 phi_G = []
+theta_M = []
+phi_M = []
 
 for i in range(num_el):
     position.append(pos0)
@@ -118,6 +120,9 @@ for i in range(num_el):
         elif('Gryzinski' in scatter_i.type):
             phi_G.append(2.*scatter_i.halfPhi)
             theta_G.append(2.*acos(scatter_i.c2_halfTheta**0.5))
+        elif(scatter_i.type == 'Moller'):
+            phi_M.append(2.*scatter_i.halfPhi)
+            theta_M.append(2.*acos(scatter_i.c2_halfTheta**0.5))
 
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
@@ -170,3 +175,17 @@ with open(file_thetaG, 'w') as f:
             f.write("%s\n" % item)
 
 print 'theta angles for Gryzinski was written to', file_thetaG
+
+file_phiM = 'phiM_50tilt.out'
+with open(file_phiM, 'w') as f:
+        for item in phi_M:
+            f.write("%s\n" % item)
+
+print 'phi angles for Moller was written to', file_phiM
+
+file_thetaM = 'thetaM_50tilt.out'
+with open(file_thetaM, 'w') as f:
+        for item in theta_M:
+            f.write("%s\n" % item)
+
+print 'theta angles for Moller was written to', file_thetaM

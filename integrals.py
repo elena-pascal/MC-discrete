@@ -14,8 +14,8 @@ def extF_limits_moller(E, Ec, Ef):
     #a = np.array([Ec])
     #a = Ec
 
-    b = np.array([0.5 * E])
-    #b = 0.5 * (E-Ef)
+    #b = np.array([0.5 * (E-Ef)])
+    b = 0.5 * (E-Ef)
     return b
 
 def extF_limits_gryz(E, Ei, Ef):
@@ -70,22 +70,29 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     nBinsW = number of W bins
     nBinsE = number of E bins
     '''
+    # e contains the array of incident energies in the tables
+    e_tables = np.linspace(Emin, Einc, nBinsE) # we will bisect left
 
-    int_extFunc = np.empty([n_e.size, nBinsE, nBinsW]) # [0:nshells-1], [0:nBinsE-1], [0:nBinsW-1]
+    # w contain the 3D matrix of w steps in the tables
+    w_tables = np.empty([n_e.size, nBinsE, nBinsW])
 
+    # the integral fuction has the same shape as w
+    int_extFunc = np.empty([n_e.size, nBinsE, nBinsW]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+
+    # tables is the final final multidimensional table
     tables = []
-    # e contains the array of energies for each shell i
-    e = np.linspace(Emin, Einc, nBinsE)
 
-    for ishell in np.ndindex(n_e.size):
+    for ishell in range(n_e.size):
         # simplify the excitation function to depend only on E and W
         if (n_e.size == 1): # Moller
             func = lambda E, W: ext_func(E, W, n_e[ishell])
         else: # Gryzinski
             func = lambda E, W: ext_func(E, W, n_e[ishell], Elossmin[ishell])
 
-        for indx_E in np.ndindex(e.size):
-            Ei = e[indx_E]
+        tables_shell = []
+
+        for indx_E in range(nBinsE):
+            Ei = e_tables[indx_E]
 
             if (n_e.size == 1): # Moller
                 # the upper integral limit depends on Ei
@@ -98,17 +105,17 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
             # initialise the integral for the recursive function
             int_extFunc[ishell, indx_E, -1] = 0.
-
-            w = np.linspace(Elossmin, Elossmax, nBinsW)
+            w_tables[ishell, indx_E, :] = np.linspace(Elossmin[ishell], Elossmax, nBinsW)
             # actual integral
-            for indx_W in np.ndindex(w.size):
-                Wi = w[indx_W]
+            for indx_W in range(nBinsW):
+                Wi = w_tables[ishell, indx_E, indx_W]
                 Wip1 = Wi + dW
                 int_extFunc[ishell, indx_E, indx_W] = ( func(Ei, Wi) + func(Ei, Wip1) )*dW/2. \
-                                                    +  int_extFunc[ishell, indx_E, indx_W[0]-1]
+                                                    +  int_extFunc[ishell, indx_E, indx_W-1]
+    #append the data
+    tables.extend([range(n_e.size), e_tables, w_tables, int_extFunc])
 
 
-        tables.append([e, w, int_extFunc])#[1:nBinsE, 1:nBinsW]])
     return tables
 
 
