@@ -70,6 +70,9 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     nBinsW = number of W bins
     nBinsE = number of E bins
     '''
+
+    ## TODO: pandas and pickles or hdf5 instead of multidimensional lists
+    
     # e contains the array of incident energies in the tables
     e_tables = np.linspace(Emin, Einc, nBinsE) # we will bisect left
 

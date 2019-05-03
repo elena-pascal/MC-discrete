@@ -22,10 +22,10 @@ pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 15
-nBinsE = 9
+nBinsW = 50
+nBinsE = 100
 
-Wc = UnitScalar(100, units = 'eV')
+Wc = UnitScalar(10, units = 'eV')
 
 def u2n(value_with_units):
     '''

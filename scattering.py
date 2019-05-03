@@ -93,19 +93,19 @@ class scatter:
         '''
         pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
         try:
-            if (pathl < 1.e-3):
+            if (pathl < 1.e-4):
                 raise lTooSmall
             elif (pathl > 1.e4):
                 raise lTooLarge
 
         except lTooSmall:
             print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l less than 0.001 Angstroms.'
+            print ' Value of l is', pathl  ,'less than 0.0001 Angstroms.'
             print ' Stopping.'
             sys.exit()
         except lTooLarge:
             print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l larger than 10000 Angstroms.'
+            print ' Value of l is', pathl, 'larger than 10000 Angstroms.'
             print ' Stopping.'
             sys.exit()
         self.pathl = pathl
@@ -121,11 +121,13 @@ class scatter:
         # probabilities to compare the random number against are cumulative sums of this dictionary
         probs = np.cumsum(sorted_sigmas.values())/np.array(self.sigma_total)
         # bisect the cumulative distribution array with a random number to find the position that random number fits in the array
+        #print 'probabilities', sorted_sigmas
         this_prob_pos = bisect.bisect_left(probs, random.random())
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
         self.type = sorted_sigmas.keys()[this_prob_pos]
         #self.type = 'Rutherford'
 
+        # Moller becomes more unprobable with increase value of Wc
         if (self.type == 'Moller'):
             # Moller tables are [Ei, Wi, Int(Ei, Wi)]
             self.tables_EW = self.tables_EW_M
@@ -139,12 +141,12 @@ class scatter:
         energy loss is calculated from tables for the Moller and Gryz type
         '''
         if (self.type == 'Rutherford'):
+            # Rutherford elastic scattering has no energy loss
             self.E_loss = UnitScalar(0., units='eV')
-            #print 'Rutherford elastic scattering has no energy loss'
 
         elif (self.type == 'Browning'):
+            # Browning elastic scattering has no energy loss
             self.E_loss = UnitScalar(0., units='eV')
-            #print 'Browning elastic scattering has no energy loss'
 
         elif(self.type == 'Bethe'):
             if (self.pathl == 0.):
@@ -154,22 +156,15 @@ class scatter:
                                     self.material.get_Es(), self.material.get_Zval(), self.material.get_Eval(), c_pi_efour))
 
         elif(self.type == 'Moller'):
-            #wi = np.linear(a, b, 100)
-            #ei = np.linear( self.free_param['Ec'], self.e.energy, 1000)
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             energies = self.tables_EW_M[1]
-            #print 'energies', energies
             Eidx_table = bisect.bisect_left(energies, self.e.energy)
             enlosses = self.tables_EW_M[2][0, Eidx_table, :]
             int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
-            #print 'integrals energy losses', int_enlosses
-            #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses_table, integral)
-            #print 'Wi_table', Wi_table
             E_loss = enlosses[Wi_table]
-            #print 'inside', energylosses[Wi_table]
 
             try:
                 if (E_loss < 1.e-3):
@@ -198,23 +193,12 @@ class scatter:
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
             energies = self.tables_EW_G[1]
-            #print 'energies',  energies
             Eidx_table = bisect.bisect_left(energies, float(self.e.energy))
-            #print 'e losses', self.tables_EW_G[ishell][1]
-            #print 'Eidx_table', Eidx_table, float(self.e.energy)
-            #print self.tables_EW_G[ishell][2]
-            #print self.tables_EW_G[ishell][2][Ei_table, -1]
             enlosses = self.tables_EW_G[2][ishell, Eidx_table, :]
-            #print 'enlosses', enlosses
-
             int_enlosses_table = self.tables_EW_G[3][ishell,Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
-            #print 'integrals energy losses', self.tables_EW_G[3][ishell, :, :]
-            #print 'integral', integral
             Wi_table = bisect.bisect_left(int_enlosses_table, integral)
-            #print 'Wi_table', Wi_table, int_enlosses_table, integral
             E_loss = enlosses[Wi_table]
-            #print 'E_loss', E_loss
 
             try:
                 if (E_loss < 1.e-3):
@@ -232,9 +216,12 @@ class scatter:
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
                 print ' Value of energy loss larger than half the current energy.'
+                print ' The current energy is:',  self.e.energy
+                print ' The corresponding energy in the tables is:',  energies[Eidx_table]
+                print ' The array of energy losses in the tables is:',  enlosses
+                print ' Try increasing the number of energy bins in the table'
                 print ' Stopping.'
                 sys.exit()
-
 
 
         elif(self.type == 'Quinn'):
