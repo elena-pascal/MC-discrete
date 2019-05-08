@@ -4,7 +4,7 @@ from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
 from rotation import newdir
 
-from math import sin
+from math import sin, cos
 import numpy as np
 
 def exp_params():
@@ -30,6 +30,8 @@ class electron:
         self.xyz = position
         self.dir = direction
 
+        self.y_local = np.array([0., 1., 0.]) # starting local coordinate system
+
         self.energy_hist = []
         self.xyz_hist = []
         self.dir_hist = []
@@ -50,15 +52,17 @@ class electron:
         self.xyz_hist.append(newPosition)
 
     def update_direction(self, c2_halfTheta, halfPhi):
-        s_hTheta = (1. - c2_halfTheta)**0.5
-        c_hTheta = c2_halfTheta**0.5
+        s_hTheta = (1. - c2_halfTheta)**0.5 # sin(halfTheta) should be positive see below
+        c_hTheta = c2_halfTheta**0.5 # halfTheta = [0, pi/2], so cos(halfTheta) is positive
         s_hPhi = sin(halfPhi)
-        c_hPhi = (1. - s_hPhi**2)**0.5
-        newDirection = newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, self.dir)
-        # after many scattering events d will lose its normal property,
+        c_hPhi = (1. - s_hPhi**2)**0.5 # hPhi = [0, pi] so cos(hPhi) is positive
+
+        newDirection_andy = newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, self.y_local, self.dir)
+        # after many scattering events d will lose its normalisation due to precision limitations,
         # so it's good to renormalise
-        newDirection = newDirection / np.linalg.norm(newDirection)
+        newDirection = newDirection_andy[0] / np.linalg.norm(newDirection_andy[0])
         self.dir = newDirection
+        self.y_local = newDirection_andy[1]
         #print 'new direction', newDirection
         self.dir_hist.append(newDirection)
 

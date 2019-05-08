@@ -20,21 +20,32 @@ def rotate_vector_R(q, v):
     rotated_v =  v + np.cross(2.*q.imag, (np.cross(q.imag, v) + q.real*v))
     return rotated_v
 
-def newdirquat(shphi, chphi, shpsi, chpsi, d):
-    # step 1. phi polar angle roation around y
-    # q_polar = (y=[0,1,0], phi)
-    q_polar = np.quaternion(chphi, 0., shphi,  0.)
-    #print 'q polar', q_polar
-    #print q_polar/np.sqrt(q_polar.w**2 + q_polar.x**2 + q_polar.y**2 + q_polar.z**2)
-    # step 2. psi azimutal angle roation around
-    # q2 = (d, psi)
-    #print 'after polar rotation', quaternion.rotate_vectors(q_polar, d)
+def newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, d):
+    # step 1. theta polar angle roation around y
+    # q_polar = (y, theta)
+    q_polar = np.quaternion(c_hTheta, 0., s_hTheta,  0.)
 
-    q_az = np.quaternion(chpsi, d[0]*shpsi, d[1]*shpsi, d[2]*shpsi)
-    #print 'after both rotations', quaternion.rotate_vectors(q_az, quaternion.rotate_vectors(q_polar, d))
-    #print 'q azimuthal', q_az
-    #print 'as spherical coords:', quaternion.as_spherical_coords(q_polar*q_az)
-    return rotate_vector_R((q_az*q_polar), d)
+    # step 2. phi azimutal angle roation around d
+    # q2 = (d, phi)
+    q_az = np.quaternion(c_hPhi, d[0]*s_hPhi, d[1]*s_hPhi, d[2]*s_hPhi)
+
+    return quaternion.rotate_vectors((q_az*q_polar), d)
+
+
+def newdir_n(s_hTheta, c_hTheta, s_hPhi, c_hPhi, x_local, d):
+    # step 0. find the axis of polar rotation
+    q_phi = np.quaternion(c_hPhi, d[0]*s_hPhi, d[1]*s_hPhi, d[2]*s_hPhi)
+    x_rotated = rotate_vector_R(q_phi, x_local)
+    n = np.cross(d, x_rotated)
+    n = n/ np.linalg.norm(n)
+
+    q_n = np.quaternion(c_hTheta, n[0]*s_hTheta, n[1]*s_hTheta, n[2]*s_hTheta)
+
+    new_dir = rotate_vector_R(q_n, d)
+
+    x_local = rotate_vector_R(q_n, x_local)
+
+    return (new_dir, x_local)
     #return quaternion.rotate_vectors((q_az*q_polar), d)
 
 # with direction cosines
@@ -81,38 +92,41 @@ def newdircos_Joy(sphi, cphi, spsi, cpsi, cxyz):
     cxyzp_norm = cxyzp * dd
     return cxyzp_norm
 
-d = np.array([2., 0., 2.])
-d = d/np.sqrt(d.dot(d))
+tilt = 20. # degrees
+d = np.array([np.sin(np.radians(tilt)), 0.,  np.cos(np.radians(tilt))])
+
 #cxyz = np.array([1./np.sqrt(3.), 1./np.sqrt(3.), 1./np.sqrt(3.)])
 cxyz = d
 #print d
-phi = 45. #degrees
+theta = 30. #degrees
+
+stheta = np.sin(np.radians(theta))
+ctheta = np.cos(np.radians(theta))
+shtheta = np.sin(np.radians(theta)/2.)
+chtheta = np.cos(np.radians(theta)/2.)
+
+phi = 10. #degrees
 
 sphi = np.sin(np.radians(phi))
 cphi = np.cos(np.radians(phi))
 shphi = np.sin(np.radians(phi)/2.)
 chphi = np.cos(np.radians(phi)/2.)
 
-psi = 20. #degrees
-
-spsi = np.sin(np.radians(psi))
-cpsi = np.cos(np.radians(psi))
-shpsi = np.sin(np.radians(psi)/2.)
-chpsi = np.cos(np.radians(psi)/2.)
-
 #qrot = quaternion.from_spherical_coords(np.radians(phi), np.radians(psi))
 #print 'this is just the quaternion from z', qrot
 
 start1_time = time.time()
-print 'new direction using quaternions:',newdirquat(shphi, chphi, shpsi, chpsi, d)
+print 'new direction using quaternions:',newdir(shtheta, chtheta, shphi, chphi, d)
 print("--- %s seconds ---" % (time.time() - start1_time))
 print
 
 start2_time = time.time()
-print 'new direction using dir cosines Joy:', newdircos_Joy(sphi, cphi, spsi, cpsi, cxyz)
+print 'new direction using quaternions but the right way:', newdir_n(shtheta, chtheta, shphi, chphi, np.array([1., 0., 0.]), d)[0]
 print("--- %s seconds ---" % (time.time() - start2_time))
 print
+print 'new x local', newdir_n(shtheta, chtheta, shphi, chphi, np.array([1., 0., 0.]), d)[1]
+print
 start3_time = time.time()
-print 'new direction using dir cosines:', newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz)
+print 'new direction using dir cosines:', newdircos_oldMC(stheta, ctheta, sphi, cphi, cxyz)
 print("--- %s seconds ---" % (time.time() - start3_time))
 print

@@ -152,7 +152,7 @@ def scattering_params(species):
     if species=='Al':
         material = {'species': 'Al'}
         # number of valence electrons
-        material['n_val'] = 3
+        material['n_val'] = UnitArray((3), units="dim")
 
         material['E_val'] = UnitScalar(72.55, units="eV")
 

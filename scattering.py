@@ -124,8 +124,8 @@ class scatter:
         #print 'probabilities', sorted_sigmas
         this_prob_pos = bisect.bisect_left(probs, random.random())
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
-        self.type = sorted_sigmas.keys()[this_prob_pos]
-        #self.type = 'Rutherford'
+        #self.type = sorted_sigmas.keys()[this_prob_pos]
+        self.type = 'Rutherford'
 
         # Moller becomes more unprobable with increase value of Wc
         if (self.type == 'Moller'):
@@ -203,7 +203,7 @@ class scatter:
             try:
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > self.e.energy*0.5):
+                elif (E_loss > (self.e.energy+max(self.material.get_Es()))*0.5):
                     raise E_lossTooLarge
                 else:
                     self.E_loss = E_loss
@@ -233,25 +233,20 @@ class scatter:
 
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):
-            alpha =  3.4e-3*(self.material.get_Z()**(0.67))/(float(self.e.energy)*1e-3)
-            self.c2_halfTheta = 1. - alpha*random.random()/(1. + alpha-random.random())
-            #print self.c2_halfTheta
+            alpha =  3.4*(self.material.get_Z()**(2./3.))/(float(self.e.energy))
+            r = random.random()
+            self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
             self.halfPhi = pi*random.random()
-
-        elif(self.type == 'Bethe'):
-            self.halfPhi = pi*random.random()
+            #self.c2_halfTheta = 0.
+            #self.halfPhi = pi*random.random()
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
                 print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
 
-            if (float(self.E_loss) < float(self.e.energy)):
-                self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
-                #print self.c2_halfTheta
-                self.halfPhi = pi*random.random() # radians
-            else:
-                self.c2_halfTheta = 0.0
-                self.halfPhi = pi*random.random() # radians
+            self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
+            self.halfPhi = pi*random.random() # radians
+
 
         elif(self.type == 'Quinn'):
             self.halfPhi = 0. # we assume plasmon scattering does not affect travelling direction

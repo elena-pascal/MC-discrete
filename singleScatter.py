@@ -14,16 +14,16 @@ from parameters import c_pi_efour
 
 material = material('Al')
 
-num_el = 1000
+num_el = 10
 E0 = UnitScalar(20000, units = 'eV') # eV
 Emin = UnitScalar(9000, units = 'eV') # eV
-tilt = 50. # degrees
+tilt = 10. # degrees
 pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 50
-nBinsE = 100
+nBinsW = 30
+nBinsE = 20
 
 Wc = UnitScalar(10, units = 'eV')
 
@@ -57,7 +57,7 @@ tables_gryz=trapez_table(float(E0), float(Emin), np.array(material.get_Es()), fl
                 np.array(material.get_ns()), funcToint_G, nBinsW, nBinsE )
 #print tables_gryz
 
-count = 0
+BSEcount = 0
 BSE = []
 position = []
 theta_R = []
@@ -74,7 +74,10 @@ for i in range(num_el):
     e_i = electron(E0, pos0, dir0)
 
     backscattered = False
-    while ((not backscattered) and (e_i.energy>=Emin)):# not backscattered
+    absorbed = False
+    scatteredTooLong = False
+    num_scatt = 0
+    while ((not backscattered) and (not absorbed) and (not scatteredTooLong)):# not backscattered
     #for i in range(2):
         #print ' electron at position', e_i.xyz
 
@@ -94,7 +97,7 @@ for i in range(num_el):
             backscattered = True
             #print 'backscattered', e_i.xyz[2]
             BSE.append(float(e_i.energy))
-            count += 1
+            BSEcount += 1
 
 
         # determine scattering type
@@ -109,6 +112,8 @@ for i in range(num_el):
         # update electron energy
         e_i.update_energy(scatter_i.E_loss)
         #print 'new energy is:', e_i.energy
+        if (e_i.energy <= Emin):
+            absorbed = True
 
         # determine scattering angles
         scatter_i.compute_sAngles()
@@ -126,8 +131,12 @@ for i in range(num_el):
 
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
-        #print
-print 'total BSE electrons', count
+
+        num_scatt += 1
+        if (num_scatt > 100):
+            scatteredTooLong = True
+
+print 'total BSE electrons', BSEcount
 
 fileBSE = 'BSE_50tilt.out'
 with open(fileBSE, 'w') as f:
