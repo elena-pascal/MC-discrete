@@ -40,3 +40,8 @@ class q_polNotNormal(Error):
 class q_azNotNormal(Error):
     ''' Raised when the polar quaternion is not normalised'''
     pass
+
+
+class wrongUpdateOrder(Error):
+    ''' Raised when the energy loss is larger than the current energy when calculating scattering angles'''
+    pass

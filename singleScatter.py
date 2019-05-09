@@ -14,7 +14,7 @@ from parameters import c_pi_efour
 
 material = material('Al')
 
-num_el = 10
+num_el = 1000
 E0 = UnitScalar(20000, units = 'eV') # eV
 Emin = UnitScalar(9000, units = 'eV') # eV
 tilt = 10. # degrees
@@ -22,8 +22,8 @@ pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 30
-nBinsE = 20
+nBinsW = 300
+nBinsE = 200
 
 Wc = UnitScalar(10, units = 'eV')
 
@@ -58,7 +58,7 @@ tables_gryz=trapez_table(float(E0), float(Emin), np.array(material.get_Es()), fl
 #print tables_gryz
 
 BSEcount = 0
-BSE = []
+BSEs = []
 position = []
 theta_R = []
 phi_R = []
@@ -77,70 +77,86 @@ for i in range(num_el):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
-    while ((not backscattered) and (not absorbed) and (not scatteredTooLong)):# not backscattered
-    #for i in range(2):
-        #print ' electron at position', e_i.xyz
+    while ((not backscattered) and (not absorbed) and (not scatteredTooLong)):
 
         # new instance of scatter
         scatter_i = scatter(e_i, material, Wc, tables_moller, tables_gryz)
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
-        #print 'Path length is:', scatter_i.pathl
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
-        #print 'new position is', e_i.xyz
+
         position.append(e_i.xyz)
 
+        # check if backscattered
         if (e_i.xyz[2]<= 0.):
             backscattered = True
-            #print 'backscattered', e_i.xyz[2]
-            BSE.append(float(e_i.energy))
-            BSEcount += 1
 
+            BSEs.append(float(e_i.energy))
+            BSEcount += 1
 
         # determine scattering type
         scatter_i.det_type()
-        #print 'Scatter type is:', scatter_i.type
 
-        #print 'electron energy is:', e_i.energy
-        # determine energy loss
-        scatter_i.compute_Eloss()
-        #print 'Energy loss is:', scatter_i.E_loss
-
-        # update electron energy
-        e_i.update_energy(scatter_i.E_loss)
-        #print 'new energy is:', e_i.energy
-        if (e_i.energy <= Emin):
-            absorbed = True
-
-        # determine scattering angles
-        scatter_i.compute_sAngles()
-        #print ' half phi is:', scatter_i.halfPhi
-        #print 'cos square half theta is:', scatter_i.c2_halfTheta
         if (scatter_i.type == 'Rutherford'):
+            # determine scattering angles
+            scatter_i.compute_sAngles()
+
             phi_R.append(2.*scatter_i.halfPhi)
             theta_R.append(2.*acos(scatter_i.c2_halfTheta**0.5))
+
+            # update electron new traveling direction
+            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
+
         elif('Gryzinski' in scatter_i.type):
+            # determine energy loss
+            scatter_i.compute_Eloss()
+
+            if (e_i.energy <= Emin):
+                absorbed = True
+
+            # determine scattering angles
+            scatter_i.compute_sAngles()
+
             phi_G.append(2.*scatter_i.halfPhi)
             theta_G.append(2.*acos(scatter_i.c2_halfTheta**0.5))
+
+            # update electron energy
+            e_i.update_energy(scatter_i.E_loss)
+
+            # update electron new traveling direction
+            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
+
         elif(scatter_i.type == 'Moller'):
+            # determine energy loss
+            scatter_i.compute_Eloss()
+
+            # determine scattering angles
+            scatter_i.compute_sAngles()
+
             phi_M.append(2.*scatter_i.halfPhi)
             theta_M.append(2.*acos(scatter_i.c2_halfTheta**0.5))
 
-        # update electron new traveling direction
-        e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
+            # update electron energy
+            e_i.update_energy(scatter_i.E_loss)
+
+            if (e_i.energy <= Emin):
+                absorbed = True
+
+            # update electron new traveling direction
+            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
         num_scatt += 1
-        if (num_scatt > 100):
+        if (num_scatt > 1000):
             scatteredTooLong = True
 
 print 'total BSE electrons', BSEcount
 
 fileBSE = 'BSE_50tilt.out'
 with open(fileBSE, 'w') as f:
-    for item in BSE:
+    for item in BSEs:
         f.write("%s\n" % item)
 
 print 'BSE data was written to', fileBSE

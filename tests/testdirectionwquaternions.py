@@ -32,21 +32,19 @@ def newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, d):
     return quaternion.rotate_vectors((q_az*q_polar), d)
 
 
-def newdir_n(s_hTheta, c_hTheta, s_hPhi, c_hPhi, x_local, d):
-    # step 0. find the axis of polar rotation
-    q_phi = np.quaternion(c_hPhi, d[0]*s_hPhi, d[1]*s_hPhi, d[2]*s_hPhi)
-    x_rotated = rotate_vector_R(q_phi, x_local)
-    n = np.cross(d, x_rotated)
-    n = n/ np.linalg.norm(n)
+def newdir_n(s_hTheta, c_hTheta, s_hPhi, c_hPhi, y_local, d):
+    # step 1. theta polar angle roation around y
+    # q_polar = (y, theta)
+    q_polar = np.quaternion(c_hTheta, y_local[0]*s_hTheta, y_local[1]*s_hTheta,  y_local[2]*s_hTheta)
 
-    q_n = np.quaternion(c_hTheta, n[0]*s_hTheta, n[1]*s_hTheta, n[2]*s_hTheta)
+    # step 2. phi azimutal angle roation around d
+    # q2 = (d, phi)
+    q_az = np.quaternion(c_hPhi, d[0]*s_hPhi, d[1]*s_hPhi, d[2]*s_hPhi)
 
-    new_dir = rotate_vector_R(q_n, d)
+    # step 3. total rotation quaternion
+    q_total = q_az*q_polar
 
-    x_local = rotate_vector_R(q_n, x_local)
-
-    return (new_dir, x_local)
-    #return quaternion.rotate_vectors((q_az*q_polar), d)
+    return quaternion.rotate_vectors(q_total, (d, y_local))
 
 # with direction cosines
 def newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz):
@@ -92,7 +90,7 @@ def newdircos_Joy(sphi, cphi, spsi, cpsi, cxyz):
     cxyzp_norm = cxyzp * dd
     return cxyzp_norm
 
-tilt = 20. # degrees
+tilt = 0. # degrees
 d = np.array([np.sin(np.radians(tilt)), 0.,  np.cos(np.radians(tilt))])
 
 #cxyz = np.array([1./np.sqrt(3.), 1./np.sqrt(3.), 1./np.sqrt(3.)])
@@ -105,7 +103,7 @@ ctheta = np.cos(np.radians(theta))
 shtheta = np.sin(np.radians(theta)/2.)
 chtheta = np.cos(np.radians(theta)/2.)
 
-phi = 10. #degrees
+phi = 20. #degrees
 
 sphi = np.sin(np.radians(phi))
 cphi = np.cos(np.radians(phi))
@@ -121,11 +119,10 @@ print("--- %s seconds ---" % (time.time() - start1_time))
 print
 
 start2_time = time.time()
-print 'new direction using quaternions but the right way:', newdir_n(shtheta, chtheta, shphi, chphi, np.array([1., 0., 0.]), d)[0]
+print 'new direction using quaternions but the right way:', newdir_n(shtheta, chtheta, shphi, chphi, np.array([0., 1., 0.]), d)[0]
 print("--- %s seconds ---" % (time.time() - start2_time))
 print
-print 'new x local', newdir_n(shtheta, chtheta, shphi, chphi, np.array([1., 0., 0.]), d)[1]
-print
+
 start3_time = time.time()
 print 'new direction using dir cosines:', newdircos_oldMC(stheta, ctheta, sphi, cphi, cxyz)
 print("--- %s seconds ---" % (time.time() - start3_time))

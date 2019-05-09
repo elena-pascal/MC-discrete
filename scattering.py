@@ -21,7 +21,7 @@ from scimath.units.dimensionless import dim
 from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, u_bohrr
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
-from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge
+from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder
 
 @has_units
 def mfp_from_sigma(sigma, n):
@@ -93,7 +93,7 @@ class scatter:
         '''
         pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
         try:
-            if (pathl < 1.e-4):
+            if (pathl < 1.e-5):
                 raise lTooSmall
             elif (pathl > 1.e4):
                 raise lTooLarge
@@ -124,8 +124,8 @@ class scatter:
         #print 'probabilities', sorted_sigmas
         this_prob_pos = bisect.bisect_left(probs, random.random())
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
-        #self.type = sorted_sigmas.keys()[this_prob_pos]
-        self.type = 'Rutherford'
+        self.type = sorted_sigmas.keys()[this_prob_pos]
+        #self.type = 'Rutherford'
 
         # Moller becomes more unprobable with increase value of Wc
         if (self.type == 'Moller'):
@@ -143,10 +143,12 @@ class scatter:
         if (self.type == 'Rutherford'):
             # Rutherford elastic scattering has no energy loss
             self.E_loss = UnitScalar(0., units='eV')
+            print 'No energy loss for Rutherford scattering'
 
         elif (self.type == 'Browning'):
             # Browning elastic scattering has no energy loss
             self.E_loss = UnitScalar(0., units='eV')
+            print 'No energy loss for Browning scattering'
 
         elif(self.type == 'Bethe'):
             if (self.pathl == 0.):
@@ -169,7 +171,7 @@ class scatter:
             try:
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > self.e.energy*0.5):
+                elif (E_loss > (0.5 * self.e.energy)):
                     raise E_lossTooLarge
                 else:
                     self.E_loss = E_loss
@@ -203,7 +205,7 @@ class scatter:
             try:
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > (self.e.energy+max(self.material.get_Es()))*0.5):
+                elif (E_loss > ((self.e.energy + max(self.material.get_Es()))*0.5)):
                     raise E_lossTooLarge
                 else:
                     self.E_loss = E_loss
@@ -216,6 +218,7 @@ class scatter:
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
                 print ' Value of energy loss larger than half the current energy.'
+                print ' The current energy is:',  self.E_loss
                 print ' The current energy is:',  self.e.energy
                 print ' The corresponding energy in the tables is:',  energies[Eidx_table]
                 print ' The array of energy losses in the tables is:',  enlosses
@@ -244,13 +247,21 @@ class scatter:
             if (self.E_loss == 0.):
                 print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
 
+            try:
+                if (self.E_loss > self.e.energy):
+                    raise wrongUpdateOrder
+            except wrongUpdateOrder:
+                print ' You might be updating energy before calculating the scattering angle'
+                print ' Stopping.'
+                sys.exit()
+
             self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.e.energy) ) )**0.5 + 1.)
             self.halfPhi = pi*random.random() # radians
 
 
         elif(self.type == 'Quinn'):
-            self.halfPhi = 0. # we assume plasmon scattering does not affect travelling direction
-            self.c2_halfTheta = 0.
-
+            # we assume plasmon scattering does not affect travelling direction
+            # TODO: small angles for Quinn
+            self.halfPhi = 0.
         else:
             print 'I did not understand the scattering type in scatter.calculate_sAngles'

@@ -46,7 +46,7 @@ def newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, y_local, d):
     # q2 = (d, phi)
     q_az = np.quaternion(c_hPhi, d[0]*s_hPhi, d[1]*s_hPhi, d[2]*s_hPhi)
 
-    # step 3. total rotation quaternions
+    # step 3. total rotation quaternion
     q_total = q_az*q_polar
 
-    return (quaternion.rotate_vectors(q_total, d), quaternion.rotate_vectors(q_total, y_local))
+    return quaternion.rotate_vectors(q_total, (d, y_local))
