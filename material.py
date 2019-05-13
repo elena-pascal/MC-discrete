@@ -97,54 +97,54 @@ class material:
         self.species = species
         self.params = scattering_params(species)
 
-    def get_nval(self):
+    def nval(self):
         ''' number of valence electrons '''
         return self.params['n_val']
 
-    def get_Eval(self):
+    def Eval(self):
         ''' energy of valence shell '''
         return self.params['E_val']
 
-    def get_name_s(self):
+    def name_s(self):
         ''' array of names of core shells '''
         return self.params['name_s']
 
-    def get_Es(self):
+    def Es(self):
         ''' array of energies of core shells as UnitArray'''
         return self.params['Es']
 
-    def get_ns(self):
+    def ns(self):
         ''' array with number of electrons in core shells'''
         return self.params['ns']
 
-    def get_Z(self):
+    def Z(self):
         ''' atomic  number'''
         return self.params['Z']
 
-    def get_density(self):
+    def density(self):
         ''' material density as UnitScalar'''
         return self.params['density']
 
-    def get_atwt(self):
+    def atwt(self):
         ''' atomic weight as UnitScalar'''
         return self.params['atwt']
 
-    def get_Bethe_k(self):
+    def Bethe_k(self):
         ''' modified Bethe k value from Joy and Luo, Scanning 1989'''
         return self.params['k']
 
     # some very useful parameters
-    def get_atnd(self):
+    def atnd(self):
         ''' atomic number density'''
         return at_num_dens(self.params['density'], self.params['atwt'])
 
-    def get_pl_e(self):
+    def pl_e(self):
         ''' plasmon energy'''
-        return plasmon_energy(self.get_atnd(), self.params['n_val'], u_hbar, u_me, u_e, u_eps0)
+        return plasmon_energy(self.atnd(), self.params['n_val'], u_hbar, u_me, u_e, u_eps0)
 
-    def get_fermi_e(self):
+    def fermi_e(self):
         ''' fermi energy'''
-        return fermi_energy(self.get_atnd(), self.params['n_val'], u_hbar, u_me)
+        return fermi_energy(self.atnd(), self.params['n_val'], u_hbar, u_me)
 
 
 

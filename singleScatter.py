@@ -1,5 +1,6 @@
 import numpy as np
 from math import acos
+
 from scimath.units.energy import J, eV, KeV
 from scimath.units.length import m, cm, km, angstrom
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
@@ -15,9 +16,9 @@ from parameters import c_pi_efour
 material = material('Al')
 
 num_el = 1000
-E0 = UnitScalar(20000, units = 'eV') # eV
-Emin = UnitScalar(9000, units = 'eV') # eV
-tilt = 10. # degrees
+E0 = UnitScalar(3000, units = 'eV') # eV
+Emin = UnitScalar(100, units = 'eV') # eV
+tilt = 45. # degrees
 pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
@@ -36,26 +37,26 @@ def u2n(value_with_units):
 
 
 print '---- calculating Moller tables'
-#a_M, b_M = u2n(extF_limits_moller(E0, Wc))
-
 # remove the function dependece on the constant and get rid of units
 funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, n_e, c_pi_efour))
 
 tables_moller = trapez_table( float(E0), float(Emin), np.array([Wc]), float(material.get_fermi_e()), \
             np.array([material.get_nval()]), funcToint_M, nBinsW, nBinsE)
 #print tables_moller
+print
 
 
 print '---- calculating Gryzinski tables'
 tables_gryz = []
-#for ishell in range(len(material.get_ns())):
-    #a_G, b_G = u2n(extF_limits_gryz(E0, material.get_Es()[ishell]))
+
 funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, n_e,\
                                             c_pi_efour, Ebi))
 
 tables_gryz=trapez_table(float(E0), float(Emin), np.array(material.get_Es()), float(material.get_fermi_e()),\
                 np.array(material.get_ns()), funcToint_G, nBinsW, nBinsE )
 #print tables_gryz
+print
+
 
 BSEcount = 0
 BSEs = []
@@ -147,6 +148,17 @@ for i in range(num_el):
 
             # update electron new traveling direction
             e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
+
+        elif (scatter_i.type == 'Quinn'):
+            # determine energy loss
+            scatter_i.compute_Eloss()
+
+            # update electron energy
+            e_i.update_energy(scatter_i.E_loss)
+
+            if (e_i.energy <= Emin):
+                absorbed = True
+
 
         num_scatt += 1
         if (num_scatt > 1000):
