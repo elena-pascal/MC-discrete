@@ -1,0 +1,35 @@
+Running on http://127.0.0.1:8050/
+Debugger PIN: 133-250-248
+ * Serving Flask app "plotDash" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+Running on http://127.0.0.1:8050/
+Debugger PIN: 726-466-263
+Running on http://127.0.0.1:8050/
+Debugger PIN: 632-882-367
+Error on request:
+Traceback (most recent call last):
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 303, in run_wsgi
+    execute(self.server.app)
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 294, in execute
+    write(data)
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 257, in write
+    self.send_header(key, value)
+  File "/usr/lib/python2.7/BaseHTTPServer.py", line 412, in send_header
+    self.wfile.write("%s: %s\r\n" % (keyword, value))
+IOError: [Errno 32] Broken pipe
+Running on http://127.0.0.1:8050/
+Debugger PIN: 639-862-008
+Error on request:
+Traceback (most recent call last):
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 303, in run_wsgi
+    execute(self.server.app)
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 294, in execute
+    write(data)
+  File "/home/elena/.local/lib/python2.7/site-packages/werkzeug/serving.py", line 257, in write
+    self.send_header(key, value)
+  File "/usr/lib/python2.7/BaseHTTPServer.py", line 412, in send_header
+    self.wfile.write("%s: %s\r\n" % (keyword, value))
+IOError: [Errno 32] Broken pipe

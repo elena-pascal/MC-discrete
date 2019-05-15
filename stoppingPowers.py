@@ -1,3 +1,14 @@
+import numpy as np
+
+from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scimath.units.energy import J, eV, KeV
+from scimath.units.electromagnetism import coulomb, farad
+from scimath.units.length import m, cm, km, angstrom
+from scimath.units.time import s
+from scimath.units.mass import g, kg
+from scimath.units.density import g_per_cm3, kg_per_m3
+from scimath.units.substance import mol
+from scimath.units.dimensionless import dim
 
 ###################################################################
 #                       Total stopping power                      #
@@ -184,7 +195,7 @@ def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour):
                occupancy of valence shell
 
         Ei     : array : units = eV
-               binding energy of valence electrons           
+               binding energy of valence electrons
 
         c_pi_efour: scalar: units = cm**2 * eV**2
 

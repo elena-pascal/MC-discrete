@@ -1,0 +1,130 @@
+
+# moller type
+---- calculating Moller tables
+--- 7.78732895851 seconds ---
+
+---- calculating Gryzinski tables
+--- 25.2401819229 seconds ---
+
+---- compute pathl 1000 times
+--- 0.105306863785 seconds ---
+
+---- update position 1000 times
+--- 0.00904393196106 seconds ---
+
+---- determine type 1000 times
+--- 0.340210914612 seconds ---
+
+---- compute angles 1000 times
+--- 0.0191969871521 seconds ---
+
+---- update directions 1000 times
+--- 0.236181020737 seconds ---
+
+---- compute energy losses 1000 times
+--- 0.225674152374 seconds ---
+
+---- update energy 1000 times
+--- 0.0246767997742 seconds ---
+
+
+
+
+---- calculating Moller tables
+--- 8.03947710991 seconds ---
+
+---- calculating Gryzinski tables
+--- 28.9936800003 seconds ---
+
+---- compute pathl 1000 times
+--- 0.0816740989685 seconds ---
+
+---- update position 1000 times
+--- 0.00497484207153 seconds ---
+
+---- determine type 1000 times
+--- 0.28050494194 seconds ---
+
+---- compute angles 1000 times
+--- 0.0191030502319 seconds ---
+
+---- update directions 1000 times
+--- 0.162783145905 seconds ---
+
+---- compute energy losses 1000 times
+--- 0.211283922195 seconds ---
+
+---- update energy 1000 times
+--- 0.0194330215454 seconds ---
+
+
+---- calculating Moller tables
+--- 7.19662094116 seconds ---
+
+---- calculating Gryzinski tables
+--- 24.6145398617 seconds ---
+
+---- compute pathl 1000 times
+--- 0.074588060379 seconds ---
+
+---- update position 1000 times
+--- 0.00496196746826 seconds ---
+
+---- determine type 1000 times
+--- 0.229562997818 seconds ---
+
+---- compute angles 1000 times
+--- 0.0188031196594 seconds ---
+
+---- update directions 1000 times
+--- 0.137126922607 seconds ---
+
+---- compute energy losses 1000 times
+--- 0.059042930603 seconds ---
+
+---- update energy 1000 times
+--- 0.017688035965 seconds ---
+
+
+# gryzinski 2s type
+---- calculating Moller tables
+--- 8.26936507225 seconds ---
+
+---- calculating Gryzinski tables
+--- 27.4597849846 seconds ---
+
+---- compute pathl 1000 times
+--- 0.114043951035 seconds ---
+
+---- update position 1000 times
+--- 0.00958204269409 seconds ---
+
+---- determine type 1000 times
+--- 0.31290102005 seconds ---
+
+---- compute angles 1000 times
+--- 0.019119977951 seconds ---
+
+---- update directions 1000 times
+--- 0.164564847946 seconds ---
+
+---- compute energy losses 1000 times
+--- 0.070041179657 seconds ---
+
+---- update energy 1000 times
+--- 0.019522190094 seconds ---
+
+
+
+---- make an ordered dictionary 1000 times
+--- 0.192026138306 seconds ---
+
+---- compute cumsum 1000 times
+--- 0.0248899459839 seconds ---
+
+---- bisect left 1000 times
+--- 0.000909090042114 seconds ---
+
+----get keys 1000 times
+--- 0.00156497955322 seconds ---
+

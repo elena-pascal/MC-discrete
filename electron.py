@@ -47,7 +47,7 @@ class electron:
     def update_xyz(self, pathLength):
         newPosition = self.xyz + float(pathLength) * self.dir
         self.xyz = newPosition
-        #self.xyz_hist.append(newPosition)
+        self.xyz_hist.append(newPosition)
 
     def update_direction(self, c2_halfTheta, halfPhi):
         s_hTheta = (1. - c2_halfTheta)**0.5 # sin(halfTheta) is positive on [0, pi)

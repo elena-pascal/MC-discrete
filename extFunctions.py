@@ -1,6 +1,6 @@
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 import numpy as np
-
+from errors import E_lossTooLarge
 ###################################################################
 #                       Excitation function                       #
 ###################################################################
@@ -27,12 +27,20 @@ def moller_dCS(E, W, nfree, c_pi_efour):
         dCS_M  : array : units = cm**2
     """
     eps = W*1./E
-    if (((1.-eps)**2) > 0.): # 1-eps can be very small
+
+    try:
         dCS_M =  nfree*c_pi_efour *( 1./(eps**2) +
                  ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
-    else:
-        print '1-eps very small in Moller discrete CS'
-        dCS_M = 0.
+
+        if ((1.-eps) < 0.):
+            raise E_lossTooLarge
+
+    except E_lossTooLarge:
+        print ' The energy loss is larger than the current electron energy in Moller discrete CS'
+        print ' W is', W ,'and E is', E
+        print ' Stopping'
+        sys.exit()
+
     return dCS_M
 
 
@@ -65,12 +73,17 @@ def gryz_dCS(E, W, nsi, c_pi_efour, Ebi):
     eps = W*1./E
     epsB = Ebi*1./E
 
-    if ((1. - eps)/epsB >= 0): # 1-eps can be very small
+    try:
         dCS_G = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                4. * epsB * np.log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 
-    else:
-        print '(1. - eps)/epsB **(0.5) very small in Gryzinski discrete CS'
-        print 'W is', W ,'and E is', E
-        dCS_G = 0.
+        if  (1. - eps < 0):
+            raise E_lossTooLarge
+
+    except E_lossTooLarge:
+        print ' The energy loss is larger than the current electron energy in Gryzinski discrete CS'
+        print ' W is', W ,'and E is', E
+        print ' Stopping'
+        sys.exit()
+
     return dCS_G

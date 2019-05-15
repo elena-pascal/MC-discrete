@@ -5,8 +5,6 @@ import bisect
 import sys
 import operator
 
-import time
-
 from math import acos
 
 from collections import OrderedDict # sweet sweet ordered dictionaries
@@ -26,6 +24,7 @@ from scimath.units.dimensionless import dim
 from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, u_bohrr
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
+from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k
 from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder
 
 @has_units
@@ -46,11 +45,12 @@ def mfp_from_sigma(sigma, n):
     mfp = 1./(n*sigma) * m**3/cm**2/angstrom
     return mfp
 
+
 #####################################################################
-####################### Scatter class ###############################
+####################### Discrete inelastic scatter class ############
 #####################################################################
-class scatter:
-    ''' Scattering can be Rutherford, Browning, Moller, Gryzinski, Quinn or Bethe
+class scatter_discrete:
+    ''' Scattering can be Rutherford, Browning, Moller, Gryzinski, Quinn
     Scattering is defined by
             - incident particle energy
             - material properties
@@ -86,34 +86,32 @@ class scatter:
         self.c2_halfTheta = 0.
         self.halfPhi = 0.
 
-        # some very useful parameters
-
-
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {} # dictionary keeping all mfp
+        #self.mfp = {} # dictionary keeping all mfp
 
         ## TODO: decide on sigma or mfp
         self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
-        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
+        #self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
         if (self.i_energy > self.m_Eval):
             self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval, c_pi_efour)
-            self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
+            #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
             # else the probability of Moller scattering is zero
 
         for i in range(len(self.m_Es)):
             if (self.i_energy > self.m_Es[i]):
                 self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], c_pi_efour)
-                self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+                #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
 
         if (self.i_energy > self.m_pl_e):
             self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd, u_bohrr)
-            self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
+            #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
 
         self.sigma_total = sum(self.sigma.values())
-        self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
-        #self.mfp_total = 1. / self.sigma_total
+        #self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
+        self.mfp_total = mfp_from_sigma( self.sigma_total, self.m_atnd)
+
 
     def compute_pathl(self):
         '''
@@ -139,7 +137,7 @@ class scatter:
         except lTooLarge:
             print ' Fatal error! in compute_pathl in scattering class'
             print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', self.mfp
+            print ' Mean free paths were:', mfp_from_sigma(self.sigmas, self.m_atnd)
             print ' Stopping.'
             sys.exit()
 
@@ -182,13 +180,6 @@ class scatter:
             self.E_loss = UnitScalar(0., units='eV')
             print 'No energy loss for Browning scattering'
 
-        elif(self.type == 'Bethe'):
-            if (self.pathl == 0.):
-                print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
-            else:
-                self.E_loss = self.path * u2n(bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
-                                    self.m_Es, self.m_Zval, self.m_Eval, c_pi_efour))
-
         elif(self.type == 'Moller'):
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
@@ -197,7 +188,7 @@ class scatter:
 
             int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
-            Wi_table = bisect.bisect_left(int_enlosses_table, integral) 
+            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
             # enlosses = self.tables_EW_M[2][0, Eidx_table, :]
             # E_loss = enlosses[Wi_table]
             E_loss = self.tables_EW_M[2][0, Eidx_table, :][Wi_table]
@@ -287,7 +278,7 @@ class scatter:
             r = random.random()
             self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
             self.halfPhi = pi*random.random()
-            print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
+            #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
@@ -295,8 +286,8 @@ class scatter:
 
             try:
                 self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
-                print 'E_loss is ', self.E_loss, self.i_energy
-                print 'Theta is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
+                #print 'E_loss is ', self.E_loss, self.i_energy
+                #print 'Theta is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
 
 
                 if (self.E_loss > self.i_energy):
@@ -317,3 +308,94 @@ class scatter:
 
         #else:
         #    print 'I did not understand the scattering type in scatter.calculate_sAngles'
+
+
+#####################################################################
+####################### Continuous inelastic scatter class ############
+#####################################################################
+
+class scatter_continuous:
+    ''' This is the CSLA scattering mode
+    Rutherford is the elastic scattering and accounts for angular deviation
+    and Bethe is the continuous energy loss
+    '''
+
+    def __init__(self, electron, material):
+        # incident particle params
+        self.i_energy = electron.energy  # incident particle energy
+
+        # material params
+        self.m_Z = material.Z()          # atomic number
+        self.m_Es = material.Es()        # inner shells energies
+        self.m_ns = material.ns()        # number of electrons per inner shell
+        self.m_nval = material.nval()    # number of valence shell electrons
+        self.m_Eval = material.Eval()    # valence shell energy
+        self.m_atnd = material.atnd()    # atomic number density
+
+
+        # scattering params
+        self.pathl = 0.
+        self.type = 0.
+        self.E_loss = 0.
+        self.c2_halfTheta = 0.
+        self.halfPhi = 0.
+
+
+        # intitalise scattering probabilities dictionary
+        self.sigma = {} # dictionary keeping all sigmas
+        self.mfp = {} # dictionary keeping all mfp
+
+        ## TODO: decide on sigma or mfp
+        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
+
+
+    def compute_pathl(self):
+        '''
+        Path length is calculated from the cross section
+        path_length = - mean_free_path * log(rn)
+        '''
+        pathl = UnitScalar(-self.mfp['Rutherford'] * log(random.random()), units = 'angstrom')
+
+        try: # ask for forgiveness
+            self.pathl = pathl
+            # if pathl is too small or too large
+            #if (float(pathl) < 1.e-5):
+            #    raise lTooSmall
+            if (float(pathl) > 1.e4):
+                raise lTooLarge
+
+        # except lTooSmall:
+        #     print ' Fatal error! in compute_pathl in scattering class'
+        #     print ' Value of l is', pathl  ,'less than 0.0001 Angstroms.'
+        #     print ' Mean free paths were:', self.mfp
+        #     print ' Stopping.'
+        #     sys.exit()
+        except lTooLarge:
+            print ' Fatal error! in compute_pathl in scattering class'
+            print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
+            print ' Mean free paths were:', mfp_from_sigma(self.sigmas, self.m_atnd)
+            print ' Stopping.'
+            sys.exit()
+
+
+
+    def compute_Eloss(self):
+        '''
+        energy loss is calculated from Bethe's CSDA
+        '''
+
+        if (self.pathl == 0.):
+            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+        else:
+            self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
+                                    self.m_Es, self.m_nval, self.m_Eval, c_pi_efour)
+
+    def compute_sAngles(self):
+        alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
+        r = random.random()
+        self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
+        self.halfPhi = pi*random.random()
+        #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
+
+        self.halfPhi = pi*random.random() # radians
