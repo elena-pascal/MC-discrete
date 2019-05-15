@@ -15,18 +15,18 @@ from parameters import c_pi_efour
 
 material = material('Al')
 
-num_el = 1000
-E0 = UnitScalar(3000, units = 'eV') # eV
-Emin = UnitScalar(100, units = 'eV') # eV
-tilt = 45. # degrees
+num_el = 100
+E0 = UnitScalar(30000, units = 'eV') # eV
+Emin = UnitScalar(3200, units = 'eV') # eV
+tilt = 70. # degrees
 pos0 = np.array([0., 0., 0.,])
 dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
 model = 'DS' # discrete scattering
 
-nBinsW = 300
+nBinsW = 1000
 nBinsE = 200
 
-Wc = UnitScalar(10, units = 'eV')
+Wc = UnitScalar(5, units = 'eV')
 
 def u2n(value_with_units):
     '''
@@ -40,9 +40,10 @@ print '---- calculating Moller tables'
 # remove the function dependece on the constant and get rid of units
 funcToint_M = lambda E, W, n_e : u2n(moller_dCS(E, W, n_e, c_pi_efour))
 
-tables_moller = trapez_table( float(E0), float(Emin), np.array([Wc]), float(material.get_fermi_e()), \
-            np.array([material.get_nval()]), funcToint_M, nBinsW, nBinsE)
-#print tables_moller
+tables_moller = trapez_table( float(E0), float(Emin), np.array([Wc]), float(material.fermi_e()), \
+            np.array([material.nval()]), funcToint_M, nBinsW, nBinsE)
+#print tables_moller[2][0, 1, :]
+#print tables_moller[3][0, 1, :]
 print
 
 
@@ -52,9 +53,10 @@ tables_gryz = []
 funcToint_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, n_e,\
                                             c_pi_efour, Ebi))
 
-tables_gryz=trapez_table(float(E0), float(Emin), np.array(material.get_Es()), float(material.get_fermi_e()),\
-                np.array(material.get_ns()), funcToint_G, nBinsW, nBinsE )
-#print tables_gryz
+tables_gryz = trapez_table(float(E0), float(Emin), np.array(material.Es()), float(material.fermi_e()),\
+                np.array(material.ns()), funcToint_G, nBinsW, nBinsE )
+#print tables_gryz[2][1, 1, :]
+#print tables_gryz[3][1, 1, :]
 print
 
 
@@ -73,6 +75,7 @@ for i in range(num_el):
     if (i% 100 == 0):
         print '-------- starting electron:', i
     e_i = electron(E0, pos0, dir0)
+    print '-------- starting electron:', i
 
     backscattered = False
     absorbed = False
@@ -115,9 +118,6 @@ for i in range(num_el):
             # determine energy loss
             scatter_i.compute_Eloss()
 
-            if (e_i.energy <= Emin):
-                absorbed = True
-
             # determine scattering angles
             scatter_i.compute_sAngles()
 
@@ -126,6 +126,10 @@ for i in range(num_el):
 
             # update electron energy
             e_i.update_energy(scatter_i.E_loss)
+
+            if (e_i.energy <= float(Emin)):
+                absorbed = True
+                #print '---num scatterings', num_scatt
 
             # update electron new traveling direction
             e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
@@ -143,9 +147,9 @@ for i in range(num_el):
             # update electron energy
             e_i.update_energy(scatter_i.E_loss)
 
-            if (e_i.energy <= Emin):
+            if (e_i.energy <= float(Emin)):
                 absorbed = True
-
+                #print '---num scatterings', num_scatt
             # update electron new traveling direction
             e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
@@ -155,13 +159,13 @@ for i in range(num_el):
 
             # update electron energy
             e_i.update_energy(scatter_i.E_loss)
-
+            print 'Quinn'
             if (e_i.energy <= Emin):
                 absorbed = True
-
+                #print '---num scatterings', num_scatt
 
         num_scatt += 1
-        if (num_scatt > 1000):
+        if (num_scatt > 10000):
             scatteredTooLong = True
 
 print 'total BSE electrons', BSEcount

@@ -7,6 +7,8 @@ import operator
 
 import time
 
+from math import acos
+
 from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
 from scipy.interpolate import Rbf
@@ -119,24 +121,29 @@ class scatter:
         path_length = - mean_free_path * log(rn)
         '''
         pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
-        try:
-            if (pathl < 1.e-5):
-                raise lTooSmall
-            elif (pathl > 1.e3):
+
+        try: # ask for forgiveness
+            self.pathl = pathl
+            # if pathl is too small or too large
+            #if (float(pathl) < 1.e-5):
+            #    raise lTooSmall
+            if (float(pathl) > 1.e4):
                 raise lTooLarge
 
-        except lTooSmall:
-            print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl  ,'less than 0.0001 Angstroms.'
-            print ' Stopping.'
-            sys.exit()
+        # except lTooSmall:
+        #     print ' Fatal error! in compute_pathl in scattering class'
+        #     print ' Value of l is', pathl  ,'less than 0.0001 Angstroms.'
+        #     print ' Mean free paths were:', self.mfp
+        #     print ' Stopping.'
+        #     sys.exit()
         except lTooLarge:
             print ' Fatal error! in compute_pathl in scattering class'
             print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
+            print ' Mean free paths were:', self.mfp
             print ' Stopping.'
             sys.exit()
 
-        self.pathl = pathl
+
 
     def det_type(self):
         '''
@@ -159,6 +166,7 @@ class scatter:
         self.type = sorted_sigmas.keys()[this_prob_pos]
 
         # Moller becomes more unprobable with increase value of Wc
+
 
     def compute_Eloss(self):
         '''
@@ -185,19 +193,22 @@ class scatter:
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             # energies = self.tables_EW_M[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_M[1], float(self.i_energy))
+            Eidx_table = bisect.bisect_left(self.tables_EW_M[1], float(self.i_energy))  # less then value
 
             int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
-            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
+            Wi_table = bisect.bisect_left(int_enlosses_table, integral) 
             # enlosses = self.tables_EW_M[2][0, Eidx_table, :]
             # E_loss = enlosses[Wi_table]
             E_loss = self.tables_EW_M[2][0, Eidx_table, :][Wi_table]
 
             try:
+                self.E_loss = E_loss
+
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > (0.5 * self.i_energy + 100)):
+                #elif (E_loss > (0.5 * self.i_energy + 100)):
+                elif (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
 
             except E_lossTooSmall:
@@ -208,14 +219,14 @@ class scatter:
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
                 print ' Value of energy loss larger than half the electron energy.'
-                print ' The current energy lost is:',  E_loss
                 print ' The current energy is:',  self.i_energy
-                print ' The corresponding energy in the tables is:',  energies[Eidx_table]
-                print ' The array of energy losses in the tables is:',  enlosses
+                print ' The corresponding energy in the tables is:',  self.tables_EW_M[1][Eidx_table]
+                print ' The current energy lost is:',  E_loss
+                print ' The array of energy losses in the tables is:',  self.tables_EW_M[2][0, Eidx_table, :]
                 print ' Stopping.'
                 sys.exit()
 
-            self.E_loss = E_loss
+
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
@@ -226,7 +237,7 @@ class scatter:
             # energy loss integral for the current energy
 
             # energies = self.tables_EW_G[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_G[1], float(self.i_energy))
+            Eidx_table = bisect.bisect_left(self.tables_EW_G[1], float(self.i_energy))  # less than value
             int_enlosses_table = self.tables_EW_G[3][ishell,Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
             Wi_table = bisect.bisect_left(int_enlosses_table, integral)
@@ -238,12 +249,13 @@ class scatter:
             E_loss = self.tables_EW_G[2][ishell, Eidx_table, :][Wi_table]
 
             try:
+                self.E_loss = E_loss
+
                 if (E_loss < 1.e-3):
                     raise E_lossTooSmall
-                elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
+                #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
+                elif (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
-                else:
-                    self.E_loss = E_loss
 
             except E_lossTooSmall:
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
@@ -255,8 +267,8 @@ class scatter:
                 print ' Value of energy loss larger than half the current energy.'
                 print ' The current energy lost is:',  E_loss
                 print ' The current energy is:',  self.i_energy
-                print ' The corresponding energy in the tables is:',  energies[Eidx_table]
-                print ' The array of energy losses in the tables is:',  enlosses
+                print ' The corresponding energy in the tables is:',  self.tables_EW_G[1][Eidx_table]
+                print ' The array of energy losses in the tables is:',  self.tables_EW_G[2][ishell, Eidx_table, :]
                 print ' Try increasing the number of energy bins in the table'
                 print ' Stopping.'
                 sys.exit()
@@ -275,14 +287,18 @@ class scatter:
             r = random.random()
             self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
             self.halfPhi = pi*random.random()
-            #self.c2_halfTheta = 0.
-            #self.halfPhi = pi*random.random()
+            print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
                 print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
 
             try:
+                self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
+                print 'E_loss is ', self.E_loss, self.i_energy
+                print 'Theta is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
+
+
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
             except wrongUpdateOrder:
@@ -290,7 +306,7 @@ class scatter:
                 print ' Stopping.'
                 sys.exit()
 
-            self.c2_halfTheta = 0.5*( (1. - ( float(self.E_loss) / float(self.i_energy) ) )**0.5 + 1.)
+
             self.halfPhi = pi*random.random() # radians
 
 

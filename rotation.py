@@ -50,3 +50,25 @@ def newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, y_local, d):
     q_total = q_az*q_polar
 
     return quaternion.rotate_vectors(q_total, (d, y_local))
+
+
+# with direction cosines
+def newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz):
+    # From MCML paper START
+    if (abs(cxyz[2]) > 0.99999):
+        cxyzp = np.array([sphi * cpsi, sphi * spsi, (cxyz[2]/np.abs(cxyz[2])) * cphi ])
+        print 'edge case'
+    else:
+        dsq = np.sqrt(1.-cxyz[2]*cxyz[2])
+        dsqi = 1./dsq
+        cxyzp = np.array([ sphi * (cxyz[0] * cxyz[2] * cpsi - cxyz[1] * spsi) * dsqi + cxyz[0] * cphi, \
+                sphi * (cxyz[1] * cxyz[2] * cpsi + cxyz[0] * spsi) * dsqi + cxyz[1] * cphi, \
+                -sphi * cpsi * dsq + cxyz[2] * cphi ])
+
+    #  From MCML paper END
+
+    # normalize the direction cosines
+    dd = 1./np.sqrt(cxyzp.dot(cxyzp))
+
+    cxyzp_norm = cxyzp * dd
+    return cxyzp_norm    

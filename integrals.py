@@ -25,7 +25,7 @@ def extF_limits_gryz(E, Ei, Ef):
 	out :: a, b
 	'''
     #a = Ei
-    b = (E - Ef + Ei) * 0.5
+    b = (E + Ei) * 0.5
     return b
 
 
@@ -73,7 +73,8 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
     ## TODO: pandas and pickles or hdf5 instead of multidimensional lists
 
-    # e contains the array of incident energies in the tables
+    # e contains the array of possible incident energies in the tables
+    ## TODO: Emin for now must be larger than max Ebi
     e_tables = np.linspace(Emin, Einc, nBinsE) # we will bisect left
 
     # w contain the 3D matrix of w steps in the tables
@@ -92,8 +93,6 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
         else: # Gryzinski
             func = lambda E, W: ext_func(E, W, n_e[ishell], Elossmin[ishell])
 
-        tables_shell = []
-
         for indx_E in range(nBinsE):
             Ei = e_tables[indx_E]
 
@@ -104,6 +103,7 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
                 dW = (Elossmax - Elossmin[ishell])/nBinsW
             else: # Gryzinski
                 Elossmax = extF_limits_gryz(Ei, Elossmin[ishell], Ef)
+                #print 'e loss max for Ei', Ei, 'is', Elossmax
                 dW = (Elossmax - Elossmin[ishell])/nBinsW
 
             # initialise the integral for the recursive function
