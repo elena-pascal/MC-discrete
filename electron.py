@@ -30,6 +30,8 @@ class electron:
         self.xyz = position
         self.dir = direction
 
+        self.outcome = None
+
         self.y_local = np.array([0., 1., 0.]) # local coordinate system
 
         self.energy_hist = []
