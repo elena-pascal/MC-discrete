@@ -1,0 +1,11 @@
+	-----------------------------------------------------------------	
+	Trajectory	0
+
+BackScattered	Transmitted	Detected	Displayed	Nb Collisions	Max Depth	Mean Free Path	Mean dE/dS	Mean Phi	Mean Theta	Mean Position
+no	no	no	yes	16	71.5921	0	-0.00455473	2.82082	0.0788551	(112.249,17.9801,45.4233)	
+
+X	Y	Z	Rx	Ry	Rz	Energy	Region
+-0.138317	-1.7971	0	0.939693	0	0.34202	10	Al
+62.69	-1.7971	22.8677	0.939693	0	0.34202	9.70755	Al
+65.8108	-1.7971	24.0035	0.917115	-0.0218849	0.537518	9.69269	Al
+---

@@ -2,7 +2,7 @@ from scimath.units.energy import J, eV, KeV
 from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV
-from rotation import newdir
+from rotation import newdir, newdircos_oldMC
 
 from math import sin, cos
 import numpy as np
@@ -41,7 +41,7 @@ class electron:
 
     def update_energy(self, energyLoss):
         ''' update electron after every scattering
-            keep record of the history by appending new iformation to lists
+            keep record of the history by appending new information to lists
         '''
         self.energy = self.energy - energyLoss
         #self.energy_hist.append(newEnergy)
@@ -63,12 +63,17 @@ class electron:
         (self.dir, self.y_local) = [(dir/ np.linalg.norm(dir)) for dir in newDirection_andy]
     #    print 'y local', self.y_local
 
-        #self.dir_hist.append(newDirection)
 
-    #    c_Theta = 2.*c2_halfTheta - 1.
-    #    s_Theta = (1. - c_Theta**2)**0.5
-    #    s_Phi = sin(2.*halfPhi)
-    #    c_Phi = (1. - s_Phi**2)**0.5
+
+        #self.dir_hist.append(newDirection)
+        #
+        # c_Theta = 2.*c2_halfTheta - 1.
+        # s_Theta = (1. - c_Theta**2)**0.5
+        # s_Phi = sin(2.*halfPhi)
+        # c_Phi = (1. - s_Phi**2)**0.5
+        #
+        # newDir = newdircos_oldMC(s_Theta, c_Theta, s_Phi, c_Phi, self.dir)
+        # self.dir = newDir/np.linalg.norm(newDir)
 
 
     def totalPathLenght(self):

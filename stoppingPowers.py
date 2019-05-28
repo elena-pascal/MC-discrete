@@ -143,7 +143,7 @@ def bethe_cl_sp(Z,E,n,c_pi_efour):
 @has_units
 def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
-        per unit length
+        per unit length using Joy and Luo potential (1989)
 
         Parameters
         ----------
@@ -175,7 +175,7 @@ def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
 @has_units
 def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
-        per unit length
+        per unit length using explicitely the binding energy for all the shells
 
         Parameters
         ----------
@@ -194,7 +194,7 @@ def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour):
         Zval   : array : units = dim
                occupancy of valence shell
 
-        Ei     : array : units = eV
+        Eval   : array : units = eV
                binding energy of valence electrons
 
         c_pi_efour: scalar: units = cm**2 * eV**2

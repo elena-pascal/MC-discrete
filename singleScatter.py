@@ -105,24 +105,13 @@ def singleScatter_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
 
 
 
-def singleScatter_cont (material, E0, Emin, tilt):
-    pos0 = np.array([0., 0., 0.,])
-    dir0 = np.array([0., -np.sin(np.radians(tilt)) , np.cos(np.radians(tilt))])
+def singleScatter_cont (e_i, material, Emin):
 
-    BSEcount = 0
-    BSEs = []
-    position = []
-    theta_R = []
-    phi_R = []
-
-    e_i = electron(E0, pos0, dir0)
-
-    backscattered = False
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
 
-    while ((not backscattered) and (not absorbed) and (not scatteredTooLong)):
+    while ((not absorbed) and (not scatteredTooLong)):
 
         # new instance of scatter
         scatter_i = scatter_continuous(e_i, material)
@@ -135,10 +124,8 @@ def singleScatter_cont (material, E0, Emin, tilt):
 
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
-            backscattered = True
-
-            BSEs.append(float(e_i.energy))
-            BSEcount += 1
+            e_i.outcome = 'backscattered'
+            return # exit function here
 
         # determine energy loss
         scatter_i.compute_Eloss()
@@ -152,15 +139,9 @@ def singleScatter_cont (material, E0, Emin, tilt):
         # determine scattering angles
         scatter_i.compute_sAngles()
 
-        phi_R.append(2.*scatter_i.halfPhi)
-        theta_R.append(2.*acos(scatter_i.c2_halfTheta**0.5))
-
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
         num_scatt += 1
         if (num_scatt > 10000):
             scatteredTooLong = True
-
-    # append the position history of this electron
-    position.append(e_i.xyz_hist)
