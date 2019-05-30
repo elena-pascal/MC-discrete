@@ -19,15 +19,15 @@ from writeHDF5 import writeBSEtoHDF5
 
 
 if __name__ == '__main__': #this is necessary on Windows
-    num_el = 100
+    num_el = 100000
     E0 = UnitScalar(10000, units = 'eV') # eV
     Emin = UnitScalar(9000, units = 'eV') # eV
     tilt = 70. # degrees
-    mode = 'cont' # discrete scattering
+    mode = 'DS' # discrete scattering
 
     print 'scattering mode is:', mode
-    nBinsW = 10
-    nBinsE = 10
+    nBinsW = 1000
+    nBinsE = 1000
 
     Wc = UnitScalar(5, units = 'eV')
     material = material('Al')
@@ -65,6 +65,7 @@ if __name__ == '__main__': #this is necessary on Windows
 
     print '---- starting scattering'
 
+    time0 = time.time()
     p = Pool(processes=num_proc-2)
     if (mode == 'DS'):
         f = partial(multiScatter_DS, material=material, E0=E0, Emin=Emin, tilt=tilt, tables_moller=tables_moller, tables_gryz=tables_gryz, Wc=Wc, parallel=True)
@@ -75,17 +76,18 @@ if __name__ == '__main__': #this is necessary on Windows
     BSE_data = p.map(f, [num_el/num_proc for _ in range(num_proc)])
 
     # serial
-    #BSE_data_dict = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
+    #BSE_data = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
 
     p.close()
     # if some things go wrong in the parallel code, pool.join() will throw some errosr
     p.join()
 
-
-    #print 'rate of BSE', len(BSE_data_dict['energy'])*1./num_el
-
+    print 'time spent in scattering', time.time()-time0
+    print
 
     # save to file
-    fileBSE = 'BSE'+str(int(tilt))+'tilt'+mode+'.h5'
+    fileBSE = 'data/Al_BSE'+str(int(tilt))+'_tilt'+mode+'_Emin'+str(int(Emin))+'_Emax'+str(int(E0))+'.h5'
 
     writeBSEtoHDF5(BSE_data, fileBSE)
+
+    print 'BSE data had been written to ', fileBSE

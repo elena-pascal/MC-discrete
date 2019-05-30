@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# data files
+data/
+CASINO/
 
 # Distribution / packaging
 .Python

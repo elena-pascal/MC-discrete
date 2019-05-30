@@ -35,7 +35,7 @@ def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz
             BSE_energy.append(float(e_i.energy))
             BSE_dir.append(e_i.dir)
 
-    return [BSE_energy, BSE_dir]
+    return {'energy':BSE_energy, 'direction':BSE_dir}
 
 
 def multiScatter_cont(num_el, material, E0, Emin, tilt, parallel=False):

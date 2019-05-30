@@ -1,11 +1,11 @@
-from math import log, isnan
+from math import log, isnan, acos
 import numpy as np
 import random
 import bisect
 import sys
 import operator
 
-from math import acos
+from numba import jit
 
 from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
@@ -270,7 +270,6 @@ class scatter_discrete:
 
         else:
             print 'I did not understand the type of scattering in scatter.calculate_Eloss'
-
 
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):

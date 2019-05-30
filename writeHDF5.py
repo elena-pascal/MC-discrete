@@ -24,8 +24,11 @@ def writeBSEtoHDF5(data, filename):
 
     del dataDictionary['direction']
     dataDictionary.update(expandDir)
+
+    print '---- number of BSEs:', len(dataDictionary['energy'])
+
     # write results to pandas
-    pandasFrame = pd.DataFrame(dataDictionary)
+    pandasFrame = pd.DataFrame(dataDictionary).T
 
     # write pandas to hdf5
     pandasFrame.to_hdf(filename, key='BSE', mode='w')
