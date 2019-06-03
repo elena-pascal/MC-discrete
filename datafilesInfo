@@ -1,0 +1,38 @@
+scattering mode is: DS
+---- calculating Moller tables
+---- calculating Gryzinski tables
+You have 7 cpu's
+---- starting scattering
+time spent in scattering 4258.31828213
+
+---- number of BSEs: 57286
+BSE data had been written to  data/Al_BSE70_tiltDS_Emin15000_Emax30000.h5
+
+
+scattering mode is: cont
+You have 8 cpu's
+---- starting scattering
+time spent in scattering 1506.29611492
+
+---- number of BSEs: 40987
+BSE data had been written to  data/Al_BSE70_tiltcont_Emin15000_Emax30000.h5
+
+
+scattering mode is: cont
+You have 8 cpu's
+---- starting scattering
+time spent in scattering 580.543294191
+
+---- number of BSEs: 22558
+BSE data had been written to  data/Al_BSE70_tiltcont_Emin25000_Emax30000.h5
+
+
+scattering mode is: DS
+---- calculating Moller tables
+---- calculating Gryzinski tables
+You have 8 cpu's
+---- starting scattering
+time spent in scattering 2502.27019095
+
+---- number of BSEs: 45745
+BSE data had been written to  data/Al_BSE70_tiltDS_Emin25000_Emax30000.h5

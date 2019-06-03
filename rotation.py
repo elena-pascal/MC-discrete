@@ -1,7 +1,7 @@
 # calculate scattering direction using quaternions
 import numpy as np
 import quaternion
-import sys
+
 
 from errors import q_azNotNormal, q_polNotNormal
 
@@ -71,4 +71,4 @@ def newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz):
     dd = 1./np.sqrt(cxyzp.dot(cxyzp))
 
     cxyzp_norm = cxyzp * dd
-    return cxyzp_norm    
+    return cxyzp_norm
