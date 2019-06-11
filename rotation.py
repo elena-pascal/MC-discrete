@@ -1,5 +1,6 @@
 # calculate scattering direction using quaternions
 import numpy as np
+from math import cos, sin
 import quaternion
 
 
@@ -10,16 +11,16 @@ def rotate_vector_Lqv(q, v):
     v is the vector to be rotated
     q is the rotation as a quaternion
     '''
-    rotated_v = ( 2. * q.real*q.real - 1. ) * v + 2.*( (q.imag.dot(v))*q.imag + q.real*np.cross(q.imag, v) )
-    return rotated_v
+    return ( 2. * q.real*q.real - 1. ) * v + 2.*( (q.imag.dot(v))*q.imag + q.real*np.cross(q.imag, v) )
+
 
 def rotate_vector_R(q, v):
     '''
     v is the vector to be rotated
     q is the rotation as a quaternion
     '''
-    rotated_v =  v + np.cross(2.*q.imag, (np.cross(q.imag, v) + q.real*v))
-    return rotated_v
+    return  v + np.cross(2.*q.imag, (np.cross(q.imag, v) + q.real*v))
+
 
 
 #def newdir(s_hTheta, c_hTheta, s_hPhi, c_hPhi, x_local, d):
@@ -70,5 +71,38 @@ def newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz):
     # normalize the direction cosines
     dd = 1./np.sqrt(cxyzp.dot(cxyzp))
 
-    cxyzp_norm = cxyzp * dd
-    return cxyzp_norm
+    return  cxyzp * dd
+
+
+
+def projOnDetector(xyz_exit, alpha, xy_PC, L):
+    '''
+    calculate the projection on the detector of a given escape direction
+
+    xyz_array = list of escape direction unit vectors in sampe frame
+    alpha = angle in degrees that brings the detector frame coincidental with the sample frame
+            by a CW rotation around x-axis
+
+    returns list of x,y projection on the detector
+    '''
+
+    # let t be the translation vector from detector frame origin to the sample frame origin
+    t = np.array([xy_PC[0], xy_PC[1], L])
+
+    # let q_SD be the rotation that brings in coincidence the detector frame with the sample frame
+    # q_SD = (x, alpha)
+    c_hAlpha = cos(np.radians(alpha)/2.)
+    s_hAlpha = (1. - c_hAlpha**2)**0.5
+
+    q_SD = np.quaternion(c_hAlpha, s_hAlpha, 0., 0.)
+
+    # the plane equaiton of the detector in the detector frame is z=0
+    # so the x,y components of the projections are just the two components of the
+    # translated dir vector, obviously
+    return [(quaternion.rotate_vectors(q_SD.conj(), one_dir) - t)[0:2]   for one_dir in xyz_exit]
+
+
+
+#dir = [np.array([1., 0., 1.]), np.array([1., 1.5, 1.])]
+#xy_PC = np.array([4.2, 12.])
+#print projOnDetector(dir, 70, xy_PC, 1258.)

@@ -1,23 +1,23 @@
 import numpy as np
 
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-from scimath.units.energy import J, eV, KeV
-from scimath.units.electromagnetism import coulomb, farad
-from scimath.units.length import m, cm, km, angstrom
-from scimath.units.time import s
-from scimath.units.mass import g, kg
-from scimath.units.density import g_per_cm3, kg_per_m3
-from scimath.units.substance import mol
+from scimath.units.api import UnitScalar, UnitArray
+from scimath.units.energy import  eV
+from scimath.units.length import  angstrom, cm, m
 from scimath.units.dimensionless import dim
+
+# local functions
+from decorators import has_units_fact
+
 
 ###################################################################
 #                       Total stopping power                      #
 ###################################################################
 
 # 2a) Moller stopping power for free electrons
-@has_units
-def moller_sp(E, Emin, nfree, n, c_pi_efour):
-    """ Calculate the Moller stopping power per unit length
+def moller_sp_cond(useit, E, Emin, nfree, n, c_pi_efour):
+    @has_units_fact(useit)
+    def moller_sp(E, Emin, nfree, n, c_pi_efour):
+        """ Calculate the Moller stopping power per unit length
 
         Parameters
         ----------
@@ -35,14 +35,15 @@ def moller_sp(E, Emin, nfree, n, c_pi_efour):
         Returns
         -------
         sp_M   : array : units = eV/angstrom
-    """
+        """
 
-    eps = Emin*1./E
-    sp_M = nfree*n*c_pi_efour*(2. - (1./(1.-eps)) +  np.log( 1./(8.* eps*((1.-eps)**2)) ))/E  * cm**(-1)/angstrom**(-1)
-    return sp_M
+        eps = Emin*1./E
+        sp_M = nfree*n*c_pi_efour*(2. - (1./(1.-eps)) +  np.log( 1./(8.* eps*((1.-eps)**2)) ))/E  * cm**(-1)/angstrom**(-1)
+        return sp_M
+
 
 # 2b) Gryzinski stopping power for core shell electrons
-@has_units
+#@has_units_cond
 def gryz_sp(E, Enl, nsi, n, c_pi_efour):
     """ Calculate the Gryzinski inelastic cross section per unit length
 
@@ -71,7 +72,7 @@ def gryz_sp(E, Enl, nsi, n, c_pi_efour):
     return sp_G
 
 # 2c) Quinn stopping power for plasmons
-@has_units
+#@has_units_cond
 def quinn_sp(E, Epl, Ef, n, bohr_r):
     """ Calculate the Quinn inelastic stopping power per unit length
         Patrick's formula
@@ -107,7 +108,7 @@ def quinn_sp(E, Epl, Ef, n, bohr_r):
 
 
 # 2d) Bethe continuous stopping power
-@has_units
+#@has_units_cond
 def bethe_cl_sp(Z,E,n,c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
         per unit length
@@ -140,7 +141,7 @@ def bethe_cl_sp(Z,E,n,c_pi_efour):
 
 
 
-@has_units
+#@has_units_cond
 def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
         per unit length using Joy and Luo potential (1989)
@@ -172,7 +173,7 @@ def bethe_mod_sp_k(Z,E,n,k,c_pi_efour):
     return sp_B
 
 
-@has_units
+#@has_units_cond
 def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
         per unit length using explicitely the binding energy for all the shells

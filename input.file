@@ -1,0 +1,24 @@
+# input file
+
+num_el   : 100000
+E0       : 30000 # eV
+Emin     : 25000 # eV
+material : Al
+s_tilt   : 70.   # degrees
+mode     : DS    # discrete scattering = DS; cont scattering = cont
+
+# bins are only relevant for discrete scattering
+num_BinsW   : 10000
+num_BinsE   : 10000
+
+# minimum transfer energy only relevant for discrete scattering
+Wc       : 5     # eV
+
+
+# detector information
+L        :   0
+delta    :   0
+x_PC     :   0
+y_PC     :   0
+
+d_tilt   :   0
