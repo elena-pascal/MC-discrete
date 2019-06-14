@@ -1,7 +1,9 @@
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scimath.units.api import has_units
 from scimath.units.length import cm, m
 from scimath.units.energy import eV, KeV
 from scipy.constants import pi
+
+from parameters import pi_efour, bohr_r
 
 import numpy as np
 ###################################################################
@@ -30,7 +32,7 @@ def ruther_sigma(E, Z):
 
 #### 2a) Inelastic Moller cross section for free electrons
 @has_units
-def moller_sigma(E, Emin, nfree, c_pi_efour):
+def moller_sigma(E, Emin, nfree, c_pi_efour=pi_e_four):
     """ Calculate the Moller inelastic cross section
         per atom
 
@@ -56,7 +58,7 @@ def moller_sigma(E, Emin, nfree, c_pi_efour):
 
 #### 2b) Inelastic Gryzinski cross section for core shell electrons
 @has_units
-def gryz_sigma(E, Esi, nsi, c_pi_efour):
+def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_e_four):
     """ Calculate the Gryzinski inelastic cross section
         per atom
 
@@ -86,7 +88,7 @@ def gryz_sigma(E, Esi, nsi, c_pi_efour):
 
 #### 2c) Inelastic Quinn cross section for plasmons
 @has_units
-def quinn_sigma(E, Epl, Ef, n, bohr_r):
+def quinn_sigma(E, Epl, Ef, n, c_bohr_r=bohr_r):
     """ Calculate the Quinn inelastic cross section
         per atom
 
@@ -104,7 +106,7 @@ def quinn_sigma(E, Epl, Ef, n, bohr_r):
         n      : array : units = m**-3
                number density
 
-        bohr_r : scalar: units = m
+        c_bohr_r : scalar: units = m
 
         Returns
         -------
@@ -114,7 +116,7 @@ def quinn_sigma(E, Epl, Ef, n, bohr_r):
     Epl_Ef = Epl*1./Ef
 
     s_Q_total = Epl * np.log( ((1. + Epl_Ef)**(0.5) - 1.)/ ( E_Ef**0.5 -\
-             (E_Ef - Epl_Ef)**0.5 ) )/(2. *  bohr_r * E)
+             (E_Ef - Epl_Ef)**0.5 ) )/(2. *  c_bohr_r * E)
 
     s_Q = (s_Q_total/n) * m**2/ cm**2
 

@@ -10,7 +10,7 @@ from functools import partial
 
 from scimath.units.energy import J, eV, KeV
 from scimath.units.length import m, cm, km, angstrom
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scimath.units.api import UnitScalar, UnitArray
 
 from material import material
 from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
@@ -41,7 +41,7 @@ def main(argv):
             sys.exit()
         elif opt == "-u":
             print "You chose to run scattering with units"
-            use_units == True
+            use_units = True
         elif opt == "-i":
             inputfile = arg
             print "Input file is", arg
@@ -60,37 +60,36 @@ if __name__ == '__main__': #this is necessary on Windows
     # read input parameters
     inputParameter = readInput(inputFile)
 
+    # set material
+    thisMaterial = material(inputParameter['material'])
+    print 'scattering in', thisMaterial.species
+
     print 'scattering mode is:', inputParameter['mode']
 
-    # if (inptParams['mode'] == 'DS'):
-    #     print '---- calculating Moller tables'
-    #     # remove the function dependece on the constant
-    #     func_M = lambda E, W, n_e : moller_dCS(E, W, n_e, c_pi_efour)
-    #
-    #     tables_moller = trapez_table( inputParameter['E0'], inputParameter['Emin'],\
-    #                                   np.array([Wc]), float(material.fermi_e()),\
-    #              np.array([material.nval()]), funcToint_M, nBinsW, nBinsE)
-    #
-    #     print '---- calculating Gryzinski tables'
-    #     tables_gryz = []
-    #
-    #     func_G = lambda E, W, n_e, Ebi : u2n(gryz_dCS(E, W, n_e,\
-    #                                              c_pi_efour, Ebi))
-    #
-    #     tables_gryz = trapez_table(float(E0), float(Emin), np.array(material.Es()), float(material.fermi_e()),\
-    #                  np.array(material.ns()), funcToint_G, nBinsW, nBinsE )
-
-
     if use_units:
-        # set all input parameters with units, make calculations @with_units
+        # Set all input parameters with units, make calculations @with_units
         # and return values with units
+        # With_units get toggled on if input is of unit type
         inputParameter.update({'E0': UnitScalar(inputParameter['E0'], units = 'eV')})
         inputParameter.update({'Emin': UnitScalar(inputParameter['Emin'], units = 'eV')})
         inputParameter.update({'Wc': UnitScalar(inputParameter['Wc'], units = 'eV')})
 
-    from stoppingPowers import moller_sp_cond
-    print "----", moller_sp_cond(use_units, 25000, inputParameter['Emin'], 3, 300, c_pi_efour)
+        # update material parameters to unit type
+        thisMaterial.set_units()
 
+
+    if (inptParams['mode'] == 'DS'):
+         print '---- calculating Moller tables'
+         tables_moller = trapez_table( inputParameter['E0'], inputParameter['Emin'],\
+                                       np.array(inputParameter['Wc']), thisMaterial.fermi_e,\
+                                       thisMaterial.params['n_val'], moller_dCS,\
+                                       inputParameter['nBinsW'], inputParameter['nBinsE'] )
+
+         print '---- calculating Gryzinski tables'
+         tables_gryz = trapez_table( inputParameter['E0'], inputParameter['Emin'],\
+                                     thisMaterial.params['Es'], thisMaterial.fermi_e,\
+                                     thisMaterial.params['ns'], gryz_dCS,\
+                                     inputParameter['nBinsW'], inputParameter['nBinsE'] )
 
 
 
@@ -100,7 +99,7 @@ if __name__ == '__main__': #this is necessary on Windows
 
     print '---- starting scattering'
 
-    time0 = time.time()
+    time_start = time.time()
     p = Pool(processes=num_proc)
     if (mode == 'DS'):
         f = partial(multiScatter_DS, material=material, E0=E0, Emin=Emin, tilt=tilt, tables_moller=tables_moller, tables_gryz=tables_gryz, Wc=Wc, units = units, parallel=True)
@@ -126,7 +125,7 @@ if __name__ == '__main__': #this is necessary on Windows
     #     print 'Waiting for ', remaining, 'electrons to finish scattering'
     #     time.sleep(0.5)
 
-    print 'time spent in scattering', time.time()-time0
+    print 'time spent in scattering', time.time()-time_start
     print
 
     # save to file

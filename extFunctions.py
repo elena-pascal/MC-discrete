@@ -1,13 +1,17 @@
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-import numpy as np
+from scimath.units.api import has_units
+from numpy import log
+
 from errors import E_lossTooLarge
+
+from parameters import pi_efour
+
 ###################################################################
-#                       Excitation function                       #
+#                       Excitation functions d_sigma/dW           #
 ###################################################################
 
-# Moller free electron discrete cross section
-@has_units
-def moller_dCS(E, W, nfree, c_pi_efour):
+# 2b) Moller free electron discrete cross section
+#@has_units
+def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
     """ Calculate the Moller inelastic cross section
 
         Parameters
@@ -45,8 +49,8 @@ def moller_dCS(E, W, nfree, c_pi_efour):
 
 
 # 2b) Gryzinski differential cross section for core shell electrons
-@has_units
-def gryz_dCS(E, W, nsi, c_pi_efour, Ebi):
+#@has_units
+def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
     """ Calculate the Moller inelastic cross section
 
         Parameters
@@ -75,7 +79,7 @@ def gryz_dCS(E, W, nsi, c_pi_efour, Ebi):
 
     try:
         dCS_G = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
-                               4. * epsB * np.log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
+                               4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 
         if  (1. - eps < 0):
             raise E_lossTooLarge

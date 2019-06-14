@@ -1,15 +1,23 @@
-from scimath.units.energy import J, eV, KeV
-from scimath.units.length import m, cm, km, angstrom
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+from scimath.units.api import UnitScalar
 import numpy as np
-from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0, eV, physical_constants
+from scipy.constants import hbar, m_e, e, epsilon_0, physical_constants
 
-u_hbar = UnitScalar(hbar, units="J*s")
-u_me = UnitScalar(m_e, units="kg")
-u_e    = UnitScalar(e, units="coulomb")
-u_eps0 = UnitScalar(epsilon_0, units="farad*m**-1")
-c_pi_efour = UnitScalar(6.51408491409531e-14, units="cm**2 * eV**2")
-u_bohrr = UnitScalar(physical_constants['Bohr radius'][0], units="m")
+
+# constants without units
+pi_efour = 6.51408491409531e-14
+bohr_r = physical_constants['Bohr radius'][0]
+
+# constants with units
+u_hbar       = UnitScalar(hbar, units="J*s")
+u_me         = UnitScalar(m_e, units="kg")
+u_e          = UnitScalar(e, units="coulomb")
+u_eps0       = UnitScalar(epsilon_0, units="farad*m**-1")
+u_pi_efour = UnitScalar(6.51408491409531e-14, units="cm**2 * eV**2")
+u_bohr_r     = UnitScalar(physical_constants['Bohr radius'][0], units="m")
+
+
+
+
 
 # detector Parameters from Patrick's paper
 L = 15250 # microns
@@ -23,12 +31,3 @@ x_PC = 3.57
 y_PC = 113.45
 
 xy_PC = np.array([x_PC*delta, y_PC*delta])
-
-
-
-def u2n(value_with_units):
-    '''
-    Tranforms quantity with units in
-    numpy unitless array
-    '''
-    return np.array(value_with_units)

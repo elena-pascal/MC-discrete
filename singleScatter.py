@@ -1,10 +1,4 @@
 import numpy as np
-from math import acos
-
-
-from scimath.units.energy import J, eV, KeV
-from scimath.units.length import m, cm, km, angstrom
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
 
 
 from electron import electron
@@ -96,7 +90,7 @@ def singleScatter_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
                 e_i.outcome = 'absorbed'
 
         num_scatt += 1
-        if (num_scatt > 500):
+        if (num_scatt > 1000):
             scatteredTooLong = True
             e_i.outcome = 'scatteredManyTimes'
 
@@ -143,5 +137,5 @@ def singleScatter_cont (e_i, material, Emin):
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
         num_scatt += 1
-        if (num_scatt > 10000):
+        if (num_scatt > 1000):
             scatteredTooLong = True

@@ -1,16 +1,15 @@
 import numpy as np
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-from scimath.units.energy import J, eV, KeV
-from scimath.units.electromagnetism import coulomb, farad
-from scimath.units.length import m, cm, km, angstrom
+from scimath.units.api import UnitScalar, UnitArray, has_units
+from scimath.units.energy import  eV
+from scimath.units.length import cm, m
+from scimath.units.mass import  kg
 from scimath.units.time import s
-from scimath.units.mass import g, kg
-from scimath.units.density import g_per_cm3, kg_per_m3
-from scimath.units.substance import mol
-from scimath.units.dimensionless import dim
 
+# constants with no units
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
-from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour
+
+#constants with units
+from parameters import u_hbar, u_me, u_e, u_eps0
 
 @has_units
 def at_num_dens(dens, atom_mass):
@@ -28,65 +27,66 @@ def at_num_dens(dens, atom_mass):
         n         : array : units = m**-3
                    n = dens*A/atom_mass
       """
-    A = Avogadro
-    n = dens*A/atom_mass * cm**(-3)/m**-3
-    return n
+    return  dens * Avogadro/atom_mass * m**3/cm**3
 
 
 @has_units
-def fermi_energy(atNumDens, nvalence, u_hbar, u_me):
-    """ Calculate the Fermi energy of a material
-        from its density, atomic weight and
-        the number of valence electrons
+def fermi_energy(atNumDens, nvalence, c_hbar=hbar, c_me=m_e):
+    """ Calculate the Fermi energy of a material from its density,
+        atomic weight and the number of valence electrons.
+
+        Call either without passin the constants values for unitless results
+        or, alternatively, pass the contants values with units for results with units.
 
         Parameters
         ----------
         atNumDens : array  : units = m**-3
 
-        u_hbar    : scalar : units = J*s
+        c_hbar    : scalar : units = J*s
 
-        u_me      : scalar : units = kg
+        c_me      : scalar : units = kg
 
         Returns
         -------
         Ef        : array : units = eV
                     Ef = hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*me)
       """
-
     n = nvalence * atNumDens
 
-    Ef = u_hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*u_me) * m**2*kg*s**-2/ eV
-    return Ef
+    return c_hbar**2 * (3.*(pi**2)*n)**(2./3.)/(2.*c_me) * m**2*kg*s**-2/ eV
+
 
 
 @has_units
-def plasmon_energy(atNumDens, nvalence, u_hbar, u_me, u_e, u_eps0):
-    """ Calculate the plasmon energy of a material
-        from its density, atomic weight and
-        the number of valence electrons
+def plasmon_energy(atNumDens, nvalence, c_hbar=hbar, c_me=me, c_e=e, c_eps0=epsilon_0):
+    """ Calculate the plasmon energy of a material from its density,
+        atomic weight and the number of valence electrons.
+
+        Call either without passin the constants values for unitless results
+        or, alternatively, pass the contants values with units for results with units.
 
         Parameters
         ----------
         atNumDens : array  : units = m**-3
 
-        u_hbar    : scalar : units = J*s
+        c_hbar    : scalar : units = J*s
 
-        u_me      : scalar : units = kg
+        c_me      : scalar : units = kg
 
-        u_e       : scalar : units = coulomb
+        c_e       : scalar : units = coulomb
 
-        u_eps0    : scalar : units = farad*m**-1
+        c_eps0    : scalar : units = farad*m**-1
 
         Returns
         -------
         Epl        : array : units = eV
-                    Ef = hbar * ((n * e**2)/(u_eps0 * u_me))**0.5
+                    Ef = hbar * ((n * e**2)/(c_eps0 * c_me))**0.5
       """
 
     n = nvalence * atNumDens
 
-    Epl = u_hbar * e * (n/(u_eps0 * u_me))**0.5  * m**2*kg*s**-2/ eV
-    return Epl
+    return c_hbar * e * (n/(c_eps0 * c_me))**0.5  * m**2*kg*s**-2/ eV
+
 
 
 class material:
@@ -95,157 +95,154 @@ class material:
     '''
     def __init__(self, species):
         self.species = species
-        self.params = scattering_params(species)
+        self.params = scatter_params(species)
 
-    def nval(self):
-        ''' number of valence electrons '''
-        return self.params['n_val']
+        # atomic number density
+        self.atnd =  at_num_dens(self.params['density'], self.params['atwt'])
+        # plasmon energy
+        self.plasmon_e = plasmon_energy(self.atnd(), self.params['n_val'])
+        # fermi energy
+        self.fermi_e = fermi_energy(self.atnd(), self.params['n_val'])
 
-    def Eval(self):
-        ''' energy of valence shell '''
-        return self.params['E_val']
 
-    def name_s(self):
-        ''' array of names of core shells '''
-        return self.params['name_s']
+    def set_units(self):
+        ''' in the case we want units'''
+        self.params.update({'n_val': UnitArray(material['n_val'], units="dim") })
+        self.params.update({'E_val': UnitScalar(material['E_val'], units="eV") })
+        self.params.update({'Es': UnitArray(material['Es'], units="eV") })
+        self.params.update({'density': UnitScalar(material['density'], units="g_per_cm3") })
+        self.params.update({'atwt': UnitScalar(material['atwt'], units="g/mol") })
 
-    def Es(self):
-        ''' array of energies of core shells as UnitArray'''
-        return self.params['Es']
+        self.atnd.update(at_num_dens(self.params['density'], self.params['atwt']))
+        self.plasmon_e.update(plasmon_e(self.params['atnd'], self.params['n_val'], u_hbar, u_me, u_e, u_eps0))
+        self.fermi_e.update(fermi_e((self.params['atnd'], self.params['n_val'], u_hbar, u_me)))
 
-    def ns(self):
-        ''' array with number of electrons in core shells'''
-        return self.params['ns']
-
-    def Z(self):
-        ''' atomic  number'''
-        return self.params['Z']
-
-    def density(self):
-        ''' material density as UnitScalar'''
-        return self.params['density']
-
-    def atwt(self):
-        ''' atomic weight as UnitScalar'''
-        return self.params['atwt']
-
-    def Bethe_k(self):
-        ''' modified Bethe k value from Joy and Luo, Scanning 1989'''
-        return self.params['k']
-
-    # some very useful parameters
-    def atnd(self):
-        ''' atomic number density'''
-        return at_num_dens(self.params['density'], self.params['atwt'])
-
-    def pl_e(self):
-        ''' plasmon energy'''
-        return plasmon_energy(self.atnd(), self.params['n_val'], u_hbar, u_me, u_e, u_eps0)
-
-    def fermi_e(self):
-        ''' fermi energy'''
-        return fermi_energy(self.atnd(), self.params['n_val'], u_hbar, u_me)
 
 
 
 def scattering_params(species):
     if species=='Al':
         material = {'species': 'Al'}
-        # number of valence electrons
-        material['n_val'] = UnitArray((3), units="dim")
 
-        material['E_val'] = UnitScalar(72.55, units="eV")
+        # number of valence electrons
+        material['n_val'] = 3
+
+        # energy of valence shell
+        material['E_val'] = 72.55
 
         # energy levels for core electrons
         material['name_s'] = ['1s', '2s', '2p']
-        # binding energies
-        material['Es'] = UnitArray((1559, 118, 73.5), units="eV")
-        # number of electrons per shell
-        material['ns'] = UnitArray((2, 2, 6), units="dim")
 
+        # binding energies
+        material['Es'] = np.array([1559, 118, 73.5])
+
+        # number of electrons per shell
+        material['ns'] = np.array()[2, 2, 6])
+
+        # atomic  number
         material['Z'] = 13
-        material['density'] = UnitScalar(2.70, units="g_per_cm3")
-        material['atwt'] = UnitScalar(26.98154, units="g/mol")
+
+        #material density
+        material['density'] = 2.70
+
+        # atomic weight
+        material['atwt'] = 26.98154
 
         # modified Bethe k value from Joy and Luo, Scanning 1989
         material['k'] = 0.815
 
+
+        elif species=='Si':
+            material = {'species': 'Si'}
+
+            # number of valence electrons
+            material['n_val'] = 4
+
+            # energy of valence shell
+            material['E_val'] = 99.42
+
+            # energy levels for core electrons
+            material['name_s'] = ['1s', '2s', '2p']
+
+            # binding energies
+            material['Es'] = np.array([1189, 149, 100])
+
+            # number of electrons per shell
+            material['ns'] = np.array([2, 2, 6])
+
+            # atomic  number
+            material['Z'] = 14
+
+            #material density
+            material['density'] = 2.33
+
+            # atomic weight
+            material['atwt'] = 28.085
+
+            # modified Bethe k value from Joy and Luo, Scanning 1989
+            material['k'] = 0.822
+
+
+        elif species=='Cu':
+            material = {'species': 'Cu'}
+
+            # number of valence electrons
+            material['n_val'] = 11
+
+            # energy of valence shell
+            material['E_val'] = 75.1
+
+            # energy levels for core electrons
+            material['name_s'] = ['1s', '2s2p', '3p', '3p']
+
+            # binding energies
+            material['Es'] = np.array([8980, 977, 120, 74])
+
+            # number of electrons per shell
+            material['ns'] = np.array([2, 8, 2, 6])
+
+            # atomic  number
+            material['Z'] = 29
+
+            #material density
+            material['density'] = 8.96
+
+            # atomic weight
+            material['atwt'] = 63.546
+
+            # modified Bethe k value from Joy and Luo, Scanning 1989
+            material['k'] = 0.83
+
+
+        elif species=='Au':
+            material = {'species': 'Au'}
+
+            # number of valence electrons
+            material['n_val'] = 11
+
+            # energy of valence shell
+            material['E_val'] = 75.1
+
+            # energy levels for core electrons
+            material['name_s'] = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
+
+            # binding energies
+            material['Es'] = np.array([12980, 2584, 624, 341, 178, 85, 72, 54])
+
+            # number of electrons per shell
+            material['ns'] = np.array([8, 18, 8, 10, 2, 14, 2, 4])
+
+            # atomic  number
+            material['Z'] = 79
+
+            #material density
+            material['density'] = 19.30
+
+            # atomic weight
+            material['atwt'] = 196.967
+
+            # modified Bethe k value from Joy and Luo, Scanning 1989
+            material['k'] = 0.851
+
+
     return material
-
-
-
-# ##### Scattering variables for Si
-# # number of valence electrons
-# n_val_Si = 4
-#
-# E_val_Si = UnitScalar(99.42, units="eV")
-#
-# # energy levels for core electrons
-# name_s_Si = ['1s', '2s', '2p']
-# # binding energies
-# Ei_Si = UnitArray((1189, 149, 100), units="eV")
-# # number of electrons per shell
-# ni_Si = np.array([2, 2, 6])
-#
-# Z_Si = 14
-# density_Si = UnitScalar(2.33, units="g_per_cm3")
-# atwt_Si = UnitScalar(28.085, units="g/mol")
-#
-# # modified Bethe k value from Joy and Luo, Scanning 1989
-# k_Si = 0.822
-#
-# # incident energy
-# E_Si = UnitScalar(20000, units="eV")
-# # 5..100
-# Ec_Si = UnitScalar(10., units="eV")
-#
-#
-# #### Scattering variables for Cu
-# # number of valence electrons
-# n_val_Cu = 11
-#
-# E_val_Cu = UnitScalar(75.1, units="eV")
-#
-# # energy levels for core electrons
-# name_s_Cu = ['1s', '2s2p', '3s', '3p']
-# # binding energies
-# Ei_Cu = UnitArray((8980, 977, 120, 74), units="eV")
-# # number of electrons per shell
-# ni_Cu = np.array([2, 8, 2, 6])
-#
-# Z_Cu = 29
-# density_Cu = UnitScalar(8.96, units="g_per_cm3")
-# atwt_Cu = UnitScalar(63.546, units="g/mol")
-#
-# # modified Bethe k value from Joy and Luo, Scanning 1989
-# k_Cu = 0.83
-#
-# # incident energy
-# E_Cu = UnitScalar(20000, units="eV")
-# # 5..100
-# Ec_Cu = UnitScalar(10., units="eV")
-#
-#
-#
-# #### Scattering variables for Au
-# # number of valence electrons
-# n_val_Au = 11
-#
-# # energy levels for core electrons
-# name_s_Au = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
-# # binding energies
-# Ei_Au = UnitArray((12980, 2584, 624, 341, 178, 85, 72, 54), units="eV")
-# # number of electrons per shell
-# ni_Au = np.array([8, 18, 8, 10, 2, 14, 2, 4])
-#
-# Z_Au = 79
-# density_Au = UnitScalar(19.30, units="g_per_cm3")
-# atwt_Au = UnitScalar(196.967, units="g/mol")
-#
-# # modified Bethe k value from Joy and Luo, Scanning 1989
-# k_Au = 0.851
-#
-# # incident energy
-# E_Au = UnitScalar(20000, units="eV")
-# # 5..100
-# Ec_Au = UnitScalar(10., units="eV")

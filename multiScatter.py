@@ -8,7 +8,7 @@ from singleScatter import singleScatter_DS, singleScatter_cont
 
 
 
-def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz, Wc, parallel=False):
+def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz, Wc, units=False, parallel=False):
     # for parallel processes we need to make sure the random number seeds are different
     # for instance the process id
     if parallel:
@@ -38,7 +38,7 @@ def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz
     return {'energy':BSE_energy, 'direction':BSE_dir}
 
 
-def multiScatter_cont(num_el, material, E0, Emin, tilt, parallel=False):
+def multiScatter_cont(num_el, material, E0, Emin, tilt, units=False, parallel=False):
     # for parallel processes we need to make sure the random number seeds are different
     # for instance the process id
     if parallel:

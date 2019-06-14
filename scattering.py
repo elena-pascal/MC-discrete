@@ -9,19 +9,19 @@ from numba import jit
 
 from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
-from scipy.interpolate import Rbf
 
-from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-from scimath.units.energy import J, eV, KeV
-from scimath.units.electromagnetism import coulomb, farad
-from scimath.units.length import m, cm, km, angstrom
-from scimath.units.time import s
-from scimath.units.mass import g, kg
-from scimath.units.density import g_per_cm3, kg_per_m3
-from scimath.units.substance import mol
-from scimath.units.dimensionless import dim
 
-from parameters import u_hbar, u_me, u_e, u_eps0, c_pi_efour, u_bohrr
+
+# from scimath.units.api import UnitScalar, UnitArray, convert, has_units
+# from scimath.units.energy import J, eV, KeV
+# from scimath.units.electromagnetism import coulomb, farad
+from scimath.units.length import angstrom, cm,  m
+# from scimath.units.time import s
+# from scimath.units.mass import g, kg
+# from scimath.units.density import g_per_cm3, kg_per_m3
+# from scimath.units.substance import mol
+# from scimath.units.dimensionless import dim
+
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k
@@ -90,22 +90,23 @@ class scatter_discrete:
         self.sigma = {} # dictionary keeping all sigmas
         #self.mfp = {} # dictionary keeping all mfp
 
-        ## TODO: decide on sigma or mfp
+        ## TODO: decide on sigma or mfp. Is sigma the inverse mean free path?
         self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
         #self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
-        if (self.i_energy > self.m_Eval):
-            self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval, c_pi_efour)
+        # if the energy is larger than the valence energy consider Moller scattering
+        if (self.i_energy >= self.m_Eval):
+            self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
             #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
             # else the probability of Moller scattering is zero
 
         for i in range(len(self.m_Es)):
             if (self.i_energy > self.m_Es[i]):
-                self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], c_pi_efour)
+                self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i])
                 #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
 
         if (self.i_energy > self.m_pl_e):
-            self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd, u_bohrr)
+            self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
             #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
 
         self.sigma_total = sum(self.sigma.values())
@@ -118,7 +119,7 @@ class scatter_discrete:
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
-        pathl = UnitScalar(-self.mfp_total * log(random.random()), units = 'angstrom')
+        pathl = -self.mfp_total * log(random.random())
 
         try: # ask for forgiveness
             self.pathl = pathl
@@ -170,17 +171,8 @@ class scatter_discrete:
         '''
         energy loss is calculated from tables for the Moller and Gryz type
         '''
-        if (self.type == 'Rutherford'):
-            # Rutherford elastic scattering has no energy loss
-            self.E_loss = UnitScalar(0., units='eV')
-            print 'No energy loss for Rutherford scattering'
 
-        elif (self.type == 'Browning'):
-            # Browning elastic scattering has no energy loss
-            self.E_loss = UnitScalar(0., units='eV')
-            print 'No energy loss for Browning scattering'
-
-        elif(self.type == 'Moller'):
+        if(self.type == 'Moller'):
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             # energies = self.tables_EW_M[1]
@@ -189,8 +181,6 @@ class scatter_discrete:
             int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
             integral = random.random() * int_enlosses_table[-1]
             Wi_table = bisect.bisect_left(int_enlosses_table, integral)
-            # enlosses = self.tables_EW_M[2][0, Eidx_table, :]
-            # E_loss = enlosses[Wi_table]
             E_loss = self.tables_EW_M[2][0, Eidx_table, :][Wi_table]
 
             try:
@@ -287,8 +277,6 @@ class scatter_discrete:
                 self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
                 #print 'E_loss is ', self.E_loss, self.i_energy
                 #print 'Theta is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
-
-
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
             except wrongUpdateOrder:
@@ -307,6 +295,77 @@ class scatter_discrete:
 
         #else:
         #    print 'I did not understand the scattering type in scatter.calculate_sAngles'
+
+
+
+
+#######################  with units  #########################################
+from parameters import u_bohr_r, u_pi_efour
+
+class scatter_discrete_wUnits(scatter_discrete):
+    ''' scatter_discerte_wUnits inherits the class scatter_discrete
+        It is different because we try to track units here.
+        The way to do that is to use inputs with units
+        and give the physical parameters with units
+
+        Practically the only difference is that we call the sigma function with
+        explicit unitted parameters
+    '''
+
+    def __init__(self, electron, material, free_param, tables_EW_M, tables_EW_G):
+        # incident particle params
+        self.i_energy = electron.energy  # incident particle energy
+
+        # material params
+        self.m_Z = material.Z()          # atomic number
+        self.m_names = material.name_s() # names of the inner shells
+        self.m_ns = material.ns()        # number of electrons per inner shell
+        self.m_Es = material.Es()        # inner shells energies
+        self.m_nval = material.nval()    # number of valence shell electrons
+        self.m_Eval = material.Eval()    # valence shell energy
+        self.m_atnd = material.atnd()    # atomic number density
+        self.m_pl_e = material.pl_e()    # plasmon energy
+        self.m_f_e = material.fermi_e()  # Fermi energy
+
+        self.free_param = free_param     # the minimun energy for Moller scattering
+
+        self.tables_EW_M = tables_EW_M
+        self.tables_EW_G = tables_EW_G
+
+        # scattering params
+        self.pathl = 0.
+        self.type = 0.
+        self.E_loss = 0.
+        self.c2_halfTheta = 0.
+        self.halfPhi = 0.
+
+        # intitalise scattering probabilities dictionary
+        self.sigma = {} # dictionary keeping all sigmas
+
+        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+
+        # if the energy is larger than the valence energy consider Moller scattering
+        if (self.i_energy >= self.m_Eval):
+            self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval, u_pi_efour)
+            #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
+            # else the probability of Moller scattering is zero
+
+        for i in range(len(self.m_Es)):
+            if (self.i_energy > self.m_Es[i]):
+                self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], u_pi_efour)
+                #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+
+        if (self.i_energy > self.m_pl_e):
+            self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd, u_bohr_r)
+            #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
+
+        self.sigma_total = sum(self.sigma.values())
+        #self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
+        self.mfp_total = mfp_from_sigma( self.sigma_total, self.m_atnd)
+
+        self.halfPhi = pi*random.random() # radians
+
+
 
 
 #####################################################################
