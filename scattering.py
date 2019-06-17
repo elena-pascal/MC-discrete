@@ -5,22 +5,11 @@ import bisect
 import sys
 import operator
 
-from numba import jit
-
 from collections import OrderedDict # sweet sweet ordered dictionaries
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
 
-
-
-# from scimath.units.api import UnitScalar, UnitArray, convert, has_units
-# from scimath.units.energy import J, eV, KeV
-# from scimath.units.electromagnetism import coulomb, farad
+from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
-# from scimath.units.time import s
-# from scimath.units.mass import g, kg
-# from scimath.units.density import g_per_cm3, kg_per_m3
-# from scimath.units.substance import mol
-# from scimath.units.dimensionless import dim
 
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
@@ -64,15 +53,15 @@ class scatter_discrete:
         self.i_energy = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.Z()          # atomic number
-        self.m_names = material.name_s() # names of the inner shells
-        self.m_ns = material.ns()        # number of electrons per inner shell
-        self.m_Es = material.Es()        # inner shells energies
-        self.m_nval = material.nval()    # number of valence shell electrons
-        self.m_Eval = material.Eval()    # valence shell energy
-        self.m_atnd = material.atnd()    # atomic number density
-        self.m_pl_e = material.pl_e()    # plasmon energy
-        self.m_f_e = material.fermi_e()  # Fermi energy
+        self.m_Z = material.params['Z']          # atomic number
+        self.m_names = material.params['name_s'] # names of the inner shells
+        self.m_ns = material.params['ns']        # number of electrons per inner shell
+        self.m_Es = material.params['Es']        # inner shells energies
+        self.m_nval = material.params['n_val']    # number of valence shell electrons
+        self.m_Eval = material.params['E_val']    # valence shell energy
+        self.m_atnd = material.atnd    # atomic number density
+        self.m_pl_e = material.plasmon_e    # plasmon energy
+        self.m_f_e = material.fermi_e  # Fermi energy
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -98,7 +87,7 @@ class scatter_discrete:
         if (self.i_energy >= self.m_Eval):
             self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
             #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
-            # else the probability of Moller scattering is zero
+            # else the probability of Moller scattering is the default zero
 
         for i in range(len(self.m_Es)):
             if (self.i_energy > self.m_Es[i]):
@@ -136,9 +125,10 @@ class scatter_discrete:
         #     print ' Stopping.'
         #     sys.exit()
         except lTooLarge:
+            print '-----------------------------------------------------'
             print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigmas, self.m_atnd)
+            print ' Value of l is', pathl, 'larger than 10000 Angstroms.'
+            print ' Mean free paths were:', mfp_from_sigma(self.sigma_total, self.m_atnd)
             print ' Stopping.'
             sys.exit()
 
@@ -239,11 +229,13 @@ class scatter_discrete:
                     raise E_lossTooLarge
 
             except E_lossTooSmall:
+                print ' ---------------------------------------------------------------------------'
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
                 print ' Value of energy loss less than 0.001 eV.'
                 print ' Stopping.'
                 sys.exit()
             except E_lossTooLarge:
+                print ' --------------------------------------------------------------------------'
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
                 print ' Value of energy loss larger than half the current energy.'
                 print ' The current energy lost is:',  E_loss
@@ -317,15 +309,15 @@ class scatter_discrete_wUnits(scatter_discrete):
         self.i_energy = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.Z()          # atomic number
-        self.m_names = material.name_s() # names of the inner shells
-        self.m_ns = material.ns()        # number of electrons per inner shell
-        self.m_Es = material.Es()        # inner shells energies
-        self.m_nval = material.nval()    # number of valence shell electrons
-        self.m_Eval = material.Eval()    # valence shell energy
-        self.m_atnd = material.atnd()    # atomic number density
-        self.m_pl_e = material.pl_e()    # plasmon energy
-        self.m_f_e = material.fermi_e()  # Fermi energy
+        self.m_Z = material.params['Z']          # atomic number
+        self.m_names = material.params['name_s'] # names of the inner shells
+        self.m_ns = material.params['ns']        # number of electrons per inner shell
+        self.m_Es = material.params['Es']        # inner shells energies
+        self.m_nval = material.params['n_val']    # number of valence shell electrons
+        self.m_Eval = material.params['E_val']    # valence shell energy
+        self.m_atnd = material.atnd    # atomic number density
+        self.m_pl_e = material.plasmon_e    # plasmon energy
+        self.m_f_e = material.fermi_e  # Fermi energy
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -383,12 +375,12 @@ class scatter_continuous:
         self.i_energy = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.Z()          # atomic number
-        self.m_Es = material.Es()        # inner shells energies
-        self.m_ns = material.ns()        # number of electrons per inner shell
-        self.m_nval = material.nval()    # number of valence shell electrons
-        self.m_Eval = material.Eval()    # valence shell energy
-        self.m_atnd = material.atnd()    # atomic number density
+        self.m_Z = material.params['Z']          # atomic number
+        self.m_Es = material.params['Es']        # inner shells energies
+        self.m_ns = material.params['ns']        # number of electrons per inner shell
+        self.m_nval = material.params['n_val']    # number of valence shell electrons
+        self.m_Eval = material.params['E_val']    # valence shell energy
+        self.m_atnd = material.atnd    # atomic number density
 
 
         # scattering params
@@ -413,7 +405,7 @@ class scatter_continuous:
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
-        pathl = UnitScalar(-self.mfp['Rutherford'] * log(random.random()), units = 'angstrom')
+        pathl = -self.mfp['Rutherford'] * log(random.random())
 
         try: # ask for forgiveness
             self.pathl = pathl
@@ -432,7 +424,7 @@ class scatter_continuous:
         except lTooLarge:
             print ' Fatal error! in compute_pathl in scattering class'
             print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigmas, self.m_atnd)
+            print ' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd)
             print ' Stopping.'
             sys.exit()
 
@@ -447,7 +439,7 @@ class scatter_continuous:
             print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
         else:
             self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
-                                    self.m_Es, self.m_nval, self.m_Eval, c_pi_efour)
+                                    self.m_Es, self.m_nval, self.m_Eval)
 
     def compute_sAngles(self):
         alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
@@ -457,3 +449,48 @@ class scatter_continuous:
         #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
 
         self.halfPhi = pi*random.random() # radians
+
+
+
+#######################  with units  #########################################
+class scatter_continuous_wUnits(scatter_continuous):
+    def __init__(self, electron, material):
+        # incident particle params
+        self.i_energy = electron.energy  # incident particle energy
+
+        # material params
+        self.m_Z = material.params['Z']          # atomic number
+        self.m_Es = material.params['Es']        # inner shells energies
+        self.m_ns = material.params['ns']        # number of electrons per inner shell
+        self.m_nval = material.params['n_val']    # number of valence shell electrons
+        self.m_Eval = material.params['E_val']    # valence shell energy
+        self.m_atnd = material.atnd    # atomic number density
+
+
+        # scattering params
+        self.pathl = 0.
+        self.type = 0.
+        self.E_loss = 0.
+        self.c2_halfTheta = 0.
+        self.halfPhi = 0.
+
+
+        # intitalise scattering probabilities dictionary
+        self.sigma = {} # dictionary keeping all sigmas
+        self.mfp = {} # dictionary keeping all mfp
+
+        ## TODO: decide on sigma or mfp
+        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
+
+
+    def compute_Eloss(self):
+        '''
+        energy loss is calculated from Bethe's CSDA
+        '''
+
+        if (self.pathl == 0.):
+            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+        else:
+            self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
+                                    self.m_Es, self.m_nval, self.m_Eval, u_pi_efour)

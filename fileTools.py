@@ -19,11 +19,11 @@ def readInput(fileName):
 
                 # trim whitespaces
                 param = [p.strip() for p in parameter]
-                
+
                 if ((param[0] == 'mode') or (param[0] == 'material')):
                     # assign string to dictionary
                     data[param[0]] = param[1]
-                elif ('Bins' in param[0]):
+                elif ('Bins' in param[0]) or ('num_el' in param[0]):
                     # assign int to dictionary
                     data[param[0]] = int(param[1])
                 else:
@@ -47,7 +47,7 @@ def writeBSEtoHDF5(data, filename, alpha, xy_PC, L):
             dataDictionary[str(k)] += d[str(k)]
 
     # project directions on detector
-    onDet_pandasFrame = pd.DataFrame(projOnDetector(dataDictionary['direction'], alpha, xy_PC, L))
+    #onDet_pandasFrame = pd.DataFrame(projOnDetector(dataDictionary['direction'], alpha, xy_PC, L))
 
     # pandas doesn't like mixed elements entries, so I'm replacing the direction
     # arrays into three separate entries until I figure out something nicer
@@ -67,4 +67,4 @@ def writeBSEtoHDF5(data, filename, alpha, xy_PC, L):
     BSE_pandasFrame.to_hdf(filename, key='BSE', mode='w')
 
     # write on detector projection pandas to hdf5
-    onDet_pandasFrame.to_hdf(filename, key='onDet', mode='w')
+    #onDet_pandasFrame.to_hdf(filename, key='onDet', mode='w')

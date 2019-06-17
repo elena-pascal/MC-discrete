@@ -58,7 +58,7 @@ def fermi_energy(atNumDens, nvalence, c_hbar=hbar, c_me=m_e):
 
 
 @has_units
-def plasmon_energy(atNumDens, nvalence, c_hbar=hbar, c_me=me, c_e=e, c_eps0=epsilon_0):
+def plasmon_energy(atNumDens, nvalence, c_hbar=hbar, c_me=m_e, c_e=e, c_eps0=epsilon_0):
     """ Calculate the plasmon energy of a material from its density,
         atomic weight and the number of valence electrons.
 
@@ -100,27 +100,27 @@ class material:
         # atomic number density
         self.atnd =  at_num_dens(self.params['density'], self.params['atwt'])
         # plasmon energy
-        self.plasmon_e = plasmon_energy(self.atnd(), self.params['n_val'])
+        self.plasmon_e = plasmon_energy(self.atnd, self.params['n_val'])
         # fermi energy
-        self.fermi_e = fermi_energy(self.atnd(), self.params['n_val'])
+        self.fermi_e = fermi_energy(self.atnd, self.params['n_val'])
 
 
     def set_units(self):
         ''' in the case we want units'''
-        self.params.update({'n_val': UnitArray(material['n_val'], units="dim") })
-        self.params.update({'E_val': UnitScalar(material['E_val'], units="eV") })
-        self.params.update({'Es': UnitArray(material['Es'], units="eV") })
-        self.params.update({'density': UnitScalar(material['density'], units="g_per_cm3") })
-        self.params.update({'atwt': UnitScalar(material['atwt'], units="g/mol") })
+        self.params.update({'n_val': UnitArray(self.params['n_val'], units="dim") })
+        self.params.update({'E_val': UnitScalar(self.params['E_val'], units="eV") })
+        self.params.update({'Es': UnitArray(self.params['Es'], units="eV") })
+        self.params.update({'density': UnitScalar(self.params['density'], units="g_per_cm3") })
+        self.params.update({'atwt': UnitScalar(self.params['atwt'], units="g/mol") })
 
-        self.atnd.update(at_num_dens(self.params['density'], self.params['atwt']))
-        self.plasmon_e.update(plasmon_e(self.params['atnd'], self.params['n_val'], u_hbar, u_me, u_e, u_eps0))
-        self.fermi_e.update(fermi_e((self.params['atnd'], self.params['n_val'], u_hbar, u_me)))
-
-
+        self.atnd = at_num_dens(self.params['density'], self.params['atwt'])
+        self.plasmon_e = plasmon_energy(self.atnd, self.params['n_val'], u_hbar, u_me, u_e, u_eps0)
+        self.fermi_e = fermi_energy(self.atnd, self.params['n_val'], u_hbar, u_me)
 
 
-def scattering_params(species):
+
+
+def scatter_params(species):
     if species=='Al':
         material = {'species': 'Al'}
 
@@ -137,7 +137,7 @@ def scattering_params(species):
         material['Es'] = np.array([1559, 118, 73.5])
 
         # number of electrons per shell
-        material['ns'] = np.array()[2, 2, 6])
+        material['ns'] = np.array([2, 2, 6])
 
         # atomic  number
         material['Z'] = 13
@@ -152,97 +152,97 @@ def scattering_params(species):
         material['k'] = 0.815
 
 
-        elif species=='Si':
-            material = {'species': 'Si'}
+    elif species=='Si':
+        material = {'species': 'Si'}
 
-            # number of valence electrons
-            material['n_val'] = 4
+        # number of valence electrons
+        material['n_val'] = 4
 
-            # energy of valence shell
-            material['E_val'] = 99.42
+        # energy of valence shell
+        material['E_val'] = 99.42
 
-            # energy levels for core electrons
-            material['name_s'] = ['1s', '2s', '2p']
+        # energy levels for core electrons
+        material['name_s'] = ['1s', '2s', '2p']
 
-            # binding energies
-            material['Es'] = np.array([1189, 149, 100])
+        # binding energies
+        material['Es'] = np.array([1189, 149, 100])
 
-            # number of electrons per shell
-            material['ns'] = np.array([2, 2, 6])
+        # number of electrons per shell
+        material['ns'] = np.array([2, 2, 6])
 
-            # atomic  number
-            material['Z'] = 14
+        # atomic  number
+        material['Z'] = 14
 
-            #material density
-            material['density'] = 2.33
+        #material density
+        material['density'] = 2.33
 
-            # atomic weight
-            material['atwt'] = 28.085
+        # atomic weight
+        material['atwt'] = 28.085
 
-            # modified Bethe k value from Joy and Luo, Scanning 1989
-            material['k'] = 0.822
-
-
-        elif species=='Cu':
-            material = {'species': 'Cu'}
-
-            # number of valence electrons
-            material['n_val'] = 11
-
-            # energy of valence shell
-            material['E_val'] = 75.1
-
-            # energy levels for core electrons
-            material['name_s'] = ['1s', '2s2p', '3p', '3p']
-
-            # binding energies
-            material['Es'] = np.array([8980, 977, 120, 74])
-
-            # number of electrons per shell
-            material['ns'] = np.array([2, 8, 2, 6])
-
-            # atomic  number
-            material['Z'] = 29
-
-            #material density
-            material['density'] = 8.96
-
-            # atomic weight
-            material['atwt'] = 63.546
-
-            # modified Bethe k value from Joy and Luo, Scanning 1989
-            material['k'] = 0.83
+        # modified Bethe k value from Joy and Luo, Scanning 1989
+        material['k'] = 0.822
 
 
-        elif species=='Au':
-            material = {'species': 'Au'}
+    elif species=='Cu':
+        material = {'species': 'Cu'}
 
-            # number of valence electrons
-            material['n_val'] = 11
+        # number of valence electrons
+        material['n_val'] = 11
 
-            # energy of valence shell
-            material['E_val'] = 75.1
+        # energy of valence shell
+        material['E_val'] = 75.1
 
-            # energy levels for core electrons
-            material['name_s'] = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
+        # energy levels for core electrons
+        material['name_s'] = ['1s', '2s2p', '3p', '3p']
 
-            # binding energies
-            material['Es'] = np.array([12980, 2584, 624, 341, 178, 85, 72, 54])
+        # binding energies
+        material['Es'] = np.array([8980, 977, 120, 74])
 
-            # number of electrons per shell
-            material['ns'] = np.array([8, 18, 8, 10, 2, 14, 2, 4])
+        # number of electrons per shell
+        material['ns'] = np.array([2, 8, 2, 6])
 
-            # atomic  number
-            material['Z'] = 79
+        # atomic  number
+        material['Z'] = 29
 
-            #material density
-            material['density'] = 19.30
+        #material density
+        material['density'] = 8.96
 
-            # atomic weight
-            material['atwt'] = 196.967
+        # atomic weight
+        material['atwt'] = 63.546
 
-            # modified Bethe k value from Joy and Luo, Scanning 1989
-            material['k'] = 0.851
+        # modified Bethe k value from Joy and Luo, Scanning 1989
+        material['k'] = 0.83
+
+
+    elif species=='Au':
+        material = {'species': 'Au'}
+
+        # number of valence electrons
+        material['n_val'] = 11
+
+        # energy of valence shell
+        material['E_val'] = 75.1
+
+        # energy levels for core electrons
+        material['name_s'] = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
+
+        # binding energies
+        material['Es'] = np.array([12980, 2584, 624, 341, 178, 85, 72, 54])
+
+        # number of electrons per shell
+        material['ns'] = np.array([8, 18, 8, 10, 2, 14, 2, 4])
+
+        # atomic  number
+        material['Z'] = 79
+
+        #material density
+        material['density'] = 19.30
+
+        # atomic weight
+        material['atwt'] = 196.967
+
+        # modified Bethe k value from Joy and Luo, Scanning 1989
+        material['k'] = 0.851
 
 
     return material

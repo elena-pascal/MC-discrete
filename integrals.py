@@ -96,12 +96,12 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
             if (n_e.size == 1): # Moller
                 # the upper integral limit depends on Ei
+
                 Elossmax =  extF_limits_moller(Ei, Elossmin[ishell], Ef)
                 # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
                 dW = (Elossmax - Elossmin[ishell])/nBinsW
             else: # Gryzinski
                 Elossmax = extF_limits_gryz(Ei, Elossmin[ishell], Ef)
-                #print 'e loss max for Ei', Ei, 'is', Elossmax
                 dW = (Elossmax - Elossmin[ishell])/nBinsW
 
             # initialise the integral for the recursive function

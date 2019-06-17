@@ -18,7 +18,7 @@ def ruther_sigma(E, Z):
 
         Parameters
         ----------
-        E      : array : units = KeV
+        E      : array : units = eV
 
         Z      : array : units = dim
 
@@ -26,13 +26,14 @@ def ruther_sigma(E, Z):
         -------
         s_R    : array : units = cm**2
     """
+    E = E * eV/KeV
     alpha =  3.4e-3*(Z**(0.67))/E
     s_R = 5.21e-21 * (Z**2/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
     return s_R
 
 #### 2a) Inelastic Moller cross section for free electrons
 @has_units
-def moller_sigma(E, Emin, nfree, c_pi_efour=pi_e_four):
+def moller_sigma(E, Emin, nfree, c_pi_efour=pi_efour):
     """ Calculate the Moller inelastic cross section
         per atom
 
@@ -58,7 +59,7 @@ def moller_sigma(E, Emin, nfree, c_pi_efour=pi_e_four):
 
 #### 2b) Inelastic Gryzinski cross section for core shell electrons
 @has_units
-def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_e_four):
+def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_efour):
     """ Calculate the Gryzinski inelastic cross section
         per atom
 

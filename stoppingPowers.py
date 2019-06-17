@@ -13,7 +13,7 @@ from parameters import pi_efour, bohr_r
 ###################################################################
 
 # 2a) Moller stopping power for free electrons
-@has_units_fact(useit)
+@has_units
 def moller_sp(E, Emin, nfree, n, c_pi_efour=pi_efour):
     """ Calculate the Moller stopping power per unit length
 

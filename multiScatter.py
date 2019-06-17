@@ -1,14 +1,13 @@
-from multiprocessing import Pool, Process, Queue
 import numpy as np
 import os
 
 
 from electron import electron
-from singleScatter import singleScatter_DS, singleScatter_cont
+from singleScatter import scatterOneEl_DS, scatterOneEl_cont
 
 
 
-def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz, Wc, units=False, parallel=False):
+def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz, Wc, parallel=False):
     # for parallel processes we need to make sure the random number seeds are different
     # for instance the process id
     if parallel:
@@ -28,7 +27,7 @@ def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz
         e_i = electron(E0, pos0, dir0)
 
         # scatter until end of scatter
-        singleScatter_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz)
+        scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz)
 
         # append data for the backscattered electrons
         if (e_i.outcome == 'backscattered'):
@@ -38,7 +37,7 @@ def multiScatter_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz
     return {'energy':BSE_energy, 'direction':BSE_dir}
 
 
-def multiScatter_cont(num_el, material, E0, Emin, tilt, units=False, parallel=False):
+def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, parallel=False):
     # for parallel processes we need to make sure the random number seeds are different
     # for instance the process id
     if parallel:
@@ -56,7 +55,7 @@ def multiScatter_cont(num_el, material, E0, Emin, tilt, units=False, parallel=Fa
         e_i = electron(E0, pos0, dir0)
 
         # scatter until end of scatter
-        singleScatter_cont(e_i, material, Emin)
+        scatterOneEl_cont(e_i, material, Emin)
 
         # append data for the backscattered electrons
         if (e_i.outcome == 'backscattered'):
