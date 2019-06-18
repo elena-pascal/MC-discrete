@@ -20,7 +20,7 @@ def readInput(fileName):
                 # trim whitespaces
                 param = [p.strip() for p in parameter]
 
-                if ((param[0] == 'mode') or (param[0] == 'material')):
+                if (param[0] in ['mode', 'material', 'Bethe']):
                     # assign string to dictionary
                     data[param[0]] = param[1]
                 elif ('Bins' in param[0]) or ('num_el' in param[0]):

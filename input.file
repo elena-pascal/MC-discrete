@@ -4,8 +4,10 @@ num_el   : 10
 E0       : 30000 # eV
 Emin     : 25000 # eV
 material : Al
-s_tilt   : 70.   # degrees
-mode     : DS    # discrete scattering = DS; cont scattering = cont
+s_tilt   : 70.     # degrees
+mode     : cont    # discrete scattering = DS; cont scattering = cont
+# if continuous choose Bethe model
+Bethe    : explicit # classical, JL or explicit
 
 # bins are only relevant for discrete scattering
 num_BinsW   : 10

@@ -12,11 +12,12 @@ from scimath.units.api import UnitScalar, UnitArray
 
 from material import material
 from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
-from singleScatter import scatterOneEl_DS_wUnits,  scatterOneEl_cont_wUnits
+from extFunctions import gryz_dCS, moller_dCS
 from extFunctions import gryz_dCS, moller_dCS
 from parameters import u_pi_efour
 
 from electron import electron
+from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
 from fileTools import readInput, writeBSEtoHDF5
 
@@ -104,13 +105,23 @@ if __name__ == '__main__': #this is necessary on Windows
         oneElectron = electron(inputParameter['E0'], pos0, dir0)
 
         if (inputParameter['mode'] == 'DS'):
-            scatter_i = scatterOneEl_DS_wUnits(oneElectron, thisMaterial, inputParameter['Emin'], inputParameter['Wc'],  tables_moller, tables_gryz)
+            scatterOneEl_DS_wUnits(oneElectron, thisMaterial, inputParameter['Emin'], inputParameter['Wc'],  tables_moller, tables_gryz)
             print '- Energy units:', oneElectron.energy.units
             print '- Distance units:', oneElectron.xyz.units
             sys.exit()
 
         elif (inputParameter['mode'] == 'cont'):
-            scatterOneEl_cont_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
+            if (inputParameter['Bethe'] == 'classical'):
+                scatterOneEl_cont_cl_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
+            elif (inputParameter['Bethe'] == 'JL'):
+                scatterOneEl_cont_JL_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
+            elif (inputParameter['Bethe'] == 'explicit'):
+                scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
+            else:
+                print '! I did not understand the Bethe model type in units check'
+                print '! Exiting'
+                sys.exit()
+
             print
             print '- Energy units:', oneElectron.energy.units
             print '- Distance units:', oneElectron.xyz.units
@@ -136,7 +147,8 @@ if __name__ == '__main__': #this is necessary on Windows
                     Wc=inputParameter['Wc'], parallel=True)
     else:
         f = partial(scatterMultiEl_cont, material=thisMaterial, E0=inputParameter['E0'],\
-                    Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'], parallel=True)
+                    Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'], \
+                    Bethe_model = inputParameter['Bethe'], parallel=True)
 
     # each worker gets num_electrons/num_proc
     BSE_data = p.map(f, [inputParameter['num_el']/num_proc for _ in range(num_proc)])

@@ -106,7 +106,7 @@ def quinn_sp(E, Epl, Ef, n, c_bohr_r=bohr_r):
 
 # 2d) Bethe continuous stopping power
 @has_units
-def bethe_cl_sp(Z,E,n,c_pi_efour=pi_efour):
+def bethe_cl_sp(Z, E, n, c_pi_efour=pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
         per unit length
 
@@ -139,7 +139,7 @@ def bethe_cl_sp(Z,E,n,c_pi_efour=pi_efour):
 
 
 @has_units
-def bethe_mod_sp_k(Z,E,n,k,c_pi_efour=pi_efour):
+def bethe_mod_sp_k(Z, E, n, k, c_pi_efour=pi_efour):
     """ Calculate the Bethe continuous inelastic scattering stopping power
         per unit length using Joy and Luo potential (1989)
 
