@@ -89,6 +89,31 @@ def plasmon_energy(atNumDens, nvalence, c_hbar=hbar, c_me=m_e, c_e=e, c_eps0=eps
 
 
 
+@has_units
+def powell_c(penn_b, plasmon_E):
+    """ Powell's c function in terms of Penn's b parameter
+        used in the derivation of IMFP using the dielectric function
+
+        Parameters
+        ----------
+        penn_b     : array : units = dim
+                  Penn's b material parameter
+
+        plasmon_E  : array : units = eV
+                  plasmon energy
+
+        Returns
+        -------
+        c          : array : units = dim
+                    c = plasmon_E * exp(penn_b)
+
+    """
+    return plasmon_E*exp(penn_b)/eV
+
+
+
+
+
 class material:
     ''' material is a class containing all the necessary
         material parameters for a small predified subset of species
@@ -103,7 +128,8 @@ class material:
         self.plasmon_e = plasmon_energy(self.atnd, self.params['n_val'])
         # fermi energy
         self.fermi_e = fermi_energy(self.atnd, self.params['n_val'])
-
+        # Powell c parameter
+        self.powell_c = powell_c(self.params['penn_b'], self.plasmon_e)
 
     def set_units(self):
         ''' in the case we want units'''
@@ -149,7 +175,10 @@ def scatter_params(species):
         material['atwt'] = 26.98154
 
         # modified Bethe k value from Joy and Luo, Scanning 1989
-        material['k'] = 0.815
+        material['bethe_k'] = 0.815
+
+        # Penn's b value for IMFP from Penn, Journal of Electron Spectroscopy and Related Phenomena, 9, 1976
+        material['penn_b'] = -2.16
 
 
     elif species=='Si':
@@ -180,7 +209,10 @@ def scatter_params(species):
         material['atwt'] = 28.085
 
         # modified Bethe k value from Joy and Luo, Scanning 1989
-        material['k'] = 0.822
+        material['bethe_k'] = 0.822
+
+        # Penn's b value for IMFP from Penn, Journal of Electron Spectroscopy and Related Phenomena, 9, 1976
+        material['penn_b'] = -2.19
 
 
     elif species=='Cu':
@@ -211,7 +243,10 @@ def scatter_params(species):
         material['atwt'] = 63.546
 
         # modified Bethe k value from Joy and Luo, Scanning 1989
-        material['k'] = 0.83
+        material['bethe_k'] = 0.83
+
+        # Penn's b value for IMFP from Penn, Journal of Electron Spectroscopy and Related Phenomena, 9, 1976
+        material['penn_b'] = -3.21
 
 
     elif species=='Au':
@@ -242,7 +277,9 @@ def scatter_params(species):
         material['atwt'] = 196.967
 
         # modified Bethe k value from Joy and Luo, Scanning 1989
-        material['k'] = 0.851
+        material['bethe_k'] = 0.851
 
+        # Penn's b value for IMFP from Penn, Journal of Electron Spectroscopy and Related Phenomena, 9, 1976
+        material['penn_b'] = -2.16
 
     return material

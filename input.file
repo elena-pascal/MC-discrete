@@ -5,7 +5,7 @@ E0       : 30000 # eV
 Emin     : 25000 # eV
 material : Al
 s_tilt   : 70.     # degrees
-mode     : cont    # discrete scattering = DS; cont scattering = cont
+mode     : cont    # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe    : explicit # classical, JL or explicit
 

@@ -123,3 +123,41 @@ def quinn_sigma(E, Epl, Ef, n, c_bohr_r=bohr_r):
 
 
     return s_Q
+
+
+#### 2d) Inelastic cross section using the dielectric function
+@has_units
+def diel_sigma(E, Epl, Ef, n, c_bohr_r=bohr_r):
+    """ Calculate the dielectric funtion cross section in the optical limit with Powell
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+                incident energy
+
+        Epl    : array : units = eV
+                plasmon energy
+
+        Ef     : array : units = eV
+                Fermi energy
+
+        n      : array : units = m**-3
+               number density
+
+        c_bohr_r : scalar: units = m
+
+        Returns
+        -------
+        s_Q    : array : units = cm**2
+    """
+    E_Ef = E*1./Ef
+    Epl_Ef = Epl*1./Ef
+
+    s_Q_total = Epl * np.log( ((1. + Epl_Ef)**(0.5) - 1.)/ ( E_Ef**0.5 -\
+             (E_Ef - Epl_Ef)**0.5 ) )/(2. *  c_bohr_r * E)
+
+    s_Q = (s_Q_total/n) * m**2/ cm**2
+
+
+    return s_Q

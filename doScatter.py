@@ -70,9 +70,9 @@ if __name__ == '__main__': #this is necessary on Windows
 
     # set material
     thisMaterial = material(inputParameter['material'])
-    print 'material is:', thisMaterial.species
+    print ' material is:', thisMaterial.species
 
-    print 'scattering mode is:', inputParameter['mode']
+    print ' scattering mode is:', inputParameter['mode']
     print
 
     if (inputParameter['mode'] == 'DS'):
@@ -87,6 +87,11 @@ if __name__ == '__main__': #this is necessary on Windows
                                      thisMaterial.params['Es'], thisMaterial.fermi_e,\
                                      thisMaterial.params['ns'], gryz_dCS,\
                                      inputParameter['num_BinsW'], inputParameter['num_BinsE'] )
+
+    elif (inputParameter['mode'] in ['diel', 'dielectric']):
+        print ' ---- calculating dielectric function integral table'
+        tables_diel = 
+
 
     if use_units:
         # Set all input parameters with units, make calculations @with_units
@@ -118,8 +123,8 @@ if __name__ == '__main__': #this is necessary on Windows
             elif (inputParameter['Bethe'] == 'explicit'):
                 scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
             else:
-                print '! I did not understand the Bethe model type in units check'
-                print '! Exiting'
+                print ' ! I did not understand the Bethe model type in units check'
+                print ' ! Exiting'
                 sys.exit()
 
             print
@@ -128,12 +133,12 @@ if __name__ == '__main__': #this is necessary on Windows
             sys.exit()
         else:
             print
-            print 'I did not understand the input scattering mode'
+            print ' I did not understand the input scattering mode'
 
 
 
     num_proc = cpu_count()-1 # leave one cpu thread free
-    print 'You have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
+    print ' You have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
     print
     print '---- starting scattering'
 
@@ -169,7 +174,7 @@ if __name__ == '__main__': #this is necessary on Windows
     #     print 'Waiting for ', remaining, 'electrons to finish scattering'
     #     time.sleep(0.5)
 
-    print 'time spent in scattering', time.time()-time_start
+    print ' time spent in scattering', time.time()-time_start
     print
 
     # save to file
