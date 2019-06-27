@@ -100,47 +100,47 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
 # see Powell 'Calculations of electron inelastic mean free paths from experimental optical data'
 # Surface and and interface analysis, 7(6): 263-274, 1985
 #@has_units
-def diel_Pow_dCS(E, W, eps_W, powell_c, c_me=me, c_e=e, c_hbar=hbar):
-    """ Calculate the Powell formula for the dielectric inelastic cross section
-
-        Parameters
-        ----------
-        E      : array : units = eV
-                       incident energy
-
-        W      : array : units = eV
-                       energy loss
-
-        eps_W  : array : units = dim
-                        dielectric function evaulated at W
-
-        Penn_b : array : units = dim
-                        Powell c parameter
-
-        c_me   : array : units = kg
-                       electron mass constant
-
-        c_e    : array : units = coulomb
-                       electron charge constant
-
-        c_hbar : array : units =
-                       reduced Plank's constant
-
-        Returns
-        -------
-        dCS    : array : units = cm**2
-    """
-
-    try:
-        dCS = c_me * c_e**2 * eps_W*ln(powell_c * E/ W) / (2. * pi * c_hbar**2 * E)
-
-        if  (1. - eps < 0):
-            raise E_lossTooLarge
-
-    except E_lossTooLarge:
-        print ' The energy loss is larger than the current electron energy in Powell formulation of the electrostatic discrete CS'
-        print ' W is', W ,'and E is', E
-        print ' Stopping'
-        sys.exit()
-
-    return dCS
+# def diel_Pow_dCS(E, W, eps_W, powell_c, c_me=me, c_e=e, c_hbar=hbar):
+#     """ Calculate the Powell formula for the dielectric inelastic cross section
+#
+#         Parameters
+#         ----------
+#         E      : array : units = eV
+#                        incident energy
+#
+#         W      : array : units = eV
+#                        energy loss
+#
+#         eps_W  : array : units = dim
+#                         dielectric function evaulated at W
+#
+#         Penn_b : array : units = dim
+#                         Powell c parameter
+#
+#         c_me   : array : units = kg
+#                        electron mass constant
+#
+#         c_e    : array : units = coulomb
+#                        electron charge constant
+#
+#         c_hbar : array : units =
+#                        reduced Plank's constant
+#
+#         Returns
+#         -------
+#         dCS    : array : units = cm**2
+#     """
+#
+#     try:
+#         dCS = c_me * c_e**2 * eps_W*ln(powell_c * E/ W) / (2. * pi * c_hbar**2 * E)
+#
+#         if  (1. - eps < 0):
+#             raise E_lossTooLarge
+#
+#     except E_lossTooLarge:
+#         print ' The energy loss is larger than the current electron energy in Powell formulation of the electrostatic discrete CS'
+#         print ' W is', W ,'and E is', E
+#         print ' Stopping'
+#         sys.exit()
+#
+#     return dCS

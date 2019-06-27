@@ -25,7 +25,7 @@ def moller_sp(E, Emin, nfree, n, c_pi_efour=pi_efour):
 
     nfree  : array : units = dim
 
-    n      : array : units = cm**-3
+    n      : array : units = m**-3
            atom number density
 
     c_pi_efour: scalar: units = cm**2 * eV**2
@@ -35,7 +35,8 @@ def moller_sp(E, Emin, nfree, n, c_pi_efour=pi_efour):
     sp_M   : array : units = eV/angstrom
     """
     eps = Emin*1./E
-    sp_M = nfree*n*c_pi_efour*(2. - (1./(1.-eps)) +  log( 1./(8.* eps*((1.-eps)**2)) ))/E  * cm**(-1)/angstrom**(-1)
+    sp_M = nfree*n*c_pi_efour*(2. - (1./(1.-eps)) +  log( 1./(8.* eps*((1.-eps)**2)) ))/E \
+                            * m**-3 * cm**2/angstrom**-1
     return sp_M
 
 
@@ -53,7 +54,7 @@ def gryz_sp(E, Enl, nsi, n, c_pi_efour=pi_efour):
         nsi    : array : units = dim
                number of electrons in i-shell
 
-        n      : array : units = cm**-3
+        n      : array : units = m**-3
                atom number density
 
         c_pi_efour: scalar: units = cm**2 * eV**2
@@ -65,7 +66,8 @@ def gryz_sp(E, Enl, nsi, n, c_pi_efour=pi_efour):
 
     U = E*1./Enl
     sp_G = nsi * n* c_pi_efour * ((U - 1.)/(U + 1.))**1.5 * (log(U) +
-                                     4.*log(2.7+(U-1.)**0.5)/3.)/E * cm**(-1)/angstrom**(-1)
+                                     4.*log(2.7+(U-1.)**0.5)/3.)/E \
+                                     * m**-3 * cm**2/angstrom**-1
     return sp_G
 
 # 2c) Quinn stopping power for plasmons
@@ -103,6 +105,7 @@ def quinn_sp(E, Epl, Ef, n, c_bohr_r=bohr_r):
 
     return sp_Q
 
+############################## Bethe #######################################
 
 # 2d) Bethe continuous stopping power
 @has_units
@@ -118,7 +121,7 @@ def bethe_cl_sp(Z, E, n, c_pi_efour=pi_efour):
         E      : array : units = eV
                 incident energy
 
-        n      : array : units = cm**-3
+        n      : array : units = m**-3
                number density
 
         c_pi_efour: scalar: units = cm**2 * eV**2
@@ -133,7 +136,7 @@ def bethe_cl_sp(Z, E, n, c_pi_efour=pi_efour):
     else:
         J = 11.5*Z
 
-    sp_B = 2.*c_pi_efour*n*(Z/E) * log( 1.166*(E )/J ) * cm**(-1)/angstrom**(-1)
+    sp_B = 2.*c_pi_efour*n*(Z/E) * log( 1.166*(E )/J ) * m**-3*cm**2/angstrom**-1
     return sp_B
 
 
@@ -151,7 +154,7 @@ def bethe_mod_sp_k(Z, E, n, k, c_pi_efour=pi_efour):
         E      : array : units = eV
                 incident energy
 
-        n      : array : units = cm**-3
+        n      : array : units = m**-3
                number density
 
         c_pi_efour: scalar: units = cm**2 * eV**2
@@ -166,7 +169,7 @@ def bethe_mod_sp_k(Z, E, n, k, c_pi_efour=pi_efour):
     else:
         J = 11.5*Z
 
-    sp_B = 2.*c_pi_efour*n*(Z/E) * log( 1.166*(E + k*J )/J ) * cm**(-1)/angstrom**(-1)
+    sp_B = 2.*c_pi_efour*n*(Z/E) * log( 1.166*(E + k*J )/J ) * m**-3*cm**2/angstrom**-1
     return sp_B
 
 
@@ -180,7 +183,7 @@ def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour=pi_efour):
         E      : array : units = eV
                 incident energy
 
-        n      : array : units = cm**-3
+        n      : array : units = m**-3
                number density
 
         Zi     : array : units = dim
@@ -202,7 +205,7 @@ def bethe_mod_sp(E, n, Zi, Ei, Zval, Eval, c_pi_efour=pi_efour):
         sp_B    : array : units = eV/angstrom
     """
 
-    prefactor = (2.*c_pi_efour*n/E ) * cm**(-1)/angstrom**(-1)
+    prefactor = (2.*c_pi_efour*n/E ) * m**-3*cm**2/angstrom**-1
 
     sumi = Zval * log(E*1./Eval)
     for indx, Eb in enumerate((Ei)):

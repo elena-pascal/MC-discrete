@@ -360,10 +360,10 @@ class scatter_discrete_wUnits(scatter_discrete):
 
 
 
-#######################################################################
-####################### Continuous inelastic scatter class ############
-#######################           3 Bethe models           ############
-#######################################################################
+################################################################################
+####################### Continuous inelastic scatter class #####################
+#######################           3 Bethe models           #####################
+################################################################################
 
 #### 1) classical Bethe
 class scatter_continuous_classical:
@@ -377,8 +377,8 @@ class scatter_continuous_classical:
         self.i_energy = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.params['Z']           # atomic number
-        self.m_atnd = material.atnd    # atomic number density
+        self.m_Z = material.params['Z']  # atomic number
+        self.m_atnd = material.atnd      # atomic number density
 
         # scattering params
         self.pathl = 0.
@@ -390,7 +390,7 @@ class scatter_continuous_classical:
 
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {} # dictionary keeping all mfp
+        self.mfp = {}   # dictionary keeping all mfp
 
         ## TODO: decide on sigma or mfp
         self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
@@ -426,7 +426,30 @@ class scatter_continuous_classical:
         if (self.pathl == 0.):
             print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
         else:
-            self.E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
+            E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
+            try:
+                self.E_loss = E_loss
+
+                if (E_loss < 1.e-3):
+                    raise E_lossTooSmall
+
+                elif (E_loss >= self.i_energy ):
+                    raise E_lossTooLarge
+
+            except E_lossTooSmall:
+                print ' ---------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss less than 0.001 eV.'
+                print ' Stopping.'
+                sys.exit()
+            except E_lossTooLarge:
+                print ' --------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss larger than half the current energy.'
+                print ' The current energy lost is:',  E_loss
+                print ' The current energy is:',  self.i_energy
+                print ' Stopping.'
+                sys.exit()
 
     def compute_sAngles(self):
         alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
@@ -435,8 +458,8 @@ class scatter_continuous_classical:
         self.halfPhi = pi*random.random()
 
 
-# Joy and Luo Bethe
-class scatter_continuous_JL:
+# Joy and Luo Bethe as extended from the classical one
+class scatter_continuous_JL(scatter_continuous_classical):
     ''' This is the CSLA scattering mode
     Rutherford is the elastic scattering and accounts for angular deviation
     and Joy and Luo modiefied form of Bethe is the continuous energy loss
@@ -468,28 +491,6 @@ class scatter_continuous_JL:
         self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
         self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
-
-    def compute_pathl(self):
-        '''
-        Path length is calculated from the cross section
-        path_length = - mean_free_path * log(rn)
-        '''
-        pathl = -self.mfp['Rutherford'] * log(random.random())
-
-        try: # ask for forgiveness
-            self.pathl = pathl
-            if (float(pathl) > 1.e4):
-                raise lTooLarge
-
-        except lTooLarge:
-            print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd)
-            print ' Stopping.'
-            sys.exit()
-
-
-
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
@@ -498,17 +499,34 @@ class scatter_continuous_JL:
         if (self.pathl == 0.):
             print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
         else:
-            self.E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k)
+            E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k)
+            try:
+                self.E_loss = E_loss
 
-    def compute_sAngles(self):
-        alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
-        r = random.random()
-        self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
-        self.halfPhi = pi*random.random()
+                if (E_loss < 1.e-3):
+                    raise E_lossTooSmall
+                #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
+                elif (E_loss >= self.i_energy ):
+                    raise E_lossTooLarge
+
+            except E_lossTooSmall:
+                print ' ---------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss less than 0.001 eV.'
+                print ' Stopping.'
+                sys.exit()
+            except E_lossTooLarge:
+                print ' --------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss larger than half the current energy.'
+                print ' The current energy lost is:',  E_loss
+                print ' The current energy is:',  self.i_energy
+                print ' Stopping.'
+                sys.exit()
 
 
-# explicit shells contributions Bethe
-class scatter_continuous_explicit:
+# explicit shells contributions Bethe as extention from the classical one
+class scatter_continuous_explicit(scatter_continuous_classical):
     ''' This is the CSLA scattering mode
     Rutherford is the elastic scattering and accounts for angular deviation
     and the explicit modified version of Bethe is the continuous energy loss
@@ -544,27 +562,6 @@ class scatter_continuous_explicit:
         self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
 
-    def compute_pathl(self):
-        '''
-        Path length is calculated from the cross section
-        path_length = - mean_free_path * log(rn)
-        '''
-        pathl = -self.mfp['Rutherford'] * log(random.random())
-
-        try: # ask for forgiveness
-            self.pathl = pathl
-            if (float(pathl) > 1.e4):
-                raise lTooLarge
-
-        except lTooLarge:
-            print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd)
-            print ' Stopping.'
-            sys.exit()
-
-
-
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
@@ -573,14 +570,32 @@ class scatter_continuous_explicit:
         if (self.pathl == 0.):
             print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
         else:
-            self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
+            E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
                                     self.m_Es, self.m_nval, self.m_Eval)
 
-    def compute_sAngles(self):
-        alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
-        r = random.random()
-        self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
-        self.halfPhi = pi*random.random()
+            try:
+                self.E_loss = E_loss
+
+                if (E_loss < 1.e-3):
+                    raise E_lossTooSmall
+
+                elif (E_loss >= self.i_energy ):
+                    raise E_lossTooLarge
+
+            except E_lossTooSmall:
+                print ' ---------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss less than 0.001 eV.'
+                print ' Stopping.'
+                sys.exit()
+            except E_lossTooLarge:
+                print ' --------------------------------------------------------------------------'
+                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+                print ' Value of energy loss larger than half the current energy.'
+                print ' The current energy lost is:',  E_loss
+                print ' The current energy is:',  self.i_energy
+                print ' Stopping.'
+                sys.exit()
 
 
 

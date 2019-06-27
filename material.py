@@ -108,7 +108,7 @@ def powell_c(penn_b, plasmon_E):
                     c = plasmon_E * exp(penn_b)
 
     """
-    return plasmon_E*exp(penn_b)/eV
+    return plasmon_E * np.exp(penn_b)/eV
 
 
 

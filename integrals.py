@@ -15,7 +15,7 @@ def extF_limits_moller(E, Ec, Ef):
     #a = Ec
 
     #b = np.array([0.5 * (E-Ef)])
-    b =  (E-Ef) * 0.5
+    b =  (E - Ef) * 0.5
     return b
 
 def extF_limits_gryz(E, Ei, Ef):
@@ -25,7 +25,7 @@ def extF_limits_gryz(E, Ei, Ef):
 	out :: a, b
 	'''
     #a = Ei
-    b = (E + Ei) * 0.5
+    b = (E - Ef + Ei) * 0.5
     return b
 
 

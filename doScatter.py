@@ -88,9 +88,9 @@ if __name__ == '__main__': #this is necessary on Windows
                                      thisMaterial.params['ns'], gryz_dCS,\
                                      inputParameter['num_BinsW'], inputParameter['num_BinsE'] )
 
-    elif (inputParameter['mode'] in ['diel', 'dielectric']):
-        print ' ---- calculating dielectric function integral table'
-        tables_diel = 
+    # elif (inputParameter['mode'] in ['diel', 'dielectric']):
+    #     print ' ---- calculating dielectric function integral table'
+    #     tables_diel =
 
 
     if use_units:
@@ -150,15 +150,16 @@ if __name__ == '__main__': #this is necessary on Windows
                     Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'],\
                     tables_moller=tables_moller, tables_gryz=tables_gryz,\
                     Wc=inputParameter['Wc'], parallel=True)
-    else:
+    elif (inputParameter['mode'] == 'cont'):
         f = partial(scatterMultiEl_cont, material=thisMaterial, E0=inputParameter['E0'],\
                     Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'], \
                     Bethe_model = inputParameter['Bethe'], parallel=True)
 
+
     # each worker gets num_electrons/num_proc
     BSE_data = p.map(f, [inputParameter['num_el']/num_proc for _ in range(num_proc)])
     # BSE_data = p.map_async(f, xrange(num_el/num_proc))
-
+    print '---- finished scattering'
     # serial
     #BSE_data = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
 
@@ -178,9 +179,9 @@ if __name__ == '__main__': #this is necessary on Windows
     print
 
     # save to file
-    fileBSE = 'data/Al_BSE'+str(int(inputParameter['s_tilt']))+'_tilt_'+\
-                                   inputParameter['mode']+'_Emin'+str(int(inputParameter['Emin']))+\
-                                   '_Emax'+str(int(inputParameter['E0']))+'_bins'+str(inputParameter['num_BinsE'])+'.h5'
+    fileBSE = 'data/Al_BSE_'+'tilt'+ str(int(inputParameter['s_tilt']))+ '_'+\
+                   inputParameter['mode']+inputParameter['Bethe']+'_Emin'+str(int(inputParameter['Emin']))+\
+                   '_Emax'+str(int(inputParameter['E0']))+'_bins'+str(inputParameter['num_BinsE'])+'.h5'
 
     from parameters import alpha, xy_PC, L
     writeBSEtoHDF5(BSE_data, fileBSE, alpha, xy_PC, L)

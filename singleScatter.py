@@ -4,7 +4,7 @@ import numpy as np
 from electron import electron
 from scattering import scatter_continuous_classical,scatter_continuous_JL, scatter_continuous_explicit
 from scattering import scatter_continuous_classical_wUnits, scatter_continuous_JL_wUnits, scatter_continuous_explicit_wUnits
-
+from scattering import scatter_discrete
 def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
@@ -217,6 +217,7 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
 
         if (e_i.energy <= float(Emin)):
             absorbed = True
+            e_i.outcome = 'absorbed'
 
         # determine scattering angles
         scatter_i.compute_sAngles()
@@ -225,8 +226,10 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
         num_scatt += 1
+
         if (num_scatt > 1000):
             scatteredTooLong = True
+            e_i.outcome = 'too far'
 
     return
 
