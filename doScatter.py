@@ -150,6 +150,7 @@ if __name__ == '__main__': #this is necessary on Windows
                     Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'],\
                     tables_moller=tables_moller, tables_gryz=tables_gryz,\
                     Wc=inputParameter['Wc'], parallel=True)
+
     elif (inputParameter['mode'] == 'cont'):
         f = partial(scatterMultiEl_cont, material=thisMaterial, E0=inputParameter['E0'],\
                     Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'], \

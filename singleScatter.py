@@ -5,10 +5,13 @@ from electron import electron
 from scattering import scatter_continuous_classical,scatter_continuous_JL, scatter_continuous_explicit
 from scattering import scatter_continuous_classical_wUnits, scatter_continuous_JL_wUnits, scatter_continuous_explicit_wUnits
 from scattering import scatter_discrete
+
+
 def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
+    pathl_history = []
 
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
@@ -16,6 +19,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
+        pathl_history.append(scatter_i.pathl)
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -23,8 +27,9 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            return # exit function here
-
+            # exit function here
+            return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+            
         # determine scattering type
         scatter_i.det_type()
 
@@ -94,9 +99,9 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             scatteredTooLong = True
             e_i.outcome = 'scatteredManyTimes'
 
-    return
+    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
-
+####################### w units #################
 def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
@@ -193,6 +198,7 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
+    pathl_history = []
 
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
@@ -200,6 +206,9 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
+        if scatter_i.pathl is None:
+            print '! pathl is NoNe'
+        pathl_history.append(scatter_i.pathl)
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -207,7 +216,8 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            return # exit function here
+            # exit function here
+            return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
         # determine energy loss
         scatter_i.compute_Eloss()
@@ -231,13 +241,14 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
             scatteredTooLong = True
             e_i.outcome = 'too far'
 
-    return
+    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
 # 2)
 def scatterOneEl_cont_JL(e_i, material, Emin):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
+    pathl_history = []
 
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
@@ -245,6 +256,7 @@ def scatterOneEl_cont_JL(e_i, material, Emin):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
+        pathl_history.append(scatter_i.pathl)
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -252,7 +264,8 @@ def scatterOneEl_cont_JL(e_i, material, Emin):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            return # exit function here
+            # exit function here
+            return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
         # determine energy loss
         scatter_i.compute_Eloss()
@@ -273,13 +286,14 @@ def scatterOneEl_cont_JL(e_i, material, Emin):
         if (num_scatt > 1000):
             scatteredTooLong = True
 
-    return
+    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
 # 3)
 def scatterOneEl_cont_expl(e_i, material, Emin):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
+    pathl_history = []
 
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
@@ -287,6 +301,7 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
+        pathl_history.append(scatter_i.pathl)
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -294,7 +309,8 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            return # exit function here
+            # exit function here
+            return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
 
         # determine energy loss
         scatter_i.compute_Eloss()
@@ -315,7 +331,9 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
         if (num_scatt > 1000):
             scatteredTooLong = True
 
-    return
+    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+
+
  ################ with units ####################
 
  #1)

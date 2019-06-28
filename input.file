@@ -1,6 +1,6 @@
 # input file
 
-num_el   : 100
+num_el   : 10000
 E0       : 30000 # eV
 Emin     : 15000 # eV
 material : Al
@@ -10,11 +10,11 @@ mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scatte
 Bethe    : classical # classical, JL or explicit
 
 # bins are only relevant for discrete scattering
-num_BinsW   : 10
-num_BinsE   : 10
+num_BinsW   : 1000
+num_BinsE   : 1000
 
 # minimum transfer energy only relevant for discrete scattering
-Wc       : 35     # eV
+Wc       : 150     # eV
 
 
 # detector information

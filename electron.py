@@ -18,22 +18,26 @@ class electron:
 
         self.y_local = np.array([0., 1., 0.]) # local coordinate system
 
-        self.energy_hist = []
-        self.xyz_hist = []
-        self.dir_hist = []
+        #self.energy_hist = []
+        #self.xyz_hist = []
+        #self.dir_hist = []
 
 
     def update_energy(self, energyLoss):
         ''' update electron after every scattering
             keep record of the history by appending new information to lists
         '''
-        self.energy = self.energy - energyLoss
+        energy = self.energy - energyLoss
+        if energy:
+            self.energy = energy
+        else:
+            print '------- None value in energy found when updating energy'
         #self.energy_hist.append(newEnergy)
 
     def update_xyz(self, pathLength):
         newPosition = self.xyz + pathLength*self.dir
         self.xyz = newPosition
-        self.xyz_hist.append(newPosition)
+        #self.xyz_hist.append(newPosition)
 
 
     def update_direction(self, c2_halfTheta, halfPhi):
