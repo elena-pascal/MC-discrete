@@ -29,7 +29,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             e_i.outcome = 'backscattered'
             # exit function here
             return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
-            
+
         # determine scattering type
         scatter_i.det_type()
 
@@ -99,7 +99,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             scatteredTooLong = True
             e_i.outcome = 'scatteredManyTimes'
 
-    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+    return {'mean_pathl' : np.mean(pathl_history), 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
 ####################### w units #################
 def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
@@ -217,7 +217,7 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
             # exit function here
-            return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+            return {'mean_pathl' : np.mean(pathl_history), 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
         # determine energy loss
         scatter_i.compute_Eloss()
@@ -241,7 +241,7 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
             scatteredTooLong = True
             e_i.outcome = 'too far'
 
-    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+    return {'mean_pathl' : pathl_history, 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
 # 2)
 def scatterOneEl_cont_JL(e_i, material, Emin):
@@ -286,7 +286,7 @@ def scatterOneEl_cont_JL(e_i, material, Emin):
         if (num_scatt > 1000):
             scatteredTooLong = True
 
-    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+    return {'mean_pathl' : np.mean(pathl_history), 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
 # 3)
 def scatterOneEl_cont_expl(e_i, material, Emin):
@@ -331,7 +331,7 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
         if (num_scatt > 1000):
             scatteredTooLong = True
 
-    return {'mean_pathl' : np.mean(pathl_history) , 'num_scattering': num_scatt}
+    return {'mean_pathl' : np.mean(pathl_history), 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
 
  ################ with units ####################

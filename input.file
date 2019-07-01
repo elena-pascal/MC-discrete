@@ -1,11 +1,11 @@
 # input file
 
-num_el   : 10000
+num_el   : 10
 E0       : 30000 # eV
 Emin     : 15000 # eV
 material : Al
 s_tilt   : 70.     # degrees
-mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+mode     : cont   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe    : classical # classical, JL or explicit
 

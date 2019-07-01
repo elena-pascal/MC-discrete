@@ -180,12 +180,10 @@ if __name__ == '__main__': #this is necessary on Windows
     print
 
     # save to file
-    fileBSE = 'data/Al_BSE_'+'tilt'+ str(int(inputParameter['s_tilt']))+ '_'+\
-                   inputParameter['mode']+inputParameter['Bethe']+'_Emin'+str(int(inputParameter['Emin']))+\
-                   '_Emax'+str(int(inputParameter['E0']))+'_bins'+str(inputParameter['num_BinsE'])+'.h5'
+    fileBSE = 'data/Al_BSE_'+'.h5'
 
     from parameters import alpha, xy_PC, L
-    writeBSEtoHDF5(BSE_data, fileBSE, alpha, xy_PC, L)
+    writeBSEtoHDF5(BSE_data, inputParameter, fileBSE, alpha, xy_PC, L)
 
 
     print 'BSE data had been written to ', fileBSE

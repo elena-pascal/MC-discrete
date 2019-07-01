@@ -21,6 +21,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
     BSE_dir          = []
     BSE_scatterAngle = []
     mean_pathl       = []
+    total_path       = []
     num_scatt        = []
 
     for _ in range(num_el):
@@ -30,6 +31,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
         # scatter until end of scatter
         res_dict = scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz)
         mean_pathl.append(res_dict['mean_pathl'])
+        total_path.append(res_dict['total_path']) 
         num_scatt.append(res_dict['num_scattering'])
 
         # append data for the backscattered electrons
@@ -39,7 +41,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
 
     # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
     return {'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
-            'all':   {'mean_pathl' : mean_pathl, 'num_scatter' : num_scatt} }
+            'all':   {'mean_pathl' : mean_pathl, 'total_path': total_path, 'num_scatter' : num_scatt} }
 
 
 def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, parallel=False):
@@ -73,6 +75,7 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, parallel=
     BSE_dir          = []
     BSE_scatterAngle = []
     mean_pathl       = []
+    total_path       = []
     num_scatt        = []
 
     for _ in range(num_el):
@@ -82,6 +85,7 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, parallel=
         # scatter until end of scatter
         res_dict = scatterOneEl_cont(e_i, material, Emin)
         mean_pathl.append(res_dict['mean_pathl'])
+        total_path.append(res_dict['total_path'])
         num_scatt.append(res_dict['num_scattering'])
 
         # append data for the backscattered electrons
@@ -91,4 +95,4 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, parallel=
 
     # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
     return {'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
-            'all':   {'mean_pathl' : mean_pathl, 'num_scatter' : num_scatt} }
+            'all':   {'mean_pathl' : mean_pathl, 'total_path': total_path, 'num_scatter' : num_scatt} }

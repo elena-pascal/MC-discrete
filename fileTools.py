@@ -1,4 +1,4 @@
-import h5py
+#import h5py
 import pandas as pd
 
 ####### read input file ##################
@@ -35,7 +35,7 @@ def readInput(fileName):
 
 
 ######## write HDF5 file ##################
-def writeBSEtoHDF5(data, filename, alpha, xy_PC, L):
+def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
     '''
     save all the backscattering relevant information to a structured data file
 
@@ -72,28 +72,46 @@ def writeBSEtoHDF5(data, filename, alpha, xy_PC, L):
 
     # pandas doesn't like mixed elements entries, so I'm replacing the direction
     # arrays into three separate entries until I figure out something nicer
-    expandDir = {'x_dir':[item[0] for item in BSE_dict['direction']],\
+    BSEtable =  {'x_dir':[item[0] for item in BSE_dict['direction']],\
                  'y_dir':[item[1] for item in BSE_dict['direction']],\
                  'z_dir':[item[2] for item in BSE_dict['direction']]}
 
     del BSE_dict['direction']
-    BSE_dict.update(expandDir)
+    BSE_dict.update({'direction' : BSEtable})
 
+    # write direction results to pandas data frame
+    BSE_dir_df = pd.DataFrame(BSE_dict['direction'], columns=BSEtable.keys())
+
+    # write energy results to pandas series
+    BSE_e_s = pd.Series(BSE_dict['energy'])
 
     print '---- number of BSEs:', len(BSE_dict['energy'])
 
-    # write results to pandas
-    BSE_pandasFrame = pd.DataFrame(BSE_dict).T
-
-    # write BSE energy and exit direction pandas to hdf5
-    BSE_pandasFrame.to_hdf(filename, key='BSE', mode='w')
-
-
-    # write results to pandas
-    all_pandasFrame = pd.DataFrame(all_dict).T
-
-    # write BSE energy and exit direction pandas to hdf5
-    all_pandasFrame.to_hdf(filename, key='all_e', mode='w')
+    # write mean path length, total length travelled and number of
+    # scattering events to pandas series
+    all_mpl_s = pd.Series(all_dict['mean_pathl'])
+    all_totalL_s = pd.Series(all_dict['total_path'])
+    all_numScatt_s = pd.Series(all_dict['num_scatter'])
 
     # write on detector projection pandas to hdf5
     #onDet_pandasFrame.to_hdf(filename, key='onDet', mode='w')
+
+    # write input parameters to pandas series
+    input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
+
+
+    # HDFstore is a dict like object that reads and writes pandas with the PyTables library
+    # picked tables to be read with pandas:
+    # pd.read_hdf(filename, 'BSE/directions')
+    with pd.HDFStore(filename) as dataFile:
+        # save some input parameters
+        dataFile['input'] = input_s
+
+        # write BSE energy and exit direction pandas data frame to hdf5
+        dataFile['BSE/directions'] = BSE_dir_df
+        dataFile['BSE/energy'] = BSE_e_s
+
+        # write all electron information
+        dataFile['all/mean_pathl'] = all_mpl_s
+        dataFile['all/total_l'] = all_totalL_s
+        dataFile['all/num_scatt'] = all_numScatt_s

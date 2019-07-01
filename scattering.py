@@ -472,7 +472,7 @@ class scatter_continuous_JL(scatter_continuous_classical):
 
         # material params
         self.m_Z = material.params['Z']           # atomic number
-        self.m_k = material.params['bethe_k']           # k value for Joy and Luo equation
+        self.m_k = material.params['bethe_k']     # k value for Joy and Luo equation
         self.m_atnd = material.atnd    # atomic number density
 
 
