@@ -5,10 +5,10 @@ import time
 import sys
 import getopt
 
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, Process, Manager, Queue, cpu_count, Lock
 from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
-
+from tqdm import tqdm
 
 from material import material
 from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
@@ -92,7 +92,7 @@ if __name__ == '__main__': #this is necessary on Windows
     #     print ' ---- calculating dielectric function integral table'
     #     tables_diel =
 
-
+############################## units###########################################
     if use_units:
         # Set all input parameters with units, make calculations @with_units
         # and return pathlength and energy units
@@ -135,16 +135,19 @@ if __name__ == '__main__': #this is necessary on Windows
             print
             print ' I did not understand the input scattering mode'
 
+###############################################################################
+
 
 
     num_proc = cpu_count()-1 # leave one cpu thread free
     print ' You have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
     print
     print '---- starting scattering'
-
     time_start = time.time()
-    p = Pool(processes=num_proc)
 
+    output = Queue()
+
+    # define the function for scattering of multiple electrons depending on the model
     if (inputParameter['mode'] == 'DS'):
         f = partial(scatterMultiEl_DS, material=thisMaterial, E0=inputParameter['E0'],\
                     Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'],\
@@ -157,25 +160,38 @@ if __name__ == '__main__': #this is necessary on Windows
                     Bethe_model = inputParameter['Bethe'], parallel=True)
 
 
-    # each worker gets num_electrons/num_proc
-    BSE_data = p.map(f, [inputParameter['num_el']/num_proc for _ in range(num_proc)])
-    # BSE_data = p.map_async(f, xrange(num_el/num_proc))
+
+    lock = Lock()
+    #with Manager() as manager:
+    #    results_list = manager.list()
+    #    print 'first call', results_list
+        # each worker gets total_num_electrons/num_proc
+
+
+    processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
+                         inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
+                         output, count, True)) for count in range(num_proc)]
+    for p in processes:
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    result = [output.get() for p in processes]
+    #print result
+
+    #for result in tqdm( p.imap_unordered(f, xrange(inputParameter['num_el'])), total=inputParameter['num_el']):
+    #    BSE_data.append(result)
+
     print '---- finished scattering'
     # serial
     #BSE_data = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
 
-    p.close()
+    #p.close()
     # if some things go wrong in the parallel code, pool.join() will throw some errosr
-    p.join()
+    #p.join()
 
-    # print progress
-    # while(True):
-    #     if (BSE_data.ready()):
-    #         break
-    #     remaining = BSE_data._number_left
-    #     print 'Waiting for ', remaining, 'electrons to finish scattering'
-    #     time.sleep(0.5)
-
+    print
     print ' time spent in scattering', time.time()-time_start
     print
 
@@ -183,7 +199,7 @@ if __name__ == '__main__': #this is necessary on Windows
     fileBSE = 'data/Al_BSE_'+'.h5'
 
     from parameters import alpha, xy_PC, L
-    writeBSEtoHDF5(BSE_data, inputParameter, fileBSE, alpha, xy_PC, L)
+    writeBSEtoHDF5(result, inputParameter, fileBSE, alpha, xy_PC, L)
 
 
-    print 'BSE data had been written to ', fileBSE
+    print ' BSE data had been written to ', fileBSE

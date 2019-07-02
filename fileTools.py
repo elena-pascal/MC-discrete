@@ -1,5 +1,6 @@
 #import h5py
 import pandas as pd
+import warnings
 
 ####### read input file ##################
 def readInput(fileName):
@@ -99,9 +100,12 @@ def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
     # write input parameters to pandas series
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
 
+    # TODO: don't supress all performance warnings though
+    # pandas is going to complain about performace for the input string table
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
     # HDFstore is a dict like object that reads and writes pandas with the PyTables library
-    # picked tables to be read with pandas:
+    # pickled tables to be read with pandas:
     # pd.read_hdf(filename, 'BSE/directions')
     with pd.HDFStore(filename) as dataFile:
         # save some input parameters

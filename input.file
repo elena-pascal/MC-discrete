@@ -1,6 +1,6 @@
 # input file
 
-num_el   : 10
+num_el   : 5000    # per process; to be multiplied by number of processes 
 E0       : 30000 # eV
 Emin     : 15000 # eV
 material : Al

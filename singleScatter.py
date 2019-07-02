@@ -241,7 +241,7 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
             scatteredTooLong = True
             e_i.outcome = 'too far'
 
-    return {'mean_pathl' : pathl_history, 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
+    return {'mean_pathl' : np.mean(pathl_history), 'total_path' : np.sum(pathl_history), 'num_scattering': num_scatt}
 
 # 2)
 def scatterOneEl_cont_JL(e_i, material, Emin):
