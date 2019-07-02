@@ -2,6 +2,7 @@ import numpy as np
 import os
 import sys
 import random
+import pickle
 from tqdm import tqdm
 
 from electron import electron
@@ -51,11 +52,13 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
             BSE_energy.append(float(e_i.energy))
             BSE_dir.append(e_i.dir)
 
-
-
-    # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
-    output.put({'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
-            'all':   {'mean_pathl' : mean_pathl, 'total_path': total_path, 'num_scatter' : num_scatt} })
+    try:
+        # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
+        output.put(pickle.dumps({'BSE':   {'energy' : tuple(BSE_energy), 'direction' : tuple(BSE_dir)},
+                    'all':   {'mean_pathl' : tuple(mean_pathl), 'total_path': tuple(total_path), 'num_scatter' : tuple(num_scatt)} }))
+    except :
+        print "Unexpected error:", sys.exc_info()[0]
+        raise
 
 
 
@@ -86,12 +89,11 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, output, c
         print '! Exiting...'
         sys.exit()
 
-    BSE_energy       = []
-    BSE_dir          = []
-    BSE_scatterAngle = []
-    mean_pathl       = []
-    total_path       = []
-    num_scatt        = []
+    indexes = ('outcome', 'energy', 'dir', 'MFP', 'TP', 'num_scatt')
+    out_dict = {}
+
+    for label in indexes:
+        out_dict[label] = []
 
     if (count == 0):
         # print progress bar for the first thread
@@ -107,16 +109,20 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, output, c
 
         # scatter until end of scatter
         res_dict = scatterOneEl_cont(e_i, material, Emin)
-        mean_pathl.append(res_dict['mean_pathl'])
-        total_path.append(res_dict['total_path'])
-        num_scatt.append(res_dict['num_scattering'])
 
-        # append data for the backscattered electrons
-        if (e_i.outcome == 'backscattered'):
-            BSE_energy.append(e_i.energy)
-            BSE_dir.append(e_i.dir)
+        # append data for all electrons
+        for index in res_dict.keys():
+            out_dict[index].append(res_dict[index])
 
+        out_dict['outcome'].append(e_i.outcome)
+        out_dict['energy'].append(e_i.energy)
+        out_dict['dir'].append(tuple(e_i.dir))
 
-    # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
-    output.put({'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
-            'all':   {'mean_pathl' : mean_pathl, 'total_path': total_path, 'num_scatter' : num_scatt} })
+    # TODO: tuple instead of dict
+    try:
+        # make tuples out of lists and pickle them
+        output.put(pickle.dumps( (indexes,  tuple( tuple(out_dict[label]) for label in indexes)) , protocol=2 ) )
+
+    except:
+        print "Unexpected error:", sys.exc_info()[0]
+        raise

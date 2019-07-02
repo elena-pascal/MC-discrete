@@ -4,6 +4,7 @@ import numpy as np
 import time
 import sys
 import getopt
+import pickle
 
 from multiprocessing import Process, Queue, cpu_count
 from functools import partial
@@ -105,8 +106,8 @@ if __name__ == '__main__': #this is necessary on Windows
         thisMaterial.set_units()
 
         # scatter one electron
-        pos0 = UnitArray(np.array([0., 0., 0.]), units='angstrom')
-        dir0 = np.array([-np.sin(np.radians(inputParameter['s_tilt'])), 0., np.cos(np.radians(inputParameter['s_tilt']))])
+        pos0 = UnitArray((0., 0., 0.), units='angstrom')
+        dir0 = (-np.sin(np.radians(inputParameter['s_tilt'])), 0., np.cos(np.radians(inputParameter['s_tilt'])))
         oneElectron = electron(inputParameter['E0'], pos0, dir0)
 
         if (inputParameter['mode'] == 'DS'):
@@ -142,8 +143,6 @@ if __name__ == '__main__': #this is necessary on Windows
     num_proc = cpu_count()-1 # leave one cpu thread free
     print ' You have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
     print
-    print '---- starting scattering'
-    time_start = time.time()
 
     output = Queue()
 
@@ -158,22 +157,26 @@ if __name__ == '__main__': #this is necessary on Windows
                          inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
                          output, count, True)) for count in range(num_proc)]
 
+
+    print '---- starting scattering'
+    time_start = time.time()
+
     # start threads
     for p in processes:
         p.start()
 
-    for p in processes:
-        p.join()
+    # wait for processes to end # this deadlocks the pipe so moved it after queue.get
+    # for p in processes:
+    #    p.join()
 
-    result = [output.get() for p in processes]
+    result = [pickle.loads(output.get()) for p in processes]
     #print result
 
+    for p in processes:
+        p.join()
+        p.terminate()
+
     print '---- finished scattering'
-    # serial
-    #BSE_data = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
-
-
-
 
     print
     print ' time spent in scattering', time.time()-time_start
@@ -182,8 +185,12 @@ if __name__ == '__main__': #this is necessary on Windows
     # save to file
     fileBSE = 'data/Al_BSE_'+'.h5'
 
+
+    print '---- writting to file'
+    time_start = time.time()
+
     from parameters import alpha, xy_PC, L
     writeBSEtoHDF5(result, inputParameter, fileBSE, alpha, xy_PC, L)
-
-
+    print ' time spent writting to file:', time.time()-time_start
+    print
     print ' BSE data had been written to ', fileBSE

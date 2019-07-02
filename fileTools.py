@@ -1,7 +1,7 @@
 #import h5py
 import pandas as pd
 import warnings
-
+import numpy as np
 ####### read input file ##################
 def readInput(fileName):
     '''
@@ -34,24 +34,44 @@ def readInput(fileName):
 
     return data
 
+##########################################
+def zipData(myData):
+    '''
+    Data arrives here as a list of tuple, a tuple for each thread.
+    Zip the thread tuples together; returns lists of lists
+    '''
+    zippedParam = []
+
+    for threadData in myData:
+        for indx, param in enumerate(threadData[1]):
+            if (indx < len(zippedParam)):
+                zippedParam[indx].extend(list(param))
+            else:
+                zippedParam.append(list(param))
+
+    #return tuple(tuple(param) for param in zippedParam)
+    return zippedParam
+
+def zipDict(dictA, dictB):
+    '''
+    For multiple dictionaries with same keys and of the form
+    {'key' : [list]} merge the values in the same list
+    '''
+    for k in dictB.iterkeys():
+        if k in dictA:
+            dictA[k] += dictB[k]
+
+    return dictA
+
+
 
 ######## write HDF5 file ##################
-def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
+def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
     '''
     save all the backscattering relevant information to a structured data file
 
     filename = name of the file
     '''
-
-    def zipDict(dictA, dictB):
-        '''
-        For multiple dictionaries with same keys and of the form
-        {'key' : [list]} merge the values in the same list
-        '''
-        for k in dictB.iterkeys():
-            if k in dictA:
-                dictA[k] += dictB[k]
-        return dictA
 
     # if parallel the dataDictionary arrives here as a list of dictionaries
     # make one dict instead
@@ -119,3 +139,36 @@ def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
         dataFile['all/mean_pathl'] = all_mpl_s
         dataFile['all/total_l'] = all_totalL_s
         dataFile['all/num_scatt'] = all_numScatt_s
+
+
+
+def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
+    '''
+    save all the backscattering relevant information to a structured data file
+
+    filename = name of the file
+    '''
+
+    data_list = zipData(data)
+
+    # write direction results to pandas data frame
+    allData_df = pd.DataFrame(np.array(data_list).T, columns=data[0][0] )
+
+    # number of bascattered electrons is the length of any column for all 'backscattered' electrons
+    print '---- number of BSEs:', len(allData_df[allData_df.values == 'backscattered']['outcome'])
+
+    # write input parameters to pandas series
+    input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
+
+    # pandas is going to complain about performace for the input string table
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
+    # HDFstore is a dict like object that reads and writes pandas with the PyTables library
+    # pickled tables to be read with pandas:
+    # pd.read_hdf(filename, 'BSE/directions')
+    with pd.HDFStore(filename) as dataFile:
+        # save some input parameters
+        dataFile['input'] = input_s
+
+        # write BSE energy and exit direction pandas data frame to hdf5
+        dataFile['all_electrons'] = allData_df

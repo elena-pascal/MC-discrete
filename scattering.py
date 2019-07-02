@@ -267,8 +267,6 @@ class scatter_discrete:
 
             try:
                 self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
-                #print 'E_loss is ', self.E_loss, self.i_energy
-                #print 'Theta is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
             except wrongUpdateOrder:
