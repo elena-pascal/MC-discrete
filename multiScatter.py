@@ -30,8 +30,8 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
 
     if (count == 0):
         # print progress bar for the first thread
-         def iterator(num):
-             return tqdm(range(num), desc='number of scattered electrons per thread')
+        def iterator(num):
+            return tqdm(range(num), desc='number of scattered electrons per thread')
     else:
         def iterator(num):
             return range(num_el)
@@ -54,7 +54,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
 
 
     # dictionary of form { 'BSE': {label: list}, 'all': {label:list}}
-    result_list.put({'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
+    output.put({'BSE':   {'energy' : BSE_energy, 'direction' : BSE_dir},
             'all':   {'mean_pathl' : mean_pathl, 'total_path': total_path, 'num_scatter' : num_scatt} })
 
 
@@ -95,8 +95,8 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, output, c
 
     if (count == 0):
         # print progress bar for the first thread
-         def iterator(num):
-             return tqdm(range(num), desc='number of scattered electrons per thread')
+        def iterator(num):
+            return tqdm(range(num), desc='number of scattered electrons per thread')
     else:
         def iterator(num):
             return range(num_el)

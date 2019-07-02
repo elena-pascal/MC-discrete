@@ -5,7 +5,7 @@ import time
 import sys
 import getopt
 
-from multiprocessing import Pool, Process, Manager, Queue, cpu_count, Lock
+from multiprocessing import Process, Queue, cpu_count
 from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
@@ -149,28 +149,16 @@ if __name__ == '__main__': #this is necessary on Windows
 
     # define the function for scattering of multiple electrons depending on the model
     if (inputParameter['mode'] == 'DS'):
-        f = partial(scatterMultiEl_DS, material=thisMaterial, E0=inputParameter['E0'],\
-                    Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'],\
-                    tables_moller=tables_moller, tables_gryz=tables_gryz,\
-                    Wc=inputParameter['Wc'], parallel=True)
-
-    elif (inputParameter['mode'] == 'cont'):
-        f = partial(scatterMultiEl_cont, material=thisMaterial, E0=inputParameter['E0'],\
-                    Emin=inputParameter['Emin'], tilt=inputParameter['s_tilt'], \
-                    Bethe_model = inputParameter['Bethe'], parallel=True)
-
-
-
-    lock = Lock()
-    #with Manager() as manager:
-    #    results_list = manager.list()
-    #    print 'first call', results_list
-        # each worker gets total_num_electrons/num_proc
-
-
-    processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
+        processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
                          inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
                          output, count, True)) for count in range(num_proc)]
+
+    elif (inputParameter['mode'] == 'cont'):
+        processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
+                         inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
+                         output, count, True)) for count in range(num_proc)]
+
+    # start threads
     for p in processes:
         p.start()
 
@@ -180,16 +168,12 @@ if __name__ == '__main__': #this is necessary on Windows
     result = [output.get() for p in processes]
     #print result
 
-    #for result in tqdm( p.imap_unordered(f, xrange(inputParameter['num_el'])), total=inputParameter['num_el']):
-    #    BSE_data.append(result)
-
     print '---- finished scattering'
     # serial
     #BSE_data = multiScatter_cont(num_el, material, E0, Emin, tilt, parallel = False)
 
-    #p.close()
-    # if some things go wrong in the parallel code, pool.join() will throw some errosr
-    #p.join()
+
+
 
     print
     print ' time spent in scattering', time.time()-time_start
