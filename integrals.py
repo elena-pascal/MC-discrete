@@ -81,7 +81,7 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     # the integral fuction has the same shape as w
     int_extFunc = np.empty([n_e.size, nBinsE, nBinsW]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
 
-    # tables is the final final multidimensional table
+    # tables is the final multidimensional table
     tables = []
 
     for ishell in range(n_e.size):

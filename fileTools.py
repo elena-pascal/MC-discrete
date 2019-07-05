@@ -142,7 +142,7 @@ def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
 
 
 
-def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
+def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
     '''
     save all the backscattering relevant information to a structured data file
 
@@ -154,8 +154,9 @@ def writeBSEtoHDF5(data, input, filename, alpha, xy_PC, L):
     # write direction results to pandas data frame
     allData_df = pd.DataFrame(np.array(data_list).T, columns=data[0][0] )
 
+    print
     # number of bascattered electrons is the length of any column for all 'backscattered' electrons
-    print '---- number of BSEs:', len(allData_df[allData_df.values == 'backscattered']['outcome'])
+    print ' number of BSEs:', len(allData_df[allData_df.values == 'backscattered']['outcome'])
 
     # write input parameters to pandas series
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)

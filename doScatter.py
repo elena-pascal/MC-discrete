@@ -20,7 +20,7 @@ from parameters import u_pi_efour
 from electron import electron
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
-from fileTools import readInput, writeBSEtoHDF5
+from fileTools import readInput, writeAllEtoHDF5
 
 # if the script is run with the -u option
 # run all the code with units and return units
@@ -67,29 +67,32 @@ if __name__ == '__main__': #this is necessary on Windows
     use_units, inputFile = main(sys.argv[1:])
 
     # read input parameters
-    inputParameter = readInput(inputFile)
+    inputPar = readInput(inputFile)
 
     # set material
-    thisMaterial = material(inputParameter['material'])
+    thisMaterial = material(inputPar['material'])
+    print
+    print ' number of incident electrons:', inputPar['num_el']
+    print
     print ' material is:', thisMaterial.species
-
-    print ' scattering mode is:', inputParameter['mode']
+    print
+    print ' scattering mode is:', inputPar['mode']
     print
 
-    if (inputParameter['mode'] == 'DS'):
+    if (inputPar['mode'] == 'DS'):
          print '---- calculating Moller tables'
-         tables_moller = trapez_table( inputParameter['E0'], inputParameter['Emin'],\
-                                       np.array([inputParameter['Wc']]), thisMaterial.fermi_e,\
+         tables_moller = trapez_table( inputPar['E0'], inputPar['Emin'],\
+                                       np.array([inputPar['Wc']]), thisMaterial.fermi_e,\
                                        np.array([thisMaterial.params['n_val']]), moller_dCS,\
-                                       inputParameter['num_BinsW'], inputParameter['num_BinsE'] )
+                                       inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
          print '---- calculating Gryzinski tables'
-         tables_gryz = trapez_table( inputParameter['E0'], inputParameter['Emin'],\
+         tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                      thisMaterial.params['Es'], thisMaterial.fermi_e,\
                                      thisMaterial.params['ns'], gryz_dCS,\
-                                     inputParameter['num_BinsW'], inputParameter['num_BinsE'] )
+                                     inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
-    # elif (inputParameter['mode'] in ['diel', 'dielectric']):
+    # elif (inputPar['mode'] in ['diel', 'dielectric']):
     #     print ' ---- calculating dielectric function integral table'
     #     tables_diel =
 
@@ -98,31 +101,31 @@ if __name__ == '__main__': #this is necessary on Windows
         # Set all input parameters with units, make calculations @with_units
         # and return pathlength and energy units
         # With_units gets toggled on if input is of unit type
-        inputParameter.update({'E0': UnitScalar(inputParameter['E0'], units = 'eV')})
-        inputParameter.update({'Emin': UnitScalar(inputParameter['Emin'], units = 'eV')})
-        inputParameter.update({'Wc': UnitScalar(inputParameter['Wc'], units = 'eV')})
+        inputPar.update({'E0': UnitScalar(inputPar['E0'], units = 'eV')})
+        inputPar.update({'Emin': UnitScalar(inputPar['Emin'], units = 'eV')})
+        inputPar.update({'Wc': UnitScalar(inputPar['Wc'], units = 'eV')})
 
         # update material parameters to unit type
         thisMaterial.set_units()
 
         # scatter one electron
         pos0 = UnitArray((0., 0., 0.), units='angstrom')
-        dir0 = (-np.sin(np.radians(inputParameter['s_tilt'])), 0., np.cos(np.radians(inputParameter['s_tilt'])))
-        oneElectron = electron(inputParameter['E0'], pos0, dir0)
+        dir0 = (-np.sin(np.radians(inputPar['s_tilt'])), 0., np.cos(np.radians(inputPar['s_tilt'])))
+        oneElectron = electron(inputPar['E0'], pos0, dir0)
 
-        if (inputParameter['mode'] == 'DS'):
-            scatterOneEl_DS_wUnits(oneElectron, thisMaterial, inputParameter['Emin'], inputParameter['Wc'],  tables_moller, tables_gryz)
+        if (inputPar['mode'] == 'DS'):
+            scatterOneEl_DS_wUnits(oneElectron, thisMaterial, inputPar['Emin'], inputPar['Wc'],  tables_moller, tables_gryz)
             print '- Energy units:', oneElectron.energy.units
             print '- Distance units:', oneElectron.xyz.units
             sys.exit()
 
-        elif (inputParameter['mode'] == 'cont'):
-            if (inputParameter['Bethe'] == 'classical'):
-                scatterOneEl_cont_cl_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
-            elif (inputParameter['Bethe'] == 'JL'):
-                scatterOneEl_cont_JL_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
-            elif (inputParameter['Bethe'] == 'explicit'):
-                scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputParameter['Emin'])
+        elif (inputPar['mode'] == 'cont'):
+            if (inputPar['Bethe'] == 'classical'):
+                scatterOneEl_cont_cl_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
+            elif (inputPar['Bethe'] == 'JL'):
+                scatterOneEl_cont_JL_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
+            elif (inputPar['Bethe'] == 'explicit'):
+                scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
             else:
                 print ' ! I did not understand the Bethe model type in units check'
                 print ' ! Exiting'
@@ -141,21 +144,25 @@ if __name__ == '__main__': #this is necessary on Windows
 
 
     num_proc = cpu_count()-1 # leave one cpu thread free
-    print ' You have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
+    print
+    print ' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
     print
 
     output = Queue()
 
     # define the function for scattering of multiple electrons depending on the model
-    if (inputParameter['mode'] == 'DS'):
-        processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
-                         inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
-                         output, count, True)) for count in range(num_proc)]
+    if (inputPar['mode'] == 'DS'):
+        processes = [Process(target=scatterMultiEl_DS, args=(inputPar['num_el'], thisMaterial,
+                                                            inputPar['E0'], inputPar['Emin'],
+                                                            inputPar['s_tilt'], tables_moller,
+                                                            tables_gryz, inputPar['Wc'],
+                                                            output, count)) for count in range(num_proc)]
 
-    elif (inputParameter['mode'] == 'cont'):
-        processes = [Process(target=scatterMultiEl_cont, args=(inputParameter['num_el'], thisMaterial, inputParameter['E0'],
-                         inputParameter['Emin'], inputParameter['s_tilt'], inputParameter['Bethe'],
-                         output, count, True)) for count in range(num_proc)]
+    elif (inputPar['mode'] == 'cont'):
+        processes = [Process(target=scatterMultiEl_cont, args=(inputPar['num_el'], thisMaterial,
+                                                              inputPar['E0'], inputPar['Emin'],
+                                                              inputPar['s_tilt'], inputPar['Bethe'],
+                                                              output, count)) for count in range(num_proc)]
 
 
     print '---- starting scattering'
@@ -168,9 +175,11 @@ if __name__ == '__main__': #this is necessary on Windows
     # wait for processes to end # this deadlocks the pipe so moved it after queue.get
     # for p in processes:
     #    p.join()
-
     result = [pickle.loads(output.get()) for p in processes]
-    #print result
+
+    print
+    print 'joing results ...'
+    print     
 
     for p in processes:
         p.join()
@@ -183,14 +192,16 @@ if __name__ == '__main__': #this is necessary on Windows
     print
 
     # save to file
-    fileBSE = 'data/Al_BSE_'+'.h5'
+    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_short.h5'
 
 
     print '---- writting to file'
     time_start = time.time()
 
     from parameters import alpha, xy_PC, L
-    writeBSEtoHDF5(result, inputParameter, fileBSE, alpha, xy_PC, L)
+    writeAllEtoHDF5(result, inputPar, fileBSE, alpha, xy_PC, L)
+    print
     print ' time spent writting to file:', time.time()-time_start
     print
     print ' BSE data had been written to ', fileBSE
+    print

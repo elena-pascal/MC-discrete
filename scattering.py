@@ -175,18 +175,16 @@ class scatter_discrete:
 
             try:
                 self.E_loss = E_loss
-
-                if (E_loss < 1.e-3):
-                    raise E_lossTooSmall
-                #elif (E_loss > (0.5 * self.i_energy + 100)):
-                elif (E_loss >= self.i_energy ):
+                # if (E_loss < 1.e-3):
+                #     raise E_lossTooSmall
+                if (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
 
-            except E_lossTooSmall:
-                print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
-                print ' Value of energy loss less than 0.001 eV.'
-                print ' Stopping.'
-                sys.exit()
+            # except E_lossTooSmall:
+            #     print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
+            #     print ' Value of energy loss less than 0.001 eV.'
+            #     print ' Stopping.'
+            #     sys.exit()
             except E_lossTooLarge:
                 print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
                 print ' Value of energy loss larger than half the electron energy.'
@@ -221,19 +219,18 @@ class scatter_discrete:
 
             try:
                 self.E_loss = E_loss
-
-                if (E_loss < 1.e-3):
-                    raise E_lossTooSmall
+                # if (E_loss < 1.e-3):
+                #     raise E_lossTooSmall
                 #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
-                elif (E_loss >= self.i_energy ):
+                if (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
 
-            except E_lossTooSmall:
-                print ' ---------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
-                print ' Value of energy loss less than 0.001 eV.'
-                print ' Stopping.'
-                sys.exit()
+            # except E_lossTooSmall:
+            #     print ' ---------------------------------------------------------------------------'
+            #     print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
+            #     print ' Value of energy loss less than 0.001 eV.'
+            #     print ' Stopping.'
+            #     sys.exit()
             except E_lossTooLarge:
                 print ' --------------------------------------------------------------------------'
                 print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
@@ -427,11 +424,9 @@ class scatter_continuous_classical:
             E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
             try:
                 self.E_loss = E_loss
-
-                if (E_loss < 1.e-5):
-                    raise E_lossTooSmall
-
-                elif (E_loss >= self.i_energy ):
+                # if (E_loss < 1.e-5):
+                #     raise E_lossTooSmall
+                if (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
 
             # TODO: set lower limit of pathl ?
@@ -501,20 +496,19 @@ class scatter_continuous_JL(scatter_continuous_classical):
             E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k)
             try:
                 self.E_loss = E_loss
-
-                if (E_loss < 1.e-6):
-                    raise E_lossTooSmall
+                # if (E_loss < 1.e-6):
+                #     raise E_lossTooSmall
                 #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
-                elif (E_loss >= self.i_energy ):
+                if (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
-
-            except E_lossTooSmall:
-                print ' ---------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-                print ' Value of energy loss less than 0.001 eV.'
-                print ' Path lenght was', self.pathl
-                print ' Stopping.'
-                sys.exit()
+            #
+            # except E_lossTooSmall:
+            #     print ' ---------------------------------------------------------------------------'
+            #     print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+            #     print ' Value of energy loss less than 0.001 eV.'
+            #     print ' Path lenght was', self.pathl
+            #     print ' Stopping.'
+            #     sys.exit()
             except E_lossTooLarge:
                 print ' --------------------------------------------------------------------------'
                 print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
@@ -576,19 +570,18 @@ class scatter_continuous_explicit(scatter_continuous_classical):
             try:
                 self.E_loss = E_loss
                 # TODO: is there a lower limit
-                if (E_loss < 1.e-5):
-                     raise E_lossTooSmall
-
-                elif (E_loss >= self.i_energy ):
+                # if (E_loss < 1.e-5):
+                #      raise E_lossTooSmall
+                if (E_loss >= self.i_energy ):
                     raise E_lossTooLarge
 
-            except E_lossTooSmall:
-                print ' ---------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-                print ' Value of energy loss less than 0.001 eV.'
-                print ' Path lenght is', self.pathl
-                print ' Stopping.'
-                sys.exit()
+            # except E_lossTooSmall:
+            #     print ' ---------------------------------------------------------------------------'
+            #     print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
+            #     print ' Value of energy loss less than 0.001 eV.'
+            #     print ' Path lenght is', self.pathl
+            #     print ' Stopping.'
+            #     sys.exit()
             except E_lossTooLarge:
                 print ' --------------------------------------------------------------------------'
                 print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
