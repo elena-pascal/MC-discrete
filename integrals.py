@@ -26,7 +26,7 @@ def extF_limits_gryz(E, Ei, Ef):
 	out :: a, b
 	'''
     #a = Ei
-    b = (E - Ef + Ei) 
+    b = (E - Ef + Ei)
     return b
 
 
@@ -131,10 +131,10 @@ def trapez_refine(a, b, E, n_e, ext_func, m, *Wc):
     try:
         if (m < 0):
             raise mTooSmall
-    except mTooSmall:
-        print ' Fatal error! in trapez_refine'
-        print ' Illegal input value of m.'
-        print ' Stopping.'
+    except mTooSmall as err:
+        print (' Fatal error! in trapez_refine:', err)
+        print (' Illegal input value of m.')
+        print (' Stopping.')
         sys.exit()
 
     if (m == 0):
@@ -190,11 +190,11 @@ def trapez_tol(a, b, E, n_e, ext_func, tol, *Wc):
             m += 1
             if (m >= maxm):
                 raise mTooLarge
-        except mTooLarge:
+        except mTooLarge as err:
             fatalError = True
-            print
-            print 'Failed to converge in 20 steps in trapez_tol'
-            print
+            print( '! Error:', err)
+            print ('Failed to converge in 20 steps in trapez_tol')
+            print()
 
 
 
@@ -242,7 +242,7 @@ def logSpace(a, b, E, n_e, ext_func, nSeg, *Wc):
     '''
     # the size of a step is determined by the number of chosen sections
     x = np.logspace(a, b, num=nSeg+1)
-    print a, b, x
+    print (a, b, x)
     # the left edge of first segment in log space
     logx = np.log(x)
 

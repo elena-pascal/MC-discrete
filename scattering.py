@@ -124,12 +124,13 @@ class scatter_discrete:
         #     print ' Mean free paths were:', self.mfp
         #     print ' Stopping.'
         #     sys.exit()
-        except lTooLarge:
-            print '-----------------------------------------------------'
-            print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl, 'larger than 10000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigma_total, self.m_atnd)
-            print ' Stopping.'
+        except lTooLarge as err:
+            print ('-----------------------------------------------------')
+            print (' Fatal error:', err)
+            print (' in compute_pathl in scattering class')
+            print (' Value of l is', pathl, 'larger than 10000 Angstroms.')
+            print (' Mean free paths were:', mfp_from_sigma(self.sigma_total, self.m_atnd))
+            print (' Stopping.')
             sys.exit()
 
 
@@ -185,14 +186,15 @@ class scatter_discrete:
             #     print ' Value of energy loss less than 0.001 eV.'
             #     print ' Stopping.'
             #     sys.exit()
-            except E_lossTooLarge:
-                print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
-                print ' Value of energy loss larger than half the electron energy.'
-                print ' The current energy is:',  self.i_energy
-                print ' The corresponding energy in the tables is:',  self.tables_EW_M[1][Eidx_table]
-                print ' The current energy lost is:',  E_loss
-                print ' The array of energy losses in the tables is:',  self.tables_EW_M[2][0, Eidx_table, :]
-                print ' Stopping.'
+            except E_lossTooLarge as err:
+                print (' Fatal error:', err)
+                print (' in compute_Eloss for Moller scattering in scattering class')
+                print (' Value of energy loss larger than half the electron energy.')
+                print (' The current energy is:',  self.i_energy)
+                print (' The corresponding energy in the tables is:',  self.tables_EW_M[1][Eidx_table])
+                print (' The current energy lost is:',  E_loss)
+                print (' The array of energy losses in the tables is:',  self.tables_EW_M[2][0, Eidx_table, :])
+                print (' Stopping.')
                 sys.exit()
 
 
@@ -231,16 +233,17 @@ class scatter_discrete:
             #     print ' Value of energy loss less than 0.001 eV.'
             #     print ' Stopping.'
             #     sys.exit()
-            except E_lossTooLarge:
-                print ' --------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
-                print ' Value of energy loss larger than half the current energy.'
-                print ' The current energy lost is:',  E_loss
-                print ' The current energy is:',  self.i_energy
-                print ' The corresponding energy in the tables is:',  self.tables_EW_G[1][Eidx_table]
-                print ' The array of energy losses in the tables is:',  self.tables_EW_G[2][ishell, Eidx_table, :]
-                print ' Try increasing the number of energy bins in the table'
-                print ' Stopping.'
+            except E_lossTooLarge as err:
+                print (' --------------------------------------------------------------------------')
+                print (' Fatal error:', err)
+                print (' in compute_Eloss for Gryzinski scattering in scattering class')
+                print (' Value of energy loss larger than half the current energy.')
+                print (' The current energy lost is:',  E_loss)
+                print (' The current energy is:',  self.i_energy)
+                print (' The corresponding energy in the tables is:',  self.tables_EW_G[1][Eidx_table])
+                print (' The array of energy losses in the tables is:',  self.tables_EW_G[2][ishell, Eidx_table, :])
+                print (' Try increasing the number of energy bins in the table')
+                print (' Stopping.')
                 sys.exit()
 
 
@@ -248,7 +251,7 @@ class scatter_discrete:
             self.E_loss = self.m_pl_e
 
         else:
-            print 'I did not understand the type of scattering in scatter.calculate_Eloss'
+            print (' I did not understand the type of scattering in scatter.calculate_Eloss')
 
     def compute_sAngles(self):
         if (self.type == 'Rutherford'):
@@ -260,15 +263,16 @@ class scatter_discrete:
 
         elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
             if (self.E_loss == 0.):
-                print "you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table"
+                print (" you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table")
 
             try:
                 self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
-            except wrongUpdateOrder:
-                print ' You might be updating energy before calculating the scattering angle'
-                print ' Stopping.'
+            except wrongUpdateOrder as err:
+                print ( 'Error:', err)
+                print (' You might be updating energy before calculating the scattering angle')
+                print (' Stopping.')
                 sys.exit()
 
 
@@ -404,11 +408,12 @@ class scatter_continuous_classical:
             if (float(pathl) > 1.e4):
                 raise lTooLarge
 
-        except lTooLarge:
-            print ' Fatal error! in compute_pathl in scattering class'
-            print ' Value of l is', pathl, 'larger than 1000 Angstroms.'
-            print ' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd)
-            print ' Stopping.'
+        except lTooLarge as err:
+            print (' Error:', err)
+            print (' Fatal error! in compute_pathl in scattering class')
+            print (' Value of l is', pathl, 'larger than 1000 Angstroms.')
+            print (' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd))
+            print (' Stopping.')
             sys.exit()
 
 
@@ -419,7 +424,7 @@ class scatter_continuous_classical:
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
             try:
@@ -436,13 +441,14 @@ class scatter_continuous_classical:
             #     print ' Value of energy loss less than 0.001 eV.'
             #     print ' Stopping.'
             #     sys.exit()
-            except E_lossTooLarge:
-                print ' --------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-                print ' Value of energy loss larger than half the current energy.'
-                print ' The current energy lost is:',  E_loss
-                print ' The current energy is:',  self.i_energy
-                print ' Stopping.'
+            except E_lossTooLarge as err:
+                print (' --------------------------------------------------------------------------')
+                print (' Fatal error:', err)
+                prinnt(' in compute_Eloss for Bethe scattering in scattering class')
+                print (' Value of energy loss larger than half the current energy.')
+                print (' The current energy lost is:',  E_loss)
+                print (' The current energy is:',  self.i_energy)
+                print (' Stopping.')
                 sys.exit()
 
     def compute_sAngles(self):
@@ -491,7 +497,7 @@ class scatter_continuous_JL(scatter_continuous_classical):
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k)
             try:
@@ -509,13 +515,14 @@ class scatter_continuous_JL(scatter_continuous_classical):
             #     print ' Path lenght was', self.pathl
             #     print ' Stopping.'
             #     sys.exit()
-            except E_lossTooLarge:
-                print ' --------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-                print ' Value of energy loss larger than half the current energy.'
-                print ' The current energy lost is:',  E_loss
-                print ' The current energy is:',  self.i_energy
-                print ' Stopping.'
+            except E_lossTooLarge as err:
+                print (' --------------------------------------------------------------------------')
+                print (' Fatal error:', err)
+                print (' in compute_Eloss for Bethe scattering in scattering class')
+                print (' Value of energy loss larger than half the current energy.')
+                print (' The current energy lost is:',  E_loss)
+                print (' The current energy is:',  self.i_energy)
+                print (' Stopping.')
                 sys.exit()
 
 
@@ -562,7 +569,7 @@ class scatter_continuous_explicit(scatter_continuous_classical):
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
                                     self.m_Es, self.m_nval, self.m_Eval)
@@ -582,13 +589,14 @@ class scatter_continuous_explicit(scatter_continuous_classical):
             #     print ' Path lenght is', self.pathl
             #     print ' Stopping.'
             #     sys.exit()
-            except E_lossTooLarge:
-                print ' --------------------------------------------------------------------------'
-                print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-                print ' Value of energy loss larger than half the current energy.'
-                print ' The current energy lost is:',  E_loss
-                print ' The current energy is:',  self.i_energy
-                print ' Stopping.'
+            except E_lossTooLarge as err:
+                print (' --------------------------------------------------------------------------')
+                print (' Fatal error;', err)
+                print (' in compute_Eloss for Bethe scattering in scattering class')
+                print (' Value of energy loss larger than half the current energy.')
+                print (' The current energy lost is:',  E_loss)
+                print (' The current energy is:',  self.i_energy)
+                print (' Stopping.')
                 sys.exit()
 
 
@@ -602,7 +610,7 @@ class scatter_continuous_classical_wUnits(scatter_continuous_classical):
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             self.E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd, u_pi_efour)
 
@@ -614,7 +622,7 @@ class scatter_continuous_JL_wUnits(scatter_continuous_JL):
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print ("I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             self.E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k, u_pi_efour)
 
@@ -626,7 +634,7 @@ class scatter_continuous_explicit_wUnits(scatter_continuous_explicit):
         '''
 
         if (self.pathl == 0.):
-            print "I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA"
+            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
                                     self.m_Es, self.m_nval, self.m_Eval, u_pi_efour)

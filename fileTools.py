@@ -85,7 +85,7 @@ def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
             elif (k == 'all'):
                 zipDict(all_dict, dictionary[k])
             else:
-                print 'Not all data is saved to h5 file'
+                print ('Not all data is saved to h5 file')
 
 
     # project directions on detector
@@ -106,7 +106,7 @@ def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
     # write energy results to pandas series
     BSE_e_s = pd.Series(BSE_dict['energy'])
 
-    print '---- number of BSEs:', len(BSE_dict['energy'])
+    print ('---- number of BSEs:', len(BSE_dict['energy']))
 
     # write mean path length, total length travelled and number of
     # scattering events to pandas series
@@ -154,9 +154,9 @@ def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
     # write direction results to pandas data frame
     allData_df = pd.DataFrame(np.array(data_list).T, columns=data[0][0] )
 
-    print
+    print()
     # number of bascattered electrons is the length of any column for all 'backscattered' electrons
-    print ' number of BSEs:', len(allData_df[allData_df.values == 'backscattered']['outcome'])
+    print (' number of BSEs:', len(allData_df[allData_df.values == 'backscattered']['outcome']))
 
     # write input parameters to pandas series
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)

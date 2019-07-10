@@ -42,11 +42,11 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
         if ((1.-eps) < 0.):
             raise E_lossTooLarge
 
-    except E_lossTooLarge:
-        print ' ! Error!'
-        print ' The energy loss is larger than the current electron energy in Moller discrete CS'
-        print ' W is', W ,'and E is', E
-        print ' Stopping'
+    except E_lossTooLarge as err:
+        print (' ! Error:', err)
+        print (' The energy loss is larger than the current electron energy in Moller discrete CS')
+        print (' W is', W ,'and E is', E)
+        print (' Stopping')
         sys.exit()
 
     return dCS
@@ -88,11 +88,11 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         if  (1. - eps < 0):
             raise E_lossTooLarge
 
-    except E_lossTooLarge:
-        print '! Error!'
-        print ' The energy loss is larger than the current electron energy in Gryzinski discrete CS'
-        print ' W is', W ,'and E is', E
-        print ' Stopping'
+    except E_lossTooLarge as err:
+        print ('! Error:', err)
+        print (' The energy loss is larger than the current electron energy in Gryzinski discrete CS')
+        print (' W is', W ,'and E is', E)
+        print (' Stopping')
         sys.exit()
 
     return dCS

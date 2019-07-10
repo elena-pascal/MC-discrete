@@ -58,7 +58,7 @@ def newdircos_oldMC(sphi, cphi, spsi, cpsi, cxyz):
     # From MCML paper START
     if (abs(cxyz[2]) > 0.99999):
         cxyzp = np.array([sphi * cpsi, sphi * spsi, (cxyz[2]/np.abs(cxyz[2])) * cphi ])
-        print 'edge case'
+        print ('edge case')
     else:
         dsq = np.sqrt(1.-cxyz[2]*cxyz[2])
         dsqi = 1./dsq

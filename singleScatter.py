@@ -206,8 +206,6 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
-        if scatter_i.pathl is None:
-            print '! pathl is NoNe'
         pathl_history.append(scatter_i.pathl)
 
         # update electron position

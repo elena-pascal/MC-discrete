@@ -31,7 +31,7 @@ class electron:
         if energy:
             self.energy = energy
         else:
-            print '------- None value in energy found when updating energy'
+            print ('------- None value in energy found when updating energy')
         #self.energy_hist.append(newEnergy)
 
     def update_xyz(self, pathLength):

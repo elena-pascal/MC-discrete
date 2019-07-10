@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
 import time
@@ -29,10 +29,10 @@ def main(argv):
     inputfile = 'input.file'
 
     def usage():
-        print 'doScatter.py -i <input file> '
-        print '              OR'
-        print 'doScatter.py -u -i <input file>, if you want to track units'
-        print
+        print ('doScatter.py -i <input file> ')
+        print ('              OR')
+        print ('doScatter.py -u -i <input file>, if you want to track units')
+        print ()
 
     try:
         opts, _ = getopt.getopt(argv, "uhi:", ["ifile="])
@@ -45,14 +45,14 @@ def main(argv):
             usage()
             sys.exit()
         elif opt == "-u":
-            print
-            print "You chose to run scattering with units"
-            print
+            print()
+            print ("You chose to run scattering with units")
+            print()
             use_units = True
         elif opt == "-i":
             inputfile = arg
-            print "Input file given is", arg
-            print
+            print ("Input file given is", arg)
+            print()
 
     return use_units, inputfile
 
@@ -70,22 +70,22 @@ if __name__ == '__main__': #this is necessary on Windows
 
     # set material
     thisMaterial = material(inputPar['material'])
-    print
-    print ' number of incident electrons:', inputPar['num_el']
-    print
-    print ' material is:', thisMaterial.species
-    print
-    print ' scattering mode is:', inputPar['mode']
-    print
+    print()
+    print (' number of incident electrons:', inputPar['num_el'])
+    print()
+    print (' material is:', thisMaterial.species)
+    print()
+    print (' scattering mode is:', inputPar['mode'])
+    print()
 
     if (inputPar['mode'] == 'DS'):
-         print '---- calculating Moller tables'
+         print ('---- calculating Moller tables')
          tables_moller = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                        np.array([inputPar['Wc']]), thisMaterial.fermi_e,\
                                        np.array([thisMaterial.params['n_val']]), moller_dCS,\
                                        inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
-         print '---- calculating Gryzinski tables'
+         print ('---- calculating Gryzinski tables')
          tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                      thisMaterial.params['Es'], thisMaterial.fermi_e,\
                                      thisMaterial.params['ns'], gryz_dCS,\
@@ -114,8 +114,8 @@ if __name__ == '__main__': #this is necessary on Windows
 
         if (inputPar['mode'] == 'DS'):
             scatterOneEl_DS_wUnits(oneElectron, thisMaterial, inputPar['Emin'], inputPar['Wc'],  tables_moller, tables_gryz)
-            print '- Energy units:', oneElectron.energy.units
-            print '- Distance units:', oneElectron.xyz.units
+            print ('- Energy units:', oneElectron.energy.units)
+            print ('- Distance units:', oneElectron.xyz.units)
             sys.exit()
 
         elif (inputPar['mode'] == 'cont'):
@@ -126,26 +126,26 @@ if __name__ == '__main__': #this is necessary on Windows
             elif (inputPar['Bethe'] == 'explicit'):
                 scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
             else:
-                print ' ! I did not understand the Bethe model type in units check'
-                print ' ! Exiting'
+                print (' ! I did not understand the Bethe model type in units check')
+                print (' ! Exiting')
                 sys.exit()
 
-            print
-            print '- Energy units:', oneElectron.energy.units
-            print '- Distance units:', oneElectron.xyz.units
+            print()
+            print ('- Energy units:', oneElectron.energy.units)
+            print ('- Distance units:', oneElectron.xyz.units)
             sys.exit()
         else:
-            print
-            print ' I did not understand the input scattering mode'
+            print()
+            print (' I did not understand the input scattering mode')
 
 ###############################################################################
 
 
 
     num_proc = cpu_count()-1 # leave one cpu thread free
-    print
-    print ' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them'
-    print
+    print()
+    print (' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them')
+    print()
 
     output = Queue()
 
@@ -164,7 +164,7 @@ if __name__ == '__main__': #this is necessary on Windows
                                                               output, count)) for count in range(num_proc)]
 
 
-    print '---- starting scattering'
+    print ('---- starting scattering')
     time_start = time.time()
 
     # start threads
@@ -176,31 +176,31 @@ if __name__ == '__main__': #this is necessary on Windows
     #    p.join()
     result = [pickle.loads(output.get()) for p in processes]
 
-    print
-    print 'joing results ...'
-    print
+    print()
+    print ('joing results ...')
+    print()
 
     for p in processes:
         p.join()
         p.terminate()
 
-    print '---- finished scattering'
+    print ('---- finished scattering')
 
-    print
-    print ' time spent in scattering', time.time()-time_start
-    print
+    print()
+    print (' time spent in scattering', time.time()-time_start)
+    print()
 
     # save to file
     fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_short.h5'
 
 
-    print '---- writting to file'
+    print ('---- writting to file')
     time_start = time.time()
 
     from parameters import alpha, xy_PC, L
     writeAllEtoHDF5(result, inputPar, fileBSE, alpha, xy_PC, L)
-    print
-    print ' time spent writting to file:', time.time()-time_start
-    print
-    print ' BSE data had been written to ', fileBSE
-    print
+    print()
+    print (' time spent writting to file:', time.time()-time_start)
+    print()
+    print (' BSE data had been written to ', fileBSE)
+    print()

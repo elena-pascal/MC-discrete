@@ -55,7 +55,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
         # make tuples out of lists and pickle them
         output.put(pickle.dumps( (indexes,  tuple( tuple(out_dict[label]) for label in indexes)) , protocol=2 ) )
     except :
-        print "Unexpected error:", sys.exc_info()[0]
+        print ( "Unexpected error:", sys.exc_info()[0])
         raise
 
 
@@ -83,8 +83,8 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, output, c
             return scatterOneEl_cont_expl(e_i, material, Emin)
 
     else :
-        print '! I did not understand your choice of Bethe model in multiScatter'
-        print '! Exiting...'
+        print ('! I did not understand your choice of Bethe model in multiScatter')
+        print ('! Exiting...')
         sys.exit()
 
     indexes = ('outcome', 'energy', 'dir', 'MFP', 'TP', 'num_scatt')
@@ -122,5 +122,5 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, output, c
         output.put(pickle.dumps( (indexes,  tuple( tuple(out_dict[label]) for label in indexes)) , protocol=2 ) )
 
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print (" Unexpected error:", sys.exc_info()[0])
         raise
