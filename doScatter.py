@@ -14,7 +14,6 @@ from tqdm import tqdm
 from material import material
 from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
 from extFunctions import gryz_dCS, moller_dCS
-from extFunctions import gryz_dCS, moller_dCS
 from parameters import u_pi_efour
 
 from electron import electron
@@ -179,7 +178,7 @@ if __name__ == '__main__': #this is necessary on Windows
 
     print
     print 'joing results ...'
-    print     
+    print
 
     for p in processes:
         p.join()
