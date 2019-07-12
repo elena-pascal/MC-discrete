@@ -70,8 +70,13 @@ if __name__ == '__main__': #this is necessary on Windows
 
     # set material
     thisMaterial = material(inputPar['material'])
+
+    # number of processes available
+    num_proc = cpu_count()-1 # leave one cpu thread free for user
+    #num_proc = 1
+
     print()
-    print (' number of incident electrons:', inputPar['num_el'])
+    print (' number of incident electrons:', inputPar['num_el']*num_proc)
     print()
     print (' material is:', thisMaterial.species)
     print()
@@ -87,9 +92,9 @@ if __name__ == '__main__': #this is necessary on Windows
 
          print ('---- calculating Gryzinski tables')
          tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
-                                     thisMaterial.params['Es'], thisMaterial.fermi_e,\
-                                     thisMaterial.params['ns'], gryz_dCS,\
-                                     inputPar['num_BinsW'], inputPar['num_BinsE'] )
+                                    thisMaterial.params['Es'], thisMaterial.fermi_e,\
+                                    thisMaterial.params['ns'], gryz_dCS,\
+                                    inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
     # elif (inputPar['mode'] in ['diel', 'dielectric']):
     #     print ' ---- calculating dielectric function integral table'
@@ -142,7 +147,8 @@ if __name__ == '__main__': #this is necessary on Windows
 
 
 
-    num_proc = cpu_count()-1 # leave one cpu thread free
+
+
     print()
     print (' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them')
     print()
@@ -177,7 +183,7 @@ if __name__ == '__main__': #this is necessary on Windows
     result = [pickle.loads(output.get()) for p in processes]
 
     print()
-    print ('joing results ...')
+    print ('joining results ...')
     print()
 
     for p in processes:
@@ -191,7 +197,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_short.h5'
+    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_all.h5'
 
 
     print ('---- writting to file')

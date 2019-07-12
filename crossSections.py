@@ -51,9 +51,13 @@ def moller_sigma(E, Emin, nfree, c_pi_efour=pi_efour):
         -------
         s_M    : array : units = cm**2
     """
-
-    eps = Emin*1./E
-    s_M = nfree*c_pi_efour*(1./(E*E)) * (1./eps - 1./(1.-eps) + np.log(eps/(1.-eps)))
+    # if the ennergy of this electron is lower than the cut off energy for free
+    # electron scattering then Moller sigma is set to zero
+    if (E <= Emin):
+        s_M = 0.
+    else:
+        eps = Emin*1./E
+        s_M = nfree*c_pi_efour*(1./(E*E)) * (1./eps - 1./(1.-eps) + np.log(eps/(1.-eps)))
     return s_M
 
 
@@ -80,9 +84,13 @@ def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_efour):
         -------
         s_G    : array : units = cm**2
     """
-
-    U = E*1./Esi
-    s_G = nsi * c_pi_efour * ((U - 1.)/(U + 1.))**1.5 * (1. + (2.*(1.-(1./(2.*U)))/3. *\
+    # if the ennergy of this electron is lower than the shell i binding energy
+    # then this Gryzinski sigma is set to zero
+    if (E <= Esi):
+        s_G = 0.
+    else:
+        U = E*1./Esi
+        s_G = nsi * c_pi_efour * ((U - 1.)/(U + 1.))**1.5 * (1. + (2.*(1.-(1./(2.*U)))/3. *\
               np.log(2.7 + ((U - 1.)**0.5))) ) /(E*Esi)
     return s_G
 

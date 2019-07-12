@@ -145,15 +145,17 @@ class scatter_discrete:
         # ordered dictionary of sigmas in reverse order
         sorted_sigmas = OrderedDict(sorted(self.sigma.items(), key=operator.itemgetter(1), reverse=True))
 
-        # probabilities to compare the random number against are cumulative sums of this dictionary
-        probs = np.cumsum(sorted_sigmas.values())/np.array(self.sigma_total)
+        #extract = lambda x, y: dict(zip(x, map(y.get, x)))
 
+        # probabilities to compare the random number against are cumulative sums of this dictionary
+        #probs = np.cumsum(list(sorted_sigmas.values()))/self.sigma_total
+        probs = np.cumsum(list(sorted_sigmas.values()))/sum(sorted_sigmas.values())
         # bisect the cumulative distribution array with a random number to find the position that random number fits in the array
-        #print 'probabilities', sorted_sigmas
         this_prob_pos = bisect.bisect_left(probs, random.random())
 
         # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
-        self.type = sorted_sigmas.keys()[this_prob_pos]
+        self.type = list(sorted_sigmas.keys())[this_prob_pos]
+        #self.type = 'Gryzinski1s'
 
         # Moller becomes more unprobable with increase value of Wc
 
@@ -167,12 +169,12 @@ class scatter_discrete:
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             # energies = self.tables_EW_M[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_M[1], float(self.i_energy))  # less then value
+            Eidx_table = bisect.bisect_left(self.tables_EW_M[1], self.i_energy)  # less then value
 
-            int_enlosses_table = self.tables_EW_M[3][0, Eidx_table, :]
-            integral = random.random() * int_enlosses_table[-1]
-            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
-            E_loss = self.tables_EW_M[2][0, Eidx_table, :][Wi_table]
+            int_W_table = self.tables_EW_M[3][0, Eidx_table, :]
+            integral = random.random() * int_W_table[-1]
+            Widx_table = bisect.bisect_left(int_W_table, integral)
+            E_loss = self.tables_EW_M[2][0, Eidx_table, :][Widx_table]
 
             try:
                 self.E_loss = E_loss
@@ -208,16 +210,11 @@ class scatter_discrete:
             # energy loss integral for the current energy
 
             # energies = self.tables_EW_G[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_G[1], float(self.i_energy))  # less than value
-            int_enlosses_table = self.tables_EW_G[3][ishell,Eidx_table, :]
-            integral = random.random() * int_enlosses_table[-1]
-            Wi_table = bisect.bisect_left(int_enlosses_table, integral)
-            # if (Wi_table >= len(enlosses)):
-            #     print 'enlosses shape is:', enlosses.shape
-
-            # enlosses = self.tables_EW_G[2][ishell, Eidx_table, :]
-            # E_loss = enlosses[Wi_table]
-            E_loss = self.tables_EW_G[2][ishell, Eidx_table, :][Wi_table]
+            Eidx_table = bisect.bisect_left(self.tables_EW_G[1], self.i_energy)  # less than value
+            int_W_table = self.tables_EW_G[3][ishell,Eidx_table, :]
+            integral = random.random() * int_W_table[-1]
+            Widx_table = bisect.bisect_left(int_W_table, integral)
+            E_loss = self.tables_EW_G[2][ishell, Eidx_table, :][Widx_table]
 
             try:
                 self.E_loss = E_loss
@@ -381,7 +378,6 @@ class scatter_continuous_classical:
 
         # scattering params
         self.pathl = 0.
-        self.type = 0.
         self.E_loss = 0.
         self.c2_halfTheta = 0.
         self.halfPhi = 0.
@@ -427,6 +423,7 @@ class scatter_continuous_classical:
             print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
         else:
             E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
+
             try:
                 self.E_loss = E_loss
                 # if (E_loss < 1.e-5):

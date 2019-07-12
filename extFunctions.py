@@ -8,6 +8,9 @@ from parameters import pi_efour
 ###################################################################
 #                       Excitation functions d_sigma/dW           #
 ###################################################################
+# Probability that an electron of energy E will loose energy W
+# in a scattering event
+
 # Since these functions are only used for determining the energy loss
 # in the numerical integration, I disabled the units for now
 # TODO: do this nicer though
@@ -15,7 +18,7 @@ from parameters import pi_efour
 # 2b) Moller free electron discrete cross section
 #@has_units
 def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
-    """ Calculate the Moller inelastic cross section
+    """ Calculate the Moller inelastic discrete cross section
 
         Parameters
         ----------
@@ -33,21 +36,20 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
         -------
         dCS  : array : units = cm**2
     """
-    eps = W*1./E
-
     try:
-        dCS =  nfree*c_pi_efour *( 1./(eps**2) +
-                 ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
+        eps = W*1./E
 
-        if ((1.-eps) < 0.):
+        if (W > E):
+            dCS = 0.
             raise E_lossTooLarge
-
+        else:
+            dCS = nfree*c_pi_efour *( 1./(eps**2) +
+                         ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
     except E_lossTooLarge as err:
-        print (' ! Error:', err)
+        print ()
+        print (' ! Warning:', err)
         print (' The energy loss is larger than the current electron energy in Moller discrete CS')
         print (' W is', W ,'and E is', E)
-        print (' Stopping')
-        sys.exit()
 
     return dCS
 
@@ -78,22 +80,19 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         dCS    : array : units = cm**2
     """
 
-    eps = W*1./E
-    epsB = Ebi*1./E
-
     try:
-        dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
-                               4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
-
-        if  (1. - eps < 0):
+        eps = W*1./E
+        epsB = Ebi*1./E
+        if  (W > E) or (Ebi > E):
+            dCS = 0.
             raise E_lossTooLarge
-
+        else:
+            dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+                                       4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
     except E_lossTooLarge as err:
-        print ('! Error:', err)
+        print ('! Warning:', err)
         print (' The energy loss is larger than the current electron energy in Gryzinski discrete CS')
-        print (' W is', W ,'and E is', E)
-        print (' Stopping')
-        sys.exit()
+        print (' W is', W ,'; E is', E, '; Ebi is', Ebi)
 
     return dCS
 

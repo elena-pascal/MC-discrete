@@ -3,6 +3,21 @@
 import numpy as np
 from errors import mTooLarge, mTooSmall
 
+def binMiddles(Xmin, Xmax, numBins):
+    ''' how many times do I have to see this written wrong?
+        For a given range and number of bins
+        return the numpy array of the bins middles
+    '''
+    dX = (Xmax-Xmin)/numBins
+    return np.linspace(Xmin+dX/2, Xmax-dX/2, num=numBins, retstep=True)
+
+def binEdges(Xmin, Xmax, numBins):
+    ''' how many times do I have to see this written wrong?
+        For a given range and number of bins
+        return the numpy array of the bins edges and the step size
+    '''
+    return np.linspace(Xmin, Xmax, num=numBins+1, retstep=True)
+
 
 
 def extF_limits_moller(E, Ec, Ef):
@@ -15,8 +30,10 @@ def extF_limits_moller(E, Ec, Ef):
         a :: lower integral limit
         b :: upper integral limit
 	'''
-    #a = Ec
-    b =  (E - Ef)
+
+    # a = Ec
+
+    b =  (E - Ef)*0.5
     return b
 
 def extF_limits_gryz(E, Ei, Ef):
@@ -25,8 +42,10 @@ def extF_limits_gryz(E, Ei, Ef):
 	in  :: E, Ei
 	out :: a, b
 	'''
-    #a = Ei
-    b = (E - Ef + Ei)
+
+    # a = Ei
+    #b = (E - Ef + Ei)
+    b = E
     return b
 
 
@@ -54,7 +73,7 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
     return intT
 
 
-def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
@@ -73,48 +92,66 @@ def trapez_table(Einc, Emin, Elossmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     '''
 
     # e contains the array of possible incident energies in the tables
-    ## TODO: Emin for now must be larger than max Ebi
-    e_tables = np.linspace(Emin, Einc, nBinsE) # we will bisect left
+    try:
+         e_tables, _ = binEdges(Emin, Einc, nBinsE) # we will bisect left
+         if (Emin > Einc):
+             raise ERangeError
+    except ERangeError as err:
+        print ('! Error: the incident energy is larger than the minimum energy')
+        print ('E0:', Einc)
+        print ('Emin:', Emin)
 
-    # w contains the 3D matrix of energy loss steps in the tables
-    w_tables = np.empty([n_e.size, nBinsE, nBinsW])
+    #print ('E tables', e_tables)
+    w_tables = np.empty([n_e.size, nBinsE+1, nBinsW+1])
+
 
     # the integral fuction has the same shape as w
-    int_extFunc = np.empty([n_e.size, nBinsE, nBinsW]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    int_extFunc = np.empty([n_e.size, nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
 
     # tables is the final multidimensional table
     tables = []
 
     for ishell in range(n_e.size):
+        # minimum energy that can be lossed by an electron to scatter of this shell
+        W_min = Wmin[ishell]
+
         # simplify the excitation function to depend only on E and W
         if (n_e.size == 1): # Moller
             func = lambda E, W: ext_func(E, W, n_e[ishell])
         else: # Gryzinski
-            func = lambda E, W: ext_func(E, W, n_e[ishell], Elossmin[ishell])
+            func = lambda E, W: ext_func(E, W, n_e[ishell], W_min)
 
-        for indx_E in range(nBinsE):
-            Ei = e_tables[indx_E]
+        for indx_E, Ei in enumerate(e_tables):
+            #print ('Ei at this step:', Ei)
 
             if (n_e.size == 1): # Moller
                 # the upper integral limit depends on Ei
-                Elossmax =  extF_limits_moller(Ei, Elossmin[ishell], Ef)
-                # the size of a step in energy loss W is determined by the number of chosen sections nBinsW
-                dW = (Elossmax - Elossmin[ishell])/nBinsW
+                W_max =  extF_limits_moller(Ei, W_min, Ef)
+
             else: # Gryzinski
-                Elossmax = extF_limits_gryz(Ei, Elossmin[ishell], Ef)
-                dW = (Elossmax - Elossmin[ishell])/nBinsW
+                W_max = extF_limits_gryz(Ei, W_min, Ef)
 
             # initialise the integral for the recursive function
-            int_extFunc[ishell, indx_E, -1] = 0.
-            w_tables[ishell, indx_E, :] = np.linspace(Elossmin[ishell], Elossmax, nBinsW)
+            int_extFunc[ishell, indx_E, 0] = 0.
+
+            w_tables[ishell, indx_E, :], dW = binEdges(W_min, W_max, nBinsW)
+            #print ('w_tables', w_tables[ishell, indx_E, :])
+
             # actual integral
-            for indx_W in range(nBinsW):
-                Wi = w_tables[ishell, indx_E, indx_W]
-                Wip1 = Wi + dW
-                int_extFunc[ishell, indx_E, indx_W] = ( func(Ei, Wi) + func(Ei, Wip1) )*dW/2. \
-                                                    +  int_extFunc[ishell, indx_E, indx_W-1]
-    #append the data
-    tables.extend([range(n_e.size), e_tables, w_tables, int_extFunc])
+            funcEdge0 = func(Ei, W_min)
+            for indx_W, Wi in enumerate(w_tables[ishell, indx_E, 1:]):
+                indx_W = indx_W+1
+                funcEdge1 = func(Ei, Wi)
+                #print ('Wi', Wi)
+                #print ('edges', funcEdge0, funcEdge1)
+                int_extFunc[ishell, indx_E, indx_W] = ( funcEdge0 + funcEdge1  )*dW/2. +\
+                                                      int_extFunc[ishell, indx_E, indx_W-1]
+                #print ('int', int_extFunc[ishell, indx_E, indx_W])
+                funcEdge0 = funcEdge1
+            #print ('integral list', int_extFunc[ishell, indx_E, :]/int_extFunc[ishell, indx_E, -1])
+
+        #append the data
+        tables.extend([range(n_e.size), e_tables, w_tables, int_extFunc])
 
 
     return tables

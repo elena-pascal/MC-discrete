@@ -162,7 +162,7 @@ def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
 
     # pandas is going to complain about performace for the input string table
-    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+    # warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
     # HDFstore is a dict like object that reads and writes pandas with the PyTables library
     # pickled tables to be read with pandas:

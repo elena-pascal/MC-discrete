@@ -43,7 +43,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             # update electron new traveling direction
             e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
-        elif('Gryzinski' in scatter_i.type):
+        elif ('Gryzinski' in scatter_i.type):
             # determine energy loss
             scatter_i.compute_Eloss()
 
@@ -63,7 +63,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             # update electron new traveling direction
             e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
-        elif(scatter_i.type == 'Moller'):
+        elif (scatter_i.type == 'Moller'):
             # determine energy loss
             scatter_i.compute_Eloss()
 
@@ -95,9 +95,9 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
                 e_i.outcome = 'absorbed'
 
         num_scatt += 1
-        if (num_scatt > 1000):
-            scatteredTooLong = True
-            e_i.outcome = 'scatteredManyTimes'
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
+        #     e_i.outcome = 'scatteredManyTimes'
 
     return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
 
@@ -235,9 +235,9 @@ def scatterOneEl_cont_cl(e_i, material, Emin):
 
         num_scatt += 1
 
-        if (num_scatt > 1000):
-            scatteredTooLong = True
-            e_i.outcome = 'too far'
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
+        #     e_i.outcome = 'too far'
 
     return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
 
@@ -280,9 +280,9 @@ def scatterOneEl_cont_JL(e_i, material, Emin):
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
-        num_scatt += 1
-        if (num_scatt > 1000):
-            scatteredTooLong = True
+        # num_scatt += 1
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
 
     return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
 
@@ -325,9 +325,9 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
-        num_scatt += 1
-        if (num_scatt > 1000):
-            scatteredTooLong = True
+        # num_scatt += 1
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
 
     return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
 
