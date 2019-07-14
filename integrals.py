@@ -73,7 +73,7 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
     return intT
 
 
-def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+def trapez_table(Einc, Emin, Wmin, Ef, n_e, shell_name, ext_func, nBinsW, nBinsE):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
@@ -101,17 +101,22 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
         print ('E0:', Einc)
         print ('Emin:', Emin)
 
+    # tables is the final multidimensional table dictionary
+    tables = {}
+    tables['e_tables'] = [e_tables]
+
     #print ('E tables', e_tables)
-    w_tables = np.empty([n_e.size, nBinsE+1, nBinsW+1])
+    w_tables = np.empty([nBinsE+1, nBinsW+1])
 
 
     # the integral fuction has the same shape as w
-    int_extFunc = np.empty([n_e.size, nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    int_extFunc = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
 
-    # tables is the final multidimensional table
-    tables = []
 
     for ishell in range(n_e.size):
+        # tables is adictionary of the form {'energy':[], shell1:{'w':{'energy_val':[]}, 'integral':[]}, shell2...}
+        tables[shell_name[ishell]] = {'w_tables':{}, 'integral':{}}
+
         # minimum energy that can be lossed by an electron to scatter of this shell
         W_min = Wmin[ishell]
 
@@ -132,26 +137,28 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
                 W_max = extF_limits_gryz(Ei, W_min, Ef)
 
             # initialise the integral for the recursive function
-            int_extFunc[ishell, indx_E, 0] = 0.
+            int_extFunc[indx_E, 0] = 0.
 
-            w_tables[ishell, indx_E, :], dW = binEdges(W_min, W_max, nBinsW)
-            #print ('w_tables', w_tables[ishell, indx_E, :])
+            w_tables[indx_E, :], dW = binEdges(W_min, W_max, nBinsW)
+            #print ('w_tables', w_tables[indx_E, :])
 
             # actual integral
             funcEdge0 = func(Ei, W_min)
-            for indx_W, Wi in enumerate(w_tables[ishell, indx_E, 1:]):
+            for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
                 indx_W = indx_W+1
                 funcEdge1 = func(Ei, Wi)
                 #print ('Wi', Wi)
                 #print ('edges', funcEdge0, funcEdge1)
-                int_extFunc[ishell, indx_E, indx_W] = ( funcEdge0 + funcEdge1  )*dW/2. +\
-                                                      int_extFunc[ishell, indx_E, indx_W-1]
+                int_extFunc[indx_E, indx_W] = ( funcEdge0 + funcEdge1  )*dW/2. +\
+                                                      int_extFunc[indx_E, indx_W-1]
                 #print ('int', int_extFunc[ishell, indx_E, indx_W])
                 funcEdge0 = funcEdge1
             #print ('integral list', int_extFunc[ishell, indx_E, :]/int_extFunc[ishell, indx_E, -1])
 
-        #append the data
-        tables.extend([range(n_e.size), e_tables, w_tables, int_extFunc])
+        # append [ishell, [w_tables], [int_extFunc]] for every shell
+            tables[shell_name[ishell]]['w_table'][str(Ei)] = w_tables
+            tables[shell_name[ishell]]['integral'][str(Ei)] = int_extFunc
+
 
 
     return tables

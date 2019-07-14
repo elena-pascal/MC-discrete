@@ -87,13 +87,13 @@ if __name__ == '__main__': #this is necessary on Windows
          print ('---- calculating Moller tables')
          tables_moller = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                        np.array([inputPar['Wc']]), thisMaterial.fermi_e,\
-                                       np.array([thisMaterial.params['n_val']]), moller_dCS,\
+                                       np.array([thisMaterial.params['n_val']]), ['valence'],  moller_dCS,\
                                        inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
          print ('---- calculating Gryzinski tables')
          tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                     thisMaterial.params['Es'], thisMaterial.fermi_e,\
-                                    thisMaterial.params['ns'], gryz_dCS,\
+                                    thisMaterial.params['ns'], thisMaterial.params['name_s'], gryz_dCS,\
                                     inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
     # elif (inputPar['mode'] in ['diel', 'dielectric']):

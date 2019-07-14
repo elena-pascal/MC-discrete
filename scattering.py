@@ -169,12 +169,13 @@ class scatter_discrete:
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             # energies = self.tables_EW_M[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_M[1], self.i_energy)  # less then value
-
-            int_W_table = self.tables_EW_M[3][0, Eidx_table, :]
+            Eidx_table = bisect.bisect_left(self.tables_EW_M[0], self.i_energy) - 1  # less than value
+            #print ('e index', Eidx_table)
+            #print ('int tables at line E',  self.tables_EW_M[0][2])
+            int_W_table = self.tables_EW_M[1][2][Eidx_table]
             integral = random.random() * int_W_table[-1]
             Widx_table = bisect.bisect_left(int_W_table, integral)
-            E_loss = self.tables_EW_M[2][0, Eidx_table, :][Widx_table]
+            E_loss = self.tables_EW_M[1][1][Eidx_table][Widx_table]
 
             try:
                 self.E_loss = E_loss
@@ -193,9 +194,9 @@ class scatter_discrete:
                 print (' in compute_Eloss for Moller scattering in scattering class')
                 print (' Value of energy loss larger than half the electron energy.')
                 print (' The current energy is:',  self.i_energy)
-                print (' The corresponding energy in the tables is:',  self.tables_EW_M[1][Eidx_table])
+                print (' The corresponding energy in the tables is:',  self.tables_EW_M[0][Eidx_table])
                 print (' The current energy lost is:',  E_loss)
-                print (' The array of energy losses in the tables is:',  self.tables_EW_M[2][0, Eidx_table, :])
+                print (' The array of energy losses in the tables is:',  self.tables_EW_M[1][1][Eidx_table][Widx_table-1:Widx_table+1])
                 print (' Stopping.')
                 sys.exit()
 
@@ -204,17 +205,19 @@ class scatter_discrete:
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
             shell = self.type.replace('Gryzinski', '')
-            ishell = self.m_names.index(shell)
+            ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
 
             # bisect the tables for a random fraction of the maximum
             # energy loss integral for the current energy
 
             # energies = self.tables_EW_G[1]
-            Eidx_table = bisect.bisect_left(self.tables_EW_G[1], self.i_energy)  # less than value
-            int_W_table = self.tables_EW_G[3][ishell,Eidx_table, :]
+            Eidx_table = bisect.bisect_left(self.tables_EW_G[0], self.i_energy) - 1  # less than value
+            #print ('energy is', self.i_energy, 'from table:', self.tables_EW_G[0], self.tables_EW_G[0][Eidx_table])
+            int_W_table = self.tables_EW_G[ishell][2][Eidx_table]
+            #print ('integral tables', int_W_table)
             integral = random.random() * int_W_table[-1]
             Widx_table = bisect.bisect_left(int_W_table, integral)
-            E_loss = self.tables_EW_G[2][ishell, Eidx_table, :][Widx_table]
+            E_loss = self.tables_EW_G[ishell][1][Eidx_table][Widx_table]
 
             try:
                 self.E_loss = E_loss
@@ -235,10 +238,10 @@ class scatter_discrete:
                 print (' Fatal error:', err)
                 print (' in compute_Eloss for Gryzinski scattering in scattering class')
                 print (' Value of energy loss larger than half the current energy.')
-                print (' The current energy lost is:',  E_loss)
                 print (' The current energy is:',  self.i_energy)
-                print (' The corresponding energy in the tables is:',  self.tables_EW_G[1][Eidx_table])
-                print (' The array of energy losses in the tables is:',  self.tables_EW_G[2][ishell, Eidx_table, :])
+                print (' The corresponding energy in the tables is:',  self.tables_EW_G[0][Eidx_table])
+                print (' The current energy lost is:',  E_loss)
+                print (' The neigbour energy losses in the tables are:',  self.tables_EW_G[ishell][1][Eidx_table][Widx_table-1:Widx_table+1])
                 print (' Try increasing the number of energy bins in the table')
                 print (' Stopping.')
                 sys.exit()
