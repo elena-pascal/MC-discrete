@@ -121,10 +121,14 @@ def quinn_sigma(E, Epl, Ef, n, c_bohr_r=bohr_r):
         -------
         s_Q    : array : units = cm**2
     """
-    E_Ef = E*1./Ef
-    Epl_Ef = Epl*1./Ef
 
-    s_Q_total = Epl * np.log( ((1. + Epl_Ef)**(0.5) - 1.)/ ( E_Ef**0.5 -\
+    if (E <= Epl):
+        s_Q = 0.
+    else:
+        E_Ef = E*1./Ef
+        Epl_Ef = Epl*1./Ef
+
+        s_Q_total = Epl * np.log( ((1. + Epl_Ef)**(0.5) - 1.)/ ( E_Ef**0.5 -\
              (E_Ef - Epl_Ef)**0.5 ) )/(2. *  c_bohr_r * E)
 
     s_Q = (s_Q_total/n) * m**2/ cm**2

@@ -73,7 +73,7 @@ def trapez(a, b, E, n_e, ext_func, nSect, *Ebi):
     return intT
 
 
-def trapez_table(Einc, Emin, Wmin, Ef, n_e, shell_name, ext_func, nBinsW, nBinsE):
+def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     '''
     As above but return a table of integrals for different energy losses and incident energies
     int_0^Wi for all incident energies Ei and all energy losses Wi
@@ -101,9 +101,8 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, shell_name, ext_func, nBinsW, nBinsE
         print ('E0:', Einc)
         print ('Emin:', Emin)
 
-    # tables is the final multidimensional table dictionary
-    tables = {}
-    tables['e_tables'] = [e_tables]
+    # tables is the final multidimensional table
+    tables = [e_tables]
 
     #print ('E tables', e_tables)
     w_tables = np.empty([nBinsE+1, nBinsW+1])
@@ -114,9 +113,6 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, shell_name, ext_func, nBinsW, nBinsE
 
 
     for ishell in range(n_e.size):
-        # tables is adictionary of the form {'energy':[], shell1:{'w':{'energy_val':[]}, 'integral':[]}, shell2...}
-        tables[shell_name[ishell]] = {'w_tables':{}, 'integral':{}}
-
         # minimum energy that can be lossed by an electron to scatter of this shell
         W_min = Wmin[ishell]
 
@@ -156,9 +152,7 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, shell_name, ext_func, nBinsW, nBinsE
             #print ('integral list', int_extFunc[ishell, indx_E, :]/int_extFunc[ishell, indx_E, -1])
 
         # append [ishell, [w_tables], [int_extFunc]] for every shell
-            tables[shell_name[ishell]]['w_table'][str(Ei)] = w_tables
-            tables[shell_name[ishell]]['integral'][str(Ei)] = int_extFunc
-
+        tables.extend([[ishell, w_tables, int_extFunc]])
 
 
     return tables

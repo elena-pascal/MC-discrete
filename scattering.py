@@ -35,6 +35,75 @@ def mfp_from_sigma(sigma, n):
     return mfp
 
 
+def pickFromSigmas(sigma_dict):
+    '''
+    From a dictionary of sigmas pick a scattering type.
+
+    Bisect for a random number a sorted instance of a dictionary containing
+    scattering cumulative probabilities. if R <= cum.prob.scatter.type
+    - > scatter is of type type
+    '''
+    # ordered dictionary of sigmas in reverse order
+    sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
+    #print (sorted_sigmas)
+    #extract = lambda x, y: dict(zip(x, map(y.get, x)))
+    #sorted_sigmas = extract(['Rutherford', 'Moller', 'Gryzinski1s'], sorted_sigmas)
+    #print ('after', sorted_sigmas)
+
+    # probabilities to compare the random number against are cumulative sums of this dictionary
+    probs = np.cumsum(list(sorted_sigmas.values()))/sum(sorted_sigmas.values())
+
+    # bisect the cumulative distribution array with a random number to find
+    # the position that random number fits in the array
+    pickedProb = bisect.bisect_left(probs, random.random())
+
+    # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
+    type = list(sorted_sigmas.keys())[this_prob_pos]
+
+    return type
+
+
+def pickMollerTable(tables_M, energy):
+    '''
+    From Moller tables containing the integral under the excitation function
+    for a list of incident energies and energies losses
+    pick an energy loss value
+
+    tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
+    '''
+
+    # find the index in the table for this energy
+    Eidx_table = bisect.bisect_left(tables_EW_M[0], i_energy) - 1  # less than value
+
+    # the list of integrals depending on W is then
+    int_W_table = tables_EW_M[1][2][Eidx_table]
+
+    # let's pick a value. integral(E, Wi) is rr * total integral
+    integral = random.random() * int_W_table[-1]
+
+    # corresponding to energy loss index
+    Widx_table = bisect.bisect_left(int_W_table, integral)
+
+    # which is an energy loss of
+    E_loss = tables_EW_M[1][1][Eidx_table][Widx_table]
+
+    return E_loss
+
+
+def Rutherford_azimuthal(energy, Z):
+    '''
+    compute the azimuthal angle for Rutherford scattering
+    as a half angle
+    '''
+
+    alpha =  3.4*(self.Z**(2./3.))/(float(self.energy))
+    rn = random.random()
+    c2_halfTheta = 1. - (alpha*r/(1. + alpha - rn))
+
+    return c2_halfTheta
+
+
+
 #####################################################################
 ####################### Discrete inelastic scatter class ############
 #####################################################################
@@ -70,7 +139,7 @@ class scatter_discrete:
 
         # scattering params
         self.pathl = 0.
-        self.type = 0.
+        self.type = 'Rutherford' # first entry is elastic
         self.E_loss = 0.
         self.c2_halfTheta = 0.
         self.halfPhi = 0.
@@ -84,19 +153,18 @@ class scatter_discrete:
         #self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
         # if the energy is larger than the valence energy consider Moller scattering
-        if (self.i_energy >= self.m_Eval):
-            self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
-            #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
-            # else the probability of Moller scattering is the default zero
+        self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
+        #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
+        # else the probability of Moller scattering is the default zero
 
         for i in range(len(self.m_Es)):
-            if (self.i_energy > self.m_Es[i]):
-                self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i])
-                #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+        #    if (self.i_energy >= self.m_Es[i]):
+            self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i])
+            #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
 
-        if (self.i_energy > self.m_pl_e):
-            self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
-            #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
+        #if (self.i_energy > self.m_pl_e):
+        self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
+        #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
 
         self.sigma_total = sum(self.sigma.values())
         #self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
@@ -137,45 +205,35 @@ class scatter_discrete:
 
     def det_type(self):
         '''
-        bisect for a random number a sorted instance of a dictionary containing
-        scattering cumulative probabilities. if R <= cum.prob.scatter.type - > scatter is of type type
         Set the type of scattering after determining type
         '''
-
-        # ordered dictionary of sigmas in reverse order
-        sorted_sigmas = OrderedDict(sorted(self.sigma.items(), key=operator.itemgetter(1), reverse=True))
-
-        #extract = lambda x, y: dict(zip(x, map(y.get, x)))
-
-        # probabilities to compare the random number against are cumulative sums of this dictionary
-        #probs = np.cumsum(list(sorted_sigmas.values()))/self.sigma_total
-        probs = np.cumsum(list(sorted_sigmas.values()))/sum(sorted_sigmas.values())
-        # bisect the cumulative distribution array with a random number to find the position that random number fits in the array
-        this_prob_pos = bisect.bisect_left(probs, random.random())
-
-        # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
-        self.type = list(sorted_sigmas.keys())[this_prob_pos]
-        #self.type = 'Gryzinski1s'
+        self.type = pickFromSigmas(self.sigma)
 
         # Moller becomes more unprobable with increase value of Wc
 
 
-    def compute_Eloss(self):
+    def compute_Eloss_sAngles(self):
         '''
-        energy loss is calculated from tables for the Moller and Gryz type
+        Compute both the energy loss and the scattering angles.
+
+        Energy loss is calculated from tables for the Moller and Gryz type
         '''
 
-        if(self.type == 'Moller'):
+        if(self.type == 'Rutherford'):
+            #self.E_loss = 0.
+            self.c2_halfTheta Rutherford_azimuthal(self.i_energy, self.m_Z)
+
+
+        elif(self.type == 'Moller'):
             # integral(E, Wi) is rr * total integral
             # tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
             # energies = self.tables_EW_M[1]
             Eidx_table = bisect.bisect_left(self.tables_EW_M[0], self.i_energy) - 1  # less than value
-            #print ('e index', Eidx_table)
-            #print ('int tables at line E',  self.tables_EW_M[0][2])
+
             int_W_table = self.tables_EW_M[1][2][Eidx_table]
             integral = random.random() * int_W_table[-1]
             Widx_table = bisect.bisect_left(int_W_table, integral)
-            E_loss = self.tables_EW_M[1][1][Eidx_table][Widx_table]
+            E_loss = spickMollerTable(self.tables_EW_M, self.i_energy)
 
             try:
                 self.E_loss = E_loss
@@ -200,7 +258,19 @@ class scatter_discrete:
                 print (' Stopping.')
                 sys.exit()
 
+            # angles
+            try:
+                self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
+                if (self.E_loss > self.i_energy):
+                    raise wrongUpdateOrder
+            except wrongUpdateOrder as err:
+                print ( 'Error:', err)
+                print (' You might be updating energy before calculating the scattering angle')
+                print (' Stopping.')
+                sys.exit()
 
+
+            self.halfPhi = pi*random.random() # radians
 
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
@@ -246,25 +316,7 @@ class scatter_discrete:
                 print (' Stopping.')
                 sys.exit()
 
-
-        elif(self.type == 'Quinn'):
-            self.E_loss = self.m_pl_e
-
-        else:
-            print (' I did not understand the type of scattering in scatter.calculate_Eloss')
-
-    def compute_sAngles(self):
-        if (self.type == 'Rutherford'):
-            alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
-            r = random.random()
-            self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
-            self.halfPhi = pi*random.random()
-            #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
-
-        elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
-            if (self.E_loss == 0.):
-                print (" you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table")
-
+            # angles
             try:
                 self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
                 if (self.E_loss > self.i_energy):
@@ -275,17 +327,50 @@ class scatter_discrete:
                 print (' Stopping.')
                 sys.exit()
 
-
             self.halfPhi = pi*random.random() # radians
 
+        elif(self.type == 'Quinn'):
+            self.E_loss = self.m_pl_e
 
-        #elif(self.type == 'Quinn'):
-            # we assume plasmon scattering does not affect travelling direction
-            # TODO: small angles for Quinn
-        #    self.halfPhi = 0.
+        else:
+            print (' I did not understand the type of scattering in scatter.calculate_Eloss')
 
-        #else:
-        #    print 'I did not understand the scattering type in scatter.calculate_sAngles'
+        # polar angle is the same for all scatterings
+        self.halfPhi = pi*random.random()
+
+
+
+    #
+    # def compute_sAngles(self):
+    #     if (self.type == 'Rutherford'):
+    #
+    #         #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
+    #
+    #     elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
+    #         if (self.E_loss == 0.):
+    #             print (" you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table")
+    #
+    #         try:
+    #             self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
+    #             if (self.E_loss > self.i_energy):
+    #                 raise wrongUpdateOrder
+    #         except wrongUpdateOrder as err:
+    #             print ( 'Error:', err)
+    #             print (' You might be updating energy before calculating the scattering angle')
+    #             print (' Stopping.')
+    #             sys.exit()
+    #
+    #
+    #         self.halfPhi = pi*random.random() # radians
+    #
+    #
+    #     #elif(self.type == 'Quinn'):
+    #         # we assume plasmon scattering does not affect travelling direction
+    #         # TODO: small angles for Quinn
+    #     #    self.halfPhi = 0.
+    #
+    #     #else:
+    #     #    print 'I did not understand the scattering type in scatter.calculate_sAngles'
 
 
 

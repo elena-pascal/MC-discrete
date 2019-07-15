@@ -10,16 +10,56 @@ from scattering import scatter_discrete
 def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
-    num_scatt = 0
+    num_scatt = 1
     pathl_history = []
 
+    # first entry
+    # we'll treat this as a scattering with known scattering angle (0)
+    scatter0 = scatter_discrete(e_i, material, Wc, tables_moller, tables_gryz)
+
+    # calculate path length from total cross section
+    scatter0.compute_pathl()
+    #pathl_history.append(scatter_i.pathl)
+
+    # update electron position
+    e_i.update_xyz(scatter0.pathl)
+
+    # determine energy loss and ignore the scatter angle info
+    scatter0.compute_Eloss_sAngles()
+
+    # update electron energy
+    e_i.update_energy(scatter0.E_loss)
+
+
+    # now scatter untill absorbed or we decided it went through too many scatterings
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
         scatter_i = scatter_discrete(e_i, material, Wc, tables_moller, tables_gryz)
+        num_scatt += 1
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
-        pathl_history.append(scatter_i.pathl)
+        #pathl_history.append(scatter_i.pathl)
+
+        # determine scattering type
+        scatter_i.det_type()
+
+        # determine energy loss and scattering angle
+        scatter_i.compute_Eloss_sAngles()
+
+        # update electron energy
+        e_i.update_energy(scatter_i.E_loss)
+
+        if (e_i.energy <= float(Emin)):
+            absorbed = True
+            e_i.outcome = 'absorbed'
+
+        # update electron new traveling direction
+        e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
+
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
+        #     e_i.outcome = 'scatteredManyTimes'
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -27,77 +67,6 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            # exit function here
-            return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
-
-        # determine scattering type
-        scatter_i.det_type()
-
-        if (scatter_i.type == 'Rutherford'):
-            # determine scattering angles
-            scatter_i.compute_sAngles()
-
-            #phi_R.append(2.*scatter_i.halfPhi)
-            #theta_R.append(2.*acos(scatter_i.c2_halfTheta**0.5))
-
-            # update electron new traveling direction
-            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
-
-        elif ('Gryzinski' in scatter_i.type):
-            # determine energy loss
-            scatter_i.compute_Eloss()
-
-            # determine scattering angles
-            scatter_i.compute_sAngles()
-
-            #phi_G.append(2.*scatter_i.halfPhi)
-            #theta_G.append(2.*acos(scatter_i.c2_halfTheta**0.5))
-
-            # update electron energy
-            e_i.update_energy(scatter_i.E_loss)
-
-            if (e_i.energy <= float(Emin)):
-                absorbed = True
-                e_i.outcome = 'absorbed'
-
-            # update electron new traveling direction
-            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
-
-        elif (scatter_i.type == 'Moller'):
-            # determine energy loss
-            scatter_i.compute_Eloss()
-
-            # determine scattering angles
-            scatter_i.compute_sAngles()
-
-            #phi_M.append(2.*scatter_i.halfPhi)
-            #theta_M.append(2.*acos(scatter_i.c2_halfTheta**0.5))
-
-            # update electron energy
-            e_i.update_energy(scatter_i.E_loss)
-
-            if (e_i.energy <= float(Emin)):
-                absorbed = True
-                e_i.outcome = 'absorbed'
-
-            # update electron new traveling direction
-            e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
-
-        elif (scatter_i.type == 'Quinn'):
-            # determine energy loss
-            scatter_i.compute_Eloss()
-
-            # update electron energy
-            e_i.update_energy(scatter_i.E_loss)
-
-            if (e_i.energy <= Emin):
-                absorbed = True
-                e_i.outcome = 'absorbed'
-
-        num_scatt += 1
-        # if (num_scatt > 1000):
-        #     scatteredTooLong = True
-        #     e_i.outcome = 'scatteredManyTimes'
 
     return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
 

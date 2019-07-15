@@ -1,6 +1,6 @@
 # input file
 
-num_el   : 50000  # per process; to be multiplied by number of processes
+num_el   : 500  # per process; to be multiplied by number of processes
 E0       : 30000 # eV
 Emin     : 500 # eV
 material : Al
@@ -10,8 +10,8 @@ mode     : DS    # dielectric funct = diel; discrete scattering = DS; cont scatt
 Bethe    : classical # classical, JL or explicit
 
 # bins are only relevant for discrete scattering
-num_BinsW   : 5000
-num_BinsE   : 5000
+num_BinsW   : 50
+num_BinsE   : 50
 
 # minimum transfer energy only relevant for discrete scattering
 Wc       : 150     # eV
