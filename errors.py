@@ -45,3 +45,25 @@ class q_azNotNormal(Error):
 class wrongUpdateOrder(Error):
     ''' Raised when the energy loss is larger than the current energy when calculating scattering angles'''
     pass
+
+
+
+
+
+
+
+# inform the user about what's going wrong
+
+
+
+
+def ElossGTEnergy(e, tableE, eloss, tableW, indxW, type):
+    print (' Fatal error:', err)
+    print (' in compute_Eloss for in scattering class for', type)
+    print (' Value of energy loss larger than half the electron energy.')
+    print (' The current energy is:',  e)
+    print (' The corresponding energy in the tables is:',  tableE)
+    print (' The current energy lost is:',  eloss)
+    print (' The neighbouring energy losses in the tables is:',  tableW)
+    print (' Stopping.')
+    sys.exit()

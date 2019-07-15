@@ -14,7 +14,7 @@ from scimath.units.length import angstrom, cm,  m
 from electron import electron
 from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k
-from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder
+from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 
 @has_units
 def mfp_from_sigma(sigma, n):
@@ -58,7 +58,7 @@ def pickFromSigmas(sigma_dict):
     pickedProb = bisect.bisect_left(probs, random.random())
 
     # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
-    return  list(sorted_sigmas.keys())[this_prob_pos]
+    return  list(sorted_sigmas.keys())[pickedProb]
 
 
 def pickMollerTable(tables_M, energy):
@@ -68,10 +68,11 @@ def pickMollerTable(tables_M, energy):
     pick an energy loss value
 
     tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
+    return (E_loss, equivalent energy in table, neighbouring energy losses in table)
     '''
 
     # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(tables_EW_M[0], energy) - 1  # less than value
+    Eidx_table = bisect.bisect_left(tables_M[0], energy) - 1  # less than value
 
     # the list of integrals depending on W is then
     int_W_table = tables_M[1][2][Eidx_table]
@@ -83,7 +84,9 @@ def pickMollerTable(tables_M, energy):
     Widx_table = bisect.bisect_left(int_W_table, integral)
 
     # which is an energy loss of
-    return tables_M[1][1][Eidx_table][Widx_table]
+    E_loss = tables_M[1][1][Eidx_table][Widx_table]
+
+    return (E_loss, tables_M[0][Eidx_table], tables_M[1][1][Eidx_table][Widx_table-1:Widx_table+1])
 
 def pickGryzTable(tables_G, ishell, energy):
     '''
@@ -95,20 +98,21 @@ def pickGryzTable(tables_G, ishell, energy):
     '''
 
     # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(tables_EW_G[0], energy) - 1  # less than value
+    Eidx_table = bisect.bisect_left(tables_G[0], energy) - 1  # less than value
 
     # the list of integrals depending on W is then
-    int_W_table = tables_M[ishell][2][Eidx_table]
+    int_G_table = tables_G[ishell][2][Eidx_table]
 
     # let's pick a value. integral(E, Wi) is rr * total integral
-    integral = random.random() * int_W_table[-1]
+    integral = random.random() * int_G_table[-1]
 
     # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(int_W_table, integral)
+    Widx_table = bisect.bisect_left(int_G_table, integral)
 
     # which is an energy loss of
-    return tables_G[ishell][1][Eidx_table][Widx_table]
+    E_loss = tables_G[ishell][1][Eidx_table][Widx_table]
 
+    return (E_loss, tables_G[0][Eidx_table], tables_G[ishell][1][Eidx_table][Widx_table-1:Widx_table+1])
 
 def Rutherford_azimuthal(energy, Z):
     '''
@@ -116,9 +120,9 @@ def Rutherford_azimuthal(energy, Z):
     as a half angle
     '''
 
-    alpha =  3.4*(self.Z**(2./3.))/(float(self.energy))
+    alpha =  3.4*(Z**(2./3.)) / energy
     rn = random.random()
-    c2_halfTheta = 1. - (alpha*r/(1. + alpha - rn))
+    c2_halfTheta = 1. - (alpha*rn/(1. + alpha - rn))
 
     return c2_halfTheta
 
@@ -247,11 +251,11 @@ class scatter_discrete:
         ######## Rutherford ########
         if(self.type == 'Rutherford'):
             #self.E_loss = 0.
-            self.c2_halfTheta Rutherford_azimuthal(self.i_energy, self.m_Z)
+            self.c2_halfTheta = Rutherford_azimuthal(self.i_energy, self.m_Z)
 
         ##### Moller ###############
         elif(self.type == 'Moller'):
-            E_loss = pickMollerTable(self.tables_EW_M, self.i_energy)
+            E_loss, tables_e, tables_W = pickMollerTable(self.tables_EW_M, self.i_energy)
 
             try:
                 self.E_loss = E_loss
@@ -266,19 +270,13 @@ class scatter_discrete:
             #     print ' Stopping.'
             #     sys.exit()
             except E_lossTooLarge as err:
-                print (' Fatal error:', err)
-                print (' in compute_Eloss for Moller scattering in scattering class')
-                print (' Value of energy loss larger than half the electron energy.')
-                print (' The current energy is:',  self.i_energy)
-                #print (' The corresponding energy in the tables is:',  self.tables_EW_M[0][Eidx_table])
-                print (' The current energy lost is:',  E_loss)
-                #print (' The array of energy losses in the tables is:',  self.tables_EW_M[1][1][Eidx_table][Widx_table-1:Widx_table+1])
-                print (' Stopping.')
-                sys.exit()
+                ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
+
+
 
             # azimuthal angle
             try:
-                self.c2_halfTheta = binarycollModel(self.i_energy, self.E_loss)
+                self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
             except wrongUpdateOrder as err:
@@ -293,7 +291,7 @@ class scatter_discrete:
             shell = self.type.replace('Gryzinski', '')
             ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
 
-            E_loss = pickMollerTable(self.tables_EW_G, ishell, self.i_energy)
+            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, ishell, self.i_energy)
 
             try:
                 self.E_loss = E_loss
@@ -310,21 +308,11 @@ class scatter_discrete:
             #     print ' Stopping.'
             #     sys.exit()
             except E_lossTooLarge as err:
-                print (' --------------------------------------------------------------------------')
-                print (' Fatal error:', err)
-                print (' in compute_Eloss for Gryzinski scattering in scattering class')
-                print (' Value of energy loss larger than half the current energy.')
-                print (' The current energy is:',  self.i_energy)
-                #print (' The corresponding energy in the tables is:',  self.tables_EW_G[0][Eidx_table])
-                print (' The current energy lost is:',  E_loss)
-                #print (' The neigbour energy losses in the tables are:',  self.tables_EW_G[ishell][1][Eidx_table][Widx_table-1:Widx_table+1])
-                print (' Try increasing the number of energy bins in the table')
-                print (' Stopping.')
-                sys.exit()
+                ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
 
             # azimuthal angle
             try:
-                self.c2_halfTheta = binarycollModel(self.i_energy, self.E_loss)
+                self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
                 if (self.E_loss > self.i_energy):
                     raise wrongUpdateOrder
             except wrongUpdateOrder as err:
