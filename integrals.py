@@ -82,7 +82,7 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
     Einc = incident electron energy
     Emin = minimum energy for which the electrons are still tracked
-    Elossmin = Ec for Moller and Ei[shell] for Gryzinski
+    Wmin = Ec for Moller and Ei[shell] for Gryzinski
     Ef = Fermi energy for this material
     n_e = number of valence electrons for Moller scattering and number of electrons per
             inner shell n_e[shell]
@@ -120,7 +120,8 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
         if (n_e.size == 1): # Moller
             func = lambda E, W: ext_func(E, W, n_e[ishell])
         else: # Gryzinski
-            func = lambda E, W: ext_func(E, W, n_e[ishell], W_min)
+            #func = lambda E, W: ext_func(E, W, n_e[ishell], W_min)
+            func = lambda E, W: ext_func(E, W, n_e, Wmin)
 
         for indx_E, Ei in enumerate(e_tables):
             #print ('Ei at this step:', Ei)

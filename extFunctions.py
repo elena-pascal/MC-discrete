@@ -85,17 +85,54 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         epsB = Ebi*1./E
         if  (W > E) or (Ebi > E):
             dCS = 0.
-            raise E_lossTooLarge
         else:
             dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                        4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
-    except E_lossTooLarge as err:
-        print ('! Warning:', err)
-        print (' The energy loss is larger than the current electron energy in Gryzinski discrete CS')
-        print (' W is', W ,'; E is', E, '; Ebi is', Ebi)
 
     return dCS
 
+# 2b') Gryzinski differential cross section for core shell electrons
+# but following Patrik's approach where he sums up all the shells cotributions
+#@has_units
+def gryz_dCS_P(E, W, nsi, Ebi, c_pi_efour=pi_efour):
+    """ Calculate the Moller inelastic cross section
+
+        Parameters
+        ----------
+        E      : array : units = eV
+                       incident energy
+
+        W      : array : units = eV
+                       energy loss
+
+        Ebi    : array : units = eV
+                       array of binding energy of shell i
+
+        nsi    : array : units = dim
+                       array of number of electrons per shell i
+
+        c_pi_efour: scalar: units = cm**2 * eV**2
+
+        Returns
+        -------
+        dCS    : array : units = cm**2
+    """
+
+    dCS = 0.
+
+    for indx, ni in enumerate(nsi):
+        try:
+            eps = W*1./E
+            epsB = Ebi[indx]*1./E
+            if  (W > E) or (Ebi[indx] > E):
+                dCS += 0.
+
+            else:
+                dCS += ni * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+                                       4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
+
+
+    return dCS
 
 # 2c) Dielectric function proposed by Powell (1985) for the optical dielectric limit
 # see Powell 'Calculations of electron inelastic mean free paths from experimental optical data'

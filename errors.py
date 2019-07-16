@@ -1,3 +1,5 @@
+import sys
+
 class Error(Exception):
     ''' Bare class for exceptions'''
     pass
@@ -57,8 +59,8 @@ class wrongUpdateOrder(Error):
 
 
 
-def ElossGTEnergy(e, tableE, eloss, tableW, indxW, type):
-    print (' Fatal error:', err)
+def ElossGTEnergy(e, tableE, eloss, tableW, type):
+    print (' Fatal error:')
     print (' in compute_Eloss for in scattering class for', type)
     print (' Value of energy loss larger than half the electron energy.')
     print (' The current energy is:',  e)

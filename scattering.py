@@ -44,8 +44,12 @@ def pickFromSigmas(sigma_dict):
     - > scatter is of type type
     '''
     # ordered dictionary of sigmas in reverse order
-    sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
-    #print (sorted_sigmas)
+    #sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
+    sorted_sigmas = OrderedDict()
+    sorted_sigmas['Rutherford'] = sigma_dict['Rutherford']
+    sorted_sigmas['Quinn'] = sigma_dict['Quinn']
+    sorted_sigmas['Moller'] = sigma_dict['Moller']
+    sorted_sigmas['Gryzinski'] = sigma_dict['Gryzinski']
     #extract = lambda x, y: dict(zip(x, map(y.get, x)))
     #sorted_sigmas = extract(['Rutherford', 'Moller', 'Gryzinski1s'], sorted_sigmas)
     #print ('after', sorted_sigmas)
@@ -188,9 +192,15 @@ class scatter_discrete:
         # else the probability of Moller scattering is the default zero
 
         for i in range(len(self.m_Es)):
-        #    if (self.i_energy >= self.m_Es[i]):
+            #if (self.i_energy >= self.m_Es[i]):
             self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i])
             #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+
+        # Patricks gryz sum
+        self.sigma['Gryzinski'] = np.sum([self.sigma['Gryzinski1s'], self.sigma['Gryzinski2s'], self.sigma['Gryzinski2p']])
+        del self.sigma['Gryzinski1s']
+        del self.sigma['Gryzinski2s']
+        del self.sigma['Gryzinski2p']
 
         #if (self.i_energy > self.m_pl_e):
         self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
@@ -288,11 +298,11 @@ class scatter_discrete:
         ##### Gryzinski###########
         elif('Gryzinski' in self.type):
             # the shell is the lefover string after substracting Gryzinski
-            shell = self.type.replace('Gryzinski', '')
-            ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
+            #shell = self.type.replace('Gryzinski', '')
+            #ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
 
-            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, ishell, self.i_energy)
-
+            #E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, ishell, self.i_energy)
+            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, 1, self.i_energy)
             try:
                 self.E_loss = E_loss
                 # if (E_loss < 1.e-3):

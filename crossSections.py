@@ -51,7 +51,7 @@ def moller_sigma(E, Emin, nfree, c_pi_efour=pi_efour):
         -------
         s_M    : array : units = cm**2
     """
-    # if the ennergy of this electron is lower than the cut off energy for free
+    # if the energy of this electron is lower than the cut off energy for free
     # electron scattering then Moller sigma is set to zero
     if (E <= Emin):
         s_M = 0.

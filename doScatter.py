@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from material import material
 from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
-from extFunctions import gryz_dCS, moller_dCS
+from extFunctions import gryz_dCS_P, moller_dCS
 from parameters import u_pi_efour
 
 from electron import electron
@@ -76,11 +76,11 @@ if __name__ == '__main__': #this is necessary on Windows
     #num_proc = 1
 
     print()
-    print (' number of incident electrons:', inputPar['num_el']*num_proc)
+    print(' number of incident electrons:', inputPar['num_el']*num_proc)
     print()
-    print (' material is:', thisMaterial.species)
+    print(' material is:', thisMaterial.species)
     print()
-    print (' scattering mode is:', inputPar['mode'])
+    print(' scattering mode is:', inputPar['mode'])
     print()
 
     if (inputPar['mode'] == 'DS'):
@@ -93,7 +93,7 @@ if __name__ == '__main__': #this is necessary on Windows
          print ('---- calculating Gryzinski tables')
          tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
                                     thisMaterial.params['Es'], thisMaterial.fermi_e,\
-                                    thisMaterial.params['ns'], gryz_dCS,\
+                                    thisMaterial.params['ns'], gryz_dCS_P,\
                                     inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
     # elif (inputPar['mode'] in ['diel', 'dielectric']):

@@ -12,7 +12,7 @@ u_hbar       = UnitScalar(hbar, units="J*s")
 u_me         = UnitScalar(m_e, units="kg")
 u_e          = UnitScalar(e, units="coulomb")
 u_eps0       = UnitScalar(epsilon_0, units="farad*m**-1")
-u_pi_efour = UnitScalar(6.51408491409531e-14, units="cm**2 * eV**2")
+u_pi_efour   = UnitScalar(6.51408491409531e-14, units="cm**2 * eV**2")
 u_bohr_r     = UnitScalar(physical_constants['Bohr radius'][0], units="m")
 
 
