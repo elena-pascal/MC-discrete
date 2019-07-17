@@ -45,7 +45,7 @@ def extF_limits_gryz(E, Ei, Ef):
 
     # a = Ei
     #b = (E - Ef + Ei)
-    b = E
+    b = (E -Ef)*0.5
     return b
 
 

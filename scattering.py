@@ -12,8 +12,8 @@ from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
 
 from electron import electron
-from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
-from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k
+from crossSections import ruther_sigma, ruther_N_sigma,  moller_sigma, gryz_sigma, quinn_sigma
+from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
 from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 
 @has_units
@@ -26,6 +26,7 @@ def mfp_from_sigma(sigma, n):
                 total cross section
 
         n      : array : units = m**-3
+                number density
 
         Returns
         -------
@@ -47,9 +48,11 @@ def pickFromSigmas(sigma_dict):
     #sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
     sorted_sigmas = OrderedDict()
     sorted_sigmas['Rutherford'] = sigma_dict['Rutherford']
-    sorted_sigmas['Quinn'] = sigma_dict['Quinn']
-    sorted_sigmas['Moller'] = sigma_dict['Moller']
     sorted_sigmas['Gryzinski'] = sigma_dict['Gryzinski']
+    #sorted_sigmas['Moller'] = sigma_dict['Moller']
+    #sorted_sigmas['Quinn'] = sigma_dict['Quinn']
+
+
     #extract = lambda x, y: dict(zip(x, map(y.get, x)))
     #sorted_sigmas = extract(['Rutherford', 'Moller', 'Gryzinski1s'], sorted_sigmas)
     #print ('after', sorted_sigmas)
@@ -124,7 +127,7 @@ def Rutherford_azimuthal(energy, Z):
     as a half angle
     '''
 
-    alpha =  3.4*(Z**(2./3.)) / energy
+    alpha =  3.4*(Z**(0.67)) / energy
     rn = random.random()
     c2_halfTheta = 1. - (alpha*rn/(1. + alpha - rn))
 
@@ -134,6 +137,7 @@ def binaryCollModel(energy, e_loss):
     '''
     Binary collision model is used for detemining the
     scattering azimuthal angle in Moller and Gryzinski type events
+    returns cos_square(0.5*phi)
     '''
     return 0.5*( (1. - (e_loss / energy)**0.5) + 1.)
 
@@ -282,7 +286,9 @@ class scatter_discrete:
             except E_lossTooLarge as err:
                 ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
 
-
+            #print('Eloss from tables', E_loss)
+            #print('Eloss from SP', moller_sp(self.i_energy, self.free_param, self.m_nval, self.m_atnd)*self.pathl)
+            #print ()
 
             # azimuthal angle
             try:
@@ -297,7 +303,7 @@ class scatter_discrete:
 
         ##### Gryzinski###########
         elif('Gryzinski' in self.type):
-            # the shell is the lefover string after substracting Gryzinski
+            # the shell name is the lefover string after substracting Gryzinski
             #shell = self.type.replace('Gryzinski', '')
             #ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
 
@@ -479,7 +485,8 @@ class scatter_continuous_classical:
         self.mfp = {}   # dictionary keeping all mfp
 
         ## TODO: decide on sigma or mfp
-        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+        #self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+        self.sigma['Rutherford'] = ruther_N_sigma(self.i_energy, self.m_Z)
         self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
 

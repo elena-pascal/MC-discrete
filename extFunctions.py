@@ -80,13 +80,12 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         dCS    : array : units = cm**2
     """
 
-    try:
+    if  (W > E) or (Ebi > E):
+        dCS = 0.
+    else:
         eps = W*1./E
         epsB = Ebi*1./E
-        if  (W > E) or (Ebi > E):
-            dCS = 0.
-        else:
-            dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+        dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                        4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 
     return dCS
@@ -121,14 +120,13 @@ def gryz_dCS_P(E, W, nsi, Ebi, c_pi_efour=pi_efour):
     dCS = 0.
 
     for indx, ni in enumerate(nsi):
-        try:
+        if  (W > E) or (Ebi[indx] > E):
+            dCS += 0.
+
+        else:
             eps = W*1./E
             epsB = Ebi[indx]*1./E
-            if  (W > E) or (Ebi[indx] > E):
-                dCS += 0.
-
-            else:
-                dCS += ni * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+            dCS += ni * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                        4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 
 

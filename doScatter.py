@@ -197,7 +197,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_all.h5'
+    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_all_Nig_Z+1.h5'
 
 
     print ('---- writting to file')

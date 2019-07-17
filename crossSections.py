@@ -27,9 +27,74 @@ def ruther_sigma(E, Z):
         s_R    : array : units = cm**2
     """
     E = E * eV/KeV
+
+    # correction factor for angular deflection of inelastic scattering
+    # Z**2 - > Z*(Z + 1)
+
     alpha =  3.4e-3*(Z**(0.67))/E
-    s_R = 5.21e-21 * (Z**2/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
+    s_R = 5.21e-21 * (Z*Z/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
     return s_R
+
+
+#### 1a') Elastic Rutherford scattering cross section but corrected for inelastic deflections
+@has_units
+def ruther_sigma_wDefl(E, Z):
+    """ Calculate the Rutherford elastic cross section
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+
+        Z      : array : units = dim
+
+        Returns
+        -------
+        s_R    : array : units = cm**2
+    """
+    E = E * eV/KeV
+
+    # correction factor for angular deflection of inelastic scattering
+    # Z**2 - > Z*(Z + 1)
+
+    alpha =  3.4e-3*(Z**(0.67))/E
+    s_R = 5.21e-21 * (Z*(Z+1)/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
+    return s_R
+
+
+#### 1a") Elastic Rutherford scattering cross section with Nigraru screening parameter
+@has_units
+def ruther_N_sigma(E, Z, c_pi_efour=pi_efour):
+    """ Calculate the Rutherford elastic cross section
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+
+        Z      : array : units = dim
+
+        c_pi_efour: scalar: units = cm**2 * eV**2
+
+        Returns
+        -------
+        s_R    : array : units = cm**2
+    """
+
+    beta_N = 5.43 * Z**(2/3)/E
+
+    # this value has been tweaked by fitting Rutherford CS to the pwem model
+    # see Adesida, Schimizu, Everhart (1980) JAP 51 (11)
+    beta_N_star = 0.48*beta_N
+
+    s_R = c_pi_efour * Z**2/ (4*beta_N_star*(1+beta_N_star)*E**2)
+
+    # correction factor for angular deflection of inelastic scattering
+    # Z**2 - > Z*(Z + 1)
+    # s_R = c_pi_efour * (Z+1)*Z/ (4*beta_N_star*(1+beta_N_star)*E**2)
+    return s_R
+
+
 
 #### 2a) Inelastic Moller cross section for free electrons
 @has_units
