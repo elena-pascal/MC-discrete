@@ -67,9 +67,9 @@ def pickFromSigmas(sigma_dict):
     # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
     return  list(sorted_sigmas.keys())[pickedProb]
 
-from pandas import HDFStore
 
-def pickMollerTable(tables_M, energy):
+
+def pickMollerTable(store, energy):
     '''
     From Moller tables containing the integral under the excitation function
     for a list of incident energies and energies losses
@@ -79,17 +79,13 @@ def pickMollerTable(tables_M, energy):
     return (E_loss, equivalent energy in table, neighbouring energy losses in table)
     '''
 
-    # read the table store from disk
-    path = 'Moller.h5'
-    store = HDFStore(path, 'r')
-
     # read energy dataframe from h5 file
     energy_table = store.energy.values
 
     # find the index in the table for this energy
     Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
     # this is not a bad implementation, except for the cases when the energy is
-    # exactly equal to the starting value and we end up with index -1
+    # exactly equal to the min value and we end up with index -1
     # I avoided that by setting electrons of energies <= starting value to absorbed
 
     energy_col = store.get('prob_tables').columns.values[Eidx_table]
@@ -105,11 +101,9 @@ def pickMollerTable(tables_M, energy):
     w_table = store.select('w_tables')[energy_col].values
     E_loss = w_table[Widx_table]
 
-    store.close()
-
     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
-def pickGryzTable(tables_G, ishell, energy):
+def pickGryzTable(store, ishell, energy):
     '''
     From Gryzinski tables containing the integral under the excitation function
     for a list of incident energies and energies losses
@@ -117,9 +111,6 @@ def pickGryzTable(tables_G, ishell, energy):
 
     tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
     '''
-    # read the table store from disk
-    path = 'Gryz' + str(ishell) + '.h5'
-    store = HDFStore(path, 'r')
 
     # read energy dataframe from h5 file
     energy_table = store.energy.values
@@ -140,8 +131,7 @@ def pickGryzTable(tables_G, ishell, energy):
     # which is an energy loss of
     w_table = store.select('w_tables')[energy_col].values
     E_loss = w_table[Widx_table]
-    store.close()
-    print ('eloss G', E_loss)
+
     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
 
@@ -323,11 +313,10 @@ class scatter_discrete:
         ##### Gryzinski ###########
         elif('Gryzinski' in self.type):
             # the shell name is the lefover string after substracting Gryzinski
-            #shell = self.type.replace('Gryzinski', '')
-            #ishell = self.m_names.index(shell) + 1 # in tables index 0 is the energy list
+            shell = self.type.replace('Gryzinski', '')
+            ishell = self.m_names.index(shell)
 
-            #E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, ishell, self.i_energy)
-            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G, 1, self.i_energy)
+            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G[ishell], ishell, self.i_energy)
             try:
                 self.E_loss = E_loss
                 # if (E_loss < 1.e-3):

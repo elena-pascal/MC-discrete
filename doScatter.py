@@ -10,6 +10,7 @@ from multiprocessing import Process, Queue, cpu_count
 from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
+from pandas import HDFStore
 
 from material import material
 from integrals import trapez_table, cumQuadInt_Moller, cumQuadInt_Gryz, extF_limits_gryz, extF_limits_moller
@@ -155,12 +156,20 @@ if __name__ == '__main__': #this is necessary on Windows
 
     output = Queue()
 
+    # read the table store from disk
+    storeM = HDFStore('Moller.h5', 'r')
+
+    storeG = []
+    for ishell in range(len(thisMaterial.params['Es'])):
+        path = 'Gryz' + str(ishell) + '.h5'
+        storeG.append(HDFStore(path, 'r'))
+
     # define the function for scattering of multiple electrons depending on the model
     if (inputPar['mode'] == 'DS'):
         processes = [Process(target=scatterMultiEl_DS, args=(inputPar['num_el'], thisMaterial,
                                                             inputPar['E0'], inputPar['Emin'],
-                                                            inputPar['s_tilt'], 'Moller.h5',
-                                                            'Gryz.h5', inputPar['Wc'],
+                                                            inputPar['s_tilt'], storeM,
+                                                            storeG, inputPar['Wc'],
                                                             output, count)) for count in range(num_proc)]
 
     elif (inputPar['mode'] == 'cont'):
@@ -189,6 +198,11 @@ if __name__ == '__main__': #this is necessary on Windows
     for p in processes:
         p.join()
         p.terminate()
+
+    # close the tables stores
+    storeM.close()
+    storeG.close()
+
 
     print ('---- finished scattering')
 

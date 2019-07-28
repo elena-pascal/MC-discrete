@@ -343,6 +343,8 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     # make the energy array into a pandas DataFrame and then add it to the hdf5 file
     store.put('energy', DataFrame(e_tables),
                 format='table')
+    # make the energy array into a pandas DataFrame and then add it to the hdf5 file
+    e_index = ['energy_'+str(i) for i in range(len(e_tables))]
 
     w_tables = np.empty([nBinsE+1, nBinsW+1])
 
@@ -389,16 +391,16 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
             prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
 
     # put the energy loss tables in the store
-    store.put('w_tables', DataFrame(w_tables.T, columns=e_tables),
-                    format='table')
+    store.put('w_tables', DataFrame(w_tables.T, columns=e_index),
+                    format='table', data_columns = True)
 
     # put the normalised cumulative integral (ie. probability list) in the store
-    store.put('prob_tables', DataFrame(prob_table, columns=e_tables),
+    store.put('prob_tables', DataFrame(prob_table.T, columns=e_index),
                         format='table')
 
 
     # put the integral error in the store
-    store.put('int_error', DataFrame(absErr.T, columns=e_tables),
+    store.put('int_error', DataFrame(absErr.T, columns=e_index),
                     format='table')
 
     # close the store
@@ -487,21 +489,12 @@ def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
             prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
 
         # put the energy loss tables in the store
-        w_tables_df = DataFrame(w_tables.T, columns=e_index)
-        # add shell column
-        w_tables_df['shell'] = Series([ishell]*(nBinsW+1))
-
-        store.put('w_tables', w_tables_df, data_columns = True,
-                        format='table')
+        store.put('w_tables', DataFrame(w_tables.T, columns=e_index),
+                    data_columns = True,  format='table')
 
         # put the normalised cumulative integral in the store
-        prob_df = DataFrame(prob_table.T, columns=e_index)
-
-        # add shell column
-        prob_df['shell'] =  Series([ishell]*(nBinsW+1))
-
-        store.put('prob_tables', prob_df, data_columns = True,
-                        format='table', index=False)
+        store.put('prob_tables', DataFrame(prob_table.T, columns=e_index),
+                    data_columns = True,  format='table')
 
         # put the integral error in the store
         store.put('int_error', DataFrame(absErr.T, columns=e_index),

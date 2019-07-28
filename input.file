@@ -10,8 +10,8 @@ mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scatte
 Bethe    : classical # classical, JL or explicit
 
 # bins are only relevant for discrete scattering
-num_BinsW   : 500
-num_BinsE   : 500
+num_BinsW   : 1000
+num_BinsE   : 1000
 
 # minimum transfer energy only relevant for discrete scattering
 Wc       : 10     # eV; Wc = Ec*E0
