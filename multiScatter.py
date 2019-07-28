@@ -22,7 +22,8 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
     #dir0 = np.array([np.cos(np.radians(90.0-tilt)), 0., -np.sin(np.radians(90.-tilt))])
 
 
-    indexes = ('outcome', 'energy', 'dir', 'MFP', 'TP', 'num_scatt')
+    #indexes = ('outcome', 'energy', 'dir', 'MFP', 'TP', 'num_scatt')
+    indexes = ('outcome', 'energy')
     out_dict = {}
 
     for label in indexes:
@@ -44,12 +45,12 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
         res_dict = scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz)
 
         # append data for all electrons
-        for index in res_dict.keys():
-            out_dict[index].append(res_dict[index])
+        #for index in res_dict.keys():
+        #    out_dict[index].append(res_dict[index])
 
         out_dict['outcome'].append(e_i.outcome)
         out_dict['energy'].append(e_i.energy)
-        out_dict['dir'].append(tuple(e_i.dir))
+        #out_dict['dir'].append(tuple(e_i.dir))
 
     try:
         # make tuples out of lists and pickle them

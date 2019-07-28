@@ -6,8 +6,11 @@ from scipy.constants import pi
 from parameters import pi_efour, bohr_r
 
 import numpy as np
+
 ###################################################################
-#                       Total cross section                       #
+#                                                                 #
+#                      Elastic total cross section                #
+#                                                                 #
 ###################################################################
 
 #### 1a) Elastic Rutherford scattering cross section
@@ -66,6 +69,7 @@ def ruther_sigma_wDefl(E, Z):
 @has_units
 def ruther_N_sigma(E, Z, c_pi_efour=pi_efour):
     """ Calculate the Rutherford elastic cross section
+        with Nigram parameter
         per atom
 
         Parameters
@@ -94,6 +98,66 @@ def ruther_N_sigma(E, Z, c_pi_efour=pi_efour):
     # s_R = c_pi_efour * (Z+1)*Z/ (4*beta_N_star*(1+beta_N_star)*E**2)
     return s_R
 
+### 1a"') Elastic Rutherford scattering cross section with Nigraru screening parameter and Z+1
+@has_units
+def ruther_N_sigma_wDefl(E, Z, c_pi_efour=pi_efour):
+    """ Calculate the Rutherford elastic cross section
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+
+        Z      : array : units = dim
+
+        c_pi_efour: scalar: units = cm**2 * eV**2
+
+        Returns
+        -------
+        s_R    : array : units = cm**2
+    """
+
+    beta_N = 5.43 * Z**(2/3)/E
+
+    # this value has been tweaked by fitting Rutherford CS to the pwem model
+    # see Adesida, Schimizu, Everhart (1980) JAP 51 (11)
+    beta_N_star = 0.48*beta_N
+
+    # correction factor for angular deflection of inelastic scattering
+    # Z**2 - > Z*(Z + 1)
+    s_R = c_pi_efour * (Z+1)*Z/ (4*beta_N_star*(1+beta_N_star)*E**2)
+    return s_R
+
+### 1b) Browning
+@has_units
+def browning_sigma(E, Z, c_pi_efour=pi_efour):
+    """ Calculate the Browning (1992) elastic cross section
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+
+        Z      : array : units = dim
+
+        c_pi_efour: scalar: units = cm**2 * eV**2
+
+        Returns
+        -------
+        s_R    : array : units = cm**2
+    """
+    Z133 = Z**1.33
+    u = np.log10(8 * E * Z133**(-1))
+    s_B = 4.7 * 10**(-18) * (Z133 + 0.032*Z*Z)/(E + (0.0155*Z133*E**0.5) )/(1 - 0.02*Z**0.5*np.exp(-u**2))
+    return s_B
+
+
+    
+###################################################################
+#                                                                 #
+#                      Inelastic total cross section              #
+#                                                                 #
+###################################################################
 
 
 #### 2a) Inelastic Moller cross section for free electrons

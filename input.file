@@ -1,20 +1,20 @@
 # input file
 
-num_el   : 500  # per process; to be multiplied by number of processes
-E0       : 30000 # eV
-Emin     : 500 # eV
+num_el   : 50000  # per process; to be multiplied by number of processes
+E0       : 20000 # eV
+Emin     : 19000 # eV
 material : Al
 s_tilt   : 0.     # degrees
-mode     : cont    # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe    : classical # classical, JL or explicit
 
 # bins are only relevant for discrete scattering
-num_BinsW   : 500
-num_BinsE   : 500
+num_BinsW   : 200
+num_BinsE   : 200
 
 # minimum transfer energy only relevant for discrete scattering
-Wc       : 10     # eV
+Wc       : 10     # eV; Wc = Ec*E0
 
 
 # detector information

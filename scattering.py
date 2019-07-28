@@ -12,7 +12,7 @@ from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
 
 from electron import electron
-from crossSections import ruther_sigma, ruther_N_sigma,  moller_sigma, gryz_sigma, quinn_sigma
+from crossSections import ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
 from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
 from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 
@@ -45,19 +45,19 @@ def pickFromSigmas(sigma_dict):
     - > scatter is of type type
     '''
     # ordered dictionary of sigmas in reverse order
-    #sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
-    sorted_sigmas = OrderedDict()
-    sorted_sigmas['Rutherford'] = sigma_dict['Rutherford']
-    sorted_sigmas['Gryzinski'] = sigma_dict['Gryzinski']
+    sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
+    #sorted_sigmas = OrderedDict()
+    #sorted_sigmas['Rutherford'] = sigma_dict['Rutherford']
+    #sorted_sigmas['Gryzinski'] = sigma_dict['Gryzinski']
     #sorted_sigmas['Moller'] = sigma_dict['Moller']
     #sorted_sigmas['Quinn'] = sigma_dict['Quinn']
-
 
     #extract = lambda x, y: dict(zip(x, map(y.get, x)))
     #sorted_sigmas = extract(['Rutherford', 'Moller', 'Gryzinski1s'], sorted_sigmas)
     #print ('after', sorted_sigmas)
 
     # probabilities to compare the random number against are cumulative sums of this dictionary
+    # [pR = sigmaR/sigmaT, pQ = (sigmaR+sigmaQ)/sigmaT, ... ]
     probs = np.cumsum(list(sorted_sigmas.values()))/sum(sorted_sigmas.values())
 
     # bisect the cumulative distribution array with a random number to find
@@ -67,6 +67,7 @@ def pickFromSigmas(sigma_dict):
     # the type of scattering is the key in the sorted array corresponding to the smallest prob value larger than the random number
     return  list(sorted_sigmas.keys())[pickedProb]
 
+from pandas import HDFStore
 
 def pickMollerTable(tables_M, energy):
     '''
@@ -78,22 +79,37 @@ def pickMollerTable(tables_M, energy):
     return (E_loss, equivalent energy in table, neighbouring energy losses in table)
     '''
 
+    # read the table store from disk
+    store = HDFStore(tables_M, 'r')
+
+    # read energy dataframe from h5 file
+    energy_table = store.energy.values
+
     # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(tables_M[0], energy) - 1  # less than value
+    Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
+    # this is not a bad implementation, except for the cases when the energy is
+    # exactly equal to the starting value and we end up with index -1
+    # I avoided that by setting electrons of energies <= starting value to absorbed
+
+    energy_col = store.get('cumInt_tables').columns.values[Eidx_table]
 
     # the list of integrals depending on W is then
-    int_W_table = tables_M[1][2][Eidx_table]
+    cumInt_table = store.select('cumInt_tables')[energy_col].values
 
     # let's pick a value. integral(E, Wi) is rr * total integral
-    integral = random.random() * int_W_table[-1]
+    integral = random.random() * cumInt_table[-1]
 
     # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(int_W_table, integral)
+    Widx_table = bisect.bisect_left(cumInt_table, integral)
 
     # which is an energy loss of
-    E_loss = tables_M[1][1][Eidx_table][Widx_table]
+    w_table = store.select('w_tables')[energy_col].values
+    E_loss = w_table[Widx_table]
 
-    return (E_loss, tables_M[0][Eidx_table], tables_M[1][1][Eidx_table][Widx_table-1:Widx_table+1])
+    store.close()
+
+    print ('eloss M', E_loss)
+    return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
 def pickGryzTable(tables_G, ishell, energy):
     '''
@@ -103,23 +119,31 @@ def pickGryzTable(tables_G, ishell, energy):
 
     tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
     '''
+    # read the table store from disk
+    store = HDFStore(tables_G, 'r')
+
+    # read energy dataframe from h5 file
+    energy_table = store.energy.values
 
     # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(tables_G[0], energy) - 1  # less than value
+    Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
+    energy_col = store.get('cumInt_tables').columns.values[Eidx_table]
 
     # the list of integrals depending on W is then
-    int_G_table = tables_G[ishell][2][Eidx_table]
+    cumInt_table = store.select('cumInt_tables', where=('shell == ishell'))[energy_col].values
 
     # let's pick a value. integral(E, Wi) is rr * total integral
-    integral = random.random() * int_G_table[-1]
+    integral = random.random() * cumInt_table[-1]
 
     # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(int_G_table, integral)
+    Widx_table = bisect.bisect_left(cumInt_table, integral)
 
     # which is an energy loss of
-    E_loss = tables_G[ishell][1][Eidx_table][Widx_table]
-
-    return (E_loss, tables_G[0][Eidx_table], tables_G[ishell][1][Eidx_table][Widx_table-1:Widx_table+1])
+    w_table = store.select('w_tables', where=('shell == ishell'))[energy_col].values
+    E_loss = w_table[Widx_table]
+    store.close()
+    print ('eloss G', E_loss)
+    return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
 def Rutherford_azimuthal(energy, Z):
     '''
@@ -138,6 +162,8 @@ def binaryCollModel(energy, e_loss):
     Binary collision model is used for detemining the
     scattering azimuthal angle in Moller and Gryzinski type events
     returns cos_square(0.5*phi)
+    Note that the binary collision model assumes the scattering angle
+    to be [0, pi/2], this limits
     '''
     return 0.5*( (1. - (e_loss / energy)**0.5) + 1.)
 
@@ -179,7 +205,7 @@ class scatter_discrete:
         self.pathl = 0.
         self.type = 'Rutherford' # first entry is elastic
         self.E_loss = 0.
-        self.c2_halfTheta = 0.
+        self.c2_halfTheta = 1.
         self.halfPhi = 0.
 
         # intitalise scattering probabilities dictionary
@@ -187,7 +213,7 @@ class scatter_discrete:
         #self.mfp = {} # dictionary keeping all mfp
 
         ## TODO: decide on sigma or mfp. Is sigma the inverse mean free path?
-        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
+        self.sigma['Rutherford'] = ruther_N_sigma(self.i_energy, self.m_Z)
         #self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
         # if the energy is larger than the valence energy consider Moller scattering
@@ -201,10 +227,10 @@ class scatter_discrete:
             #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
 
         # Patricks gryz sum
-        self.sigma['Gryzinski'] = np.sum([self.sigma['Gryzinski1s'], self.sigma['Gryzinski2s'], self.sigma['Gryzinski2p']])
-        del self.sigma['Gryzinski1s']
-        del self.sigma['Gryzinski2s']
-        del self.sigma['Gryzinski2p']
+        # self.sigma['Gryzinski'] = np.sum([self.sigma['Gryzinski1s'], self.sigma['Gryzinski2s'], self.sigma['Gryzinski2p']])
+        # del self.sigma['Gryzinski1s']
+        # del self.sigma['Gryzinski2s']
+        # del self.sigma['Gryzinski2p']
 
         #if (self.i_energy > self.m_pl_e):
         self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
@@ -291,17 +317,10 @@ class scatter_discrete:
             #print ()
 
             # azimuthal angle
-            try:
-                self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
-                if (self.E_loss > self.i_energy):
-                    raise wrongUpdateOrder
-            except wrongUpdateOrder as err:
-                print ( 'Error:', err)
-                print (' You might be updating energy before calculating the scattering angle')
-                print (' Stopping.')
-                sys.exit()
+            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
-        ##### Gryzinski###########
+
+        ##### Gryzinski ###########
         elif('Gryzinski' in self.type):
             # the shell name is the lefover string after substracting Gryzinski
             #shell = self.type.replace('Gryzinski', '')
@@ -327,17 +346,10 @@ class scatter_discrete:
                 ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
 
             # azimuthal angle
-            try:
-                self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
-                if (self.E_loss > self.i_energy):
-                    raise wrongUpdateOrder
-            except wrongUpdateOrder as err:
-                print ( 'Error:', err)
-                print (' You might be updating energy before calculating the scattering angle')
-                print (' Stopping.')
-                sys.exit()
+            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
-        ##### Gryzinski###########
+
+        ##### Quinn ###########
         elif(self.type == 'Quinn'):
             self.E_loss = self.m_pl_e
 
@@ -421,7 +433,7 @@ class scatter_discrete_wUnits(scatter_discrete):
         self.pathl = 0.
         self.type = 0.
         self.E_loss = 0.
-        self.c2_halfTheta = 0.
+        self.c2_halfTheta = 1.
         self.halfPhi = 0.
 
         # intitalise scattering probabilities dictionary
@@ -476,7 +488,7 @@ class scatter_continuous_classical:
         # scattering params
         self.pathl = 0.
         self.E_loss = 0.
-        self.c2_halfTheta = 0.
+        self.c2_halfTheta = 1.
         self.halfPhi = 0.
 
 
@@ -486,7 +498,7 @@ class scatter_continuous_classical:
 
         ## TODO: decide on sigma or mfp
         #self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
-        self.sigma['Rutherford'] = ruther_N_sigma(self.i_energy, self.m_Z)
+        self.sigma['Rutherford'] = ruther_N_sigma_wDefl(self.i_energy, self.m_Z)
         self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
 
@@ -574,7 +586,7 @@ class scatter_continuous_JL(scatter_continuous_classical):
         self.pathl = 0.
         self.type = 0.
         self.E_loss = 0.
-        self.c2_halfTheta = 0.
+        self.c2_halfTheta = 1.
         self.halfPhi = 0.
 
 
@@ -645,7 +657,7 @@ class scatter_continuous_explicit(scatter_continuous_classical):
         self.pathl = 0.
         self.type = 0.
         self.E_loss = 0.
-        self.c2_halfTheta = 0.
+        self.c2_halfTheta = 1.
         self.halfPhi = 0.
 
 

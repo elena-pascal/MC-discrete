@@ -12,8 +12,8 @@ from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
 
 from material import material
-from integrals import trapez_table, extF_limits_gryz, extF_limits_moller
-from extFunctions import gryz_dCS_P, moller_dCS
+from integrals import trapez_table, cumQuadInt_Moller, cumQuadInt_Gryz, extF_limits_gryz, extF_limits_moller
+from extFunctions import gryz_dCS, moller_dCS
 from parameters import u_pi_efour
 
 from electron import electron
@@ -72,8 +72,8 @@ if __name__ == '__main__': #this is necessary on Windows
     thisMaterial = material(inputPar['material'])
 
     # number of processes available
-    num_proc = cpu_count()-1 # leave one cpu thread free for user
-    #num_proc = 1
+    #num_proc = cpu_count()-1 # leave one cpu thread free for user
+    num_proc = 1
 
     print()
     print(' number of incident electrons:', inputPar['num_el']*num_proc)
@@ -85,22 +85,22 @@ if __name__ == '__main__': #this is necessary on Windows
 
     if (inputPar['mode'] == 'DS'):
          print ('---- calculating Moller tables')
-         tables_moller = trapez_table( inputPar['E0'], inputPar['Emin'],\
-                                       np.array([inputPar['Wc']]), thisMaterial.fermi_e,\
-                                       np.array([thisMaterial.params['n_val']]), moller_dCS,\
+         cumQuadInt_Moller( inputPar['E0'], inputPar['Emin'],\
+                                       inputPar['Wc'], thisMaterial.fermi_e,\
+                                       thisMaterial.params['n_val'], moller_dCS,\
                                        inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
          print ('---- calculating Gryzinski tables')
-         tables_gryz = trapez_table( inputPar['E0'], inputPar['Emin'],\
+         cumQuadInt_Gryz( inputPar['E0'], inputPar['Emin'],\
                                     thisMaterial.params['Es'], thisMaterial.fermi_e,\
-                                    thisMaterial.params['ns'], gryz_dCS_P,\
+                                    thisMaterial.params['ns'], gryz_dCS,\
                                     inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
     # elif (inputPar['mode'] in ['diel', 'dielectric']):
     #     print ' ---- calculating dielectric function integral table'
     #     tables_diel =
 
-############################## units###########################################
+############################## units ###########################################
     if use_units:
         # Set all input parameters with units, make calculations @with_units
         # and return pathlength and energy units
@@ -159,8 +159,8 @@ if __name__ == '__main__': #this is necessary on Windows
     if (inputPar['mode'] == 'DS'):
         processes = [Process(target=scatterMultiEl_DS, args=(inputPar['num_el'], thisMaterial,
                                                             inputPar['E0'], inputPar['Emin'],
-                                                            inputPar['s_tilt'], tables_moller,
-                                                            tables_gryz, inputPar['Wc'],
+                                                            inputPar['s_tilt'], 'Moller.h5',
+                                                            'Gryz.h5', inputPar['Wc'],
                                                             output, count)) for count in range(num_proc)]
 
     elif (inputPar['mode'] == 'cont'):
@@ -197,7 +197,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_all_Nig_Z+1.h5'
+    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_short_10eVBin.h5'
 
 
     print ('---- writting to file')

@@ -1,6 +1,7 @@
 # A number of numerical integration procedures
 # for generating the discrete cross section integral tables
 import numpy as np
+import os
 from errors import mTooLarge, mTooSmall
 
 def binMiddles(Xmin, Xmax, numBins):
@@ -16,7 +17,7 @@ def binEdges(Xmin, Xmax, numBins):
         For a given range and number of bins
         return the numpy array of the bins edges and the step size
     '''
-    return np.linspace(Xmin, Xmax, num=numBins+1, retstep=True)
+    return np.linspace(Xmin, Xmax, num=numBins+1)
 
 
 
@@ -45,7 +46,7 @@ def extF_limits_gryz(E, Ei, Ef):
 
     # a = Ei
     #b = (E - Ef + Ei)
-    b = (E -Ef)*0.5
+    b = E - Ef
     return b
 
 
@@ -120,11 +121,10 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
         if (n_e.size == 1): # Moller
             func = lambda E, W: ext_func(E, W, n_e[ishell])
         else: # Gryzinski
-            #func = lambda E, W: ext_func(E, W, n_e[ishell], W_min)
-            func = lambda E, W: ext_func(E, W, n_e, Wmin)
+            func = lambda E, W: ext_func(E, W, n_e[ishell], W_min) # Patricks gryz sum
+            #func = lambda E, W: ext_func(E, W, n_e, Wmin)
 
         for indx_E, Ei in enumerate(e_tables):
-            #print ('Ei at this step:', Ei)
 
             if (n_e.size == 1): # Moller
                 # the upper integral limit depends on Ei
@@ -137,20 +137,17 @@ def trapez_table(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
             int_extFunc[indx_E, 0] = 0.
 
             w_tables[indx_E, :], dW = binEdges(W_min, W_max, nBinsW)
-            #print ('w_tables', w_tables[indx_E, :])
 
             # actual integral
             funcEdge0 = func(Ei, W_min)
             for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
                 indx_W = indx_W+1
                 funcEdge1 = func(Ei, Wi)
-                #print ('Wi', Wi)
-                #print ('edges', funcEdge0, funcEdge1)
+
                 int_extFunc[indx_E, indx_W] = ( funcEdge0 + funcEdge1  )*dW/2. +\
                                                       int_extFunc[indx_E, indx_W-1]
-                #print ('int', int_extFunc[ishell, indx_E, indx_W])
+
                 funcEdge0 = funcEdge1
-            #print ('integral list', int_extFunc[ishell, indx_E, :]/int_extFunc[ishell, indx_E, -1])
 
         # append [ishell, [w_tables], [int_extFunc]] for every shell
         tables.extend([[ishell, w_tables, int_extFunc]])
@@ -311,3 +308,187 @@ def logSpace(a, b, E, n_e, ext_func, nSeg, *Wc):
         intT = intT + intSeg
 
     return intT
+
+
+################################################
+###               Scipy quad integral       ####
+################################################
+
+
+from scipy.integrate import quad
+from pandas import HDFStore, DataFrame, Series
+
+
+
+def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+    '''
+    the grid for E and W can be chosen by the user, but the integrals accuracy
+    is independed on the grid size. Unlike the trapez case.
+
+    write an HDF5 file with the cumulative array
+    '''
+
+    # define the hdf5 file name
+    store = HDFStore('Moller.h5')
+
+    # e contains the array of possible incident energies in the tables
+    e_tables = binEdges(Emin, Einc, nBinsE) # we will bisect left
+    #      if (Emin > Einc):
+    #          raise ERangeError
+    # except ERangeError as err:
+    #     print ('! Error: the incident energy is larger than the minimum energy')
+    #     print ('E0:', Einc)
+    #     print ('Emin:', Emin)
+
+    # make the energy array into a pandas DataFrame and then add it to the hdf5 file
+    store.put('energy', DataFrame(e_tables),
+                format='table')
+
+    w_tables = np.empty([nBinsE+1, nBinsW+1])
+
+
+    # the integral function has the same shape as w
+    cumInt_extFunc = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    # same for the absolute error of intergration at every step
+    absErr = np.empty([nBinsE+1, nBinsW+1])
+
+    # minimum energy that can be lost by an electron to scatter of this shell
+    W_min = Wmin
+
+    # simplify the excitation function to depend only on E and W
+    integrand = lambda W, E: ext_func(E, W, n_e)
+
+    for indx_E, Ei in enumerate(e_tables):
+        # the upper integral limit depends on Ei
+        W_max =  extF_limits_moller(Ei, W_min, Ef)
+
+        # initialise the integral for the recursive function
+        cumInt_extFunc[indx_E, 0] = 0.
+        absErr[indx_E, 0] = 0.
+
+        w_tables[indx_E, :] = binEdges(W_min, W_max, nBinsW)
+
+        Wim1 = W_min # first limit 0
+        E = Ei       # argument in integrand
+
+        # actual integral
+        for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
+            indx_W = indx_W+1
+            intStep = quad(integrand, Wim1, Wi, args=(E))
+
+            cumInt_extFunc[indx_E, indx_W] = intStep[0] + cumInt_extFunc[indx_E, indx_W-1]
+            absErr[indx_E, indx_W] = intStep[1]
+
+            Wim1 = Wi
+
+    # put the energy loss tables in the store
+    store.put('w_tables', DataFrame(w_tables.T, columns=e_tables),
+                    format='table')
+
+    # put the integral in the store
+    store.put('cumInt_tables', DataFrame(cumInt_extFunc.T, columns=e_tables),
+                    format='table')
+
+    # put the integral error in the store
+    store.put('int_error', DataFrame(absErr.T, columns=e_tables),
+                    format='table')
+
+    # close the store
+    store.close()
+
+    print ('Moller tables written to:', 'Moller.h5')
+    return
+
+
+def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+    '''
+    the grid for E and W can be chosen by the user, but the integrals accuracy
+    is independed on the grid size. Unlike the trapez case.
+
+    write an HDF5 file with the cumulative array
+    '''
+
+    path = 'Gryz.h5'
+    if os.path.exists(path):
+        os.remove(path)
+
+    # define the hdf5 file name
+    store = HDFStore(path)
+
+    # e contains the array of possible incident energies in the tables
+    e_tables = binEdges(Emin, Einc, nBinsE) # we will bisect left
+    #      if (Emin > Einc):
+    #          raise ERangeError
+    # except ERangeError as err:
+    #     print ('! Error: the incident energy is larger than the minimum energy')
+    #     print ('E0:', Einc)
+    #     print ('Emin:', Emin)
+
+    # make the energy array into a pandas DataFrame and then add it to the hdf5 file
+    e_index = ['energy_'+str(i) for i in range(len(e_tables))]
+    store.put('energy', DataFrame(e_tables), format='table', index=e_index)
+
+    # make a DataFrame for the energy loss table
+    w_tables = np.empty([nBinsE+1, nBinsW+1])
+
+    # the integral fuction has the same shape as w
+    cumInt_extFunc = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    # same for the absolute error of intergration at every step
+    absErr = np.empty([nBinsE+1, nBinsW+1])
+
+    for ishell in range(n_e.size):
+        # minimum energy that can be lost by an electron to scatter of this shell
+        W_min = Wmin[ishell]
+
+        # simplify the excitation function to depend only on E and W
+        #func = lambda E, W: ext_func(E, W, n_e, Wmin) # Patrick's gryz
+        integrand = lambda W, E: ext_func(E, W, n_e[ishell], W_min)
+
+        for indx_E, Ei in enumerate(e_tables):
+            # the upper integral limit depends on Ei
+            W_max = extF_limits_gryz(Ei, W_min, Ef)
+
+            # initialise the integral for the recursive function
+            cumInt_extFunc[indx_E, 0] = 0.
+            absErr[indx_E, 0] = 0.
+
+            w_tables[indx_E, :] = binEdges(W_min, W_max, nBinsW)
+
+            Wim1 = W_min # first limit 0
+            E = Ei       # argument in integrand
+            # actual integral
+            for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
+                indx_W = indx_W+1
+                intStep = quad(integrand, Wim1, Wi, args=(E))
+
+                cumInt_extFunc[indx_E, indx_W] = intStep[0] + cumInt_extFunc[indx_E, indx_W-1]
+                absErr[indx_E, indx_W] = intStep[1]
+
+                Wim1 = Wi
+
+        # put the energy loss tables in the store
+        w_tables_df = DataFrame(w_tables.T, columns=e_index)
+        # add shell column
+        w_tables_df['shell'] =  Series([ishell]*(nBinsW+1))
+
+        store.append('w_tables', w_tables_df, data_columns = True,
+                        format='table', index=False)
+
+        # put the integral in the store
+        cumInt_df = DataFrame(cumInt_extFunc.T, columns=e_index)
+        # add shell column
+        cumInt_df['shell'] =  Series([ishell]*(nBinsW+1))
+
+        store.append('cumInt_tables', cumInt_df, data_columns = True,
+                        format='table', index=False)
+
+        # put the integral error in the store
+        store.append('int_error', DataFrame(absErr.T, columns=e_index),
+                        format='table', index=False)
+
+    # close the store
+    store.close()
+
+    print ('Gryzinski tables written to:', 'Gryz.h5')
+
+    return

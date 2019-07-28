@@ -10,25 +10,27 @@ from scattering import scatter_discrete
 def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
-    num_scatt = 1
+    num_scatt = 0
     pathl_history = []
+    scattAngle_history = []
+    type_history = []
 
-    # first entry
-    # we'll treat this as a scattering with known scattering angle (0)
-    scatter0 = scatter_discrete(e_i, material, Wc, tables_moller, tables_gryz)
-
-    # calculate path length from total cross section
-    scatter0.compute_pathl()
-    #pathl_history.append(scatter_i.pathl)
-
-    # update electron position
-    e_i.update_xyz(scatter0.pathl)
-
-    # determine energy loss and ignore the scatter angle info
-    scatter0.compute_Eloss_sAngles()
-
-    # update electron energy
-    e_i.update_energy(scatter0.E_loss)
+    # # first entry
+    # # we'll treat this as a scattering with known scattering angle (0)
+    # scatter0 = scatter_discrete(e_i, material, Wc, tables_moller, tables_gryz)
+    #
+    # # calculate path length from total cross section
+    # scatter0.compute_pathl()
+    # #pathl_history.append(scatter_i.pathl)
+    #
+    # # update electron position
+    # e_i.update_xyz(scatter0.pathl)
+    #
+    # # determine energy loss and ignore the scatter angle info
+    # scatter0.compute_Eloss_sAngles()
+    #
+    # # update electron energy
+    # e_i.update_energy(scatter0.E_loss)
 
 
     # now scatter untill absorbed or we decided it went through too many scatterings
@@ -41,19 +43,32 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
         scatter_i.compute_pathl()
         #pathl_history.append(scatter_i.pathl)
 
+        # update electron position
+        e_i.update_xyz(scatter_i.pathl)
+
+        # check if backscattered
+        if (e_i.xyz[2]<= 0.):
+            e_i.outcome = 'backscattered'
+            #return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
+            #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
+            return
+
         # determine scattering type
         scatter_i.det_type()
+        type_history.append(scatter_i.type)
 
         # determine energy loss and scattering angle
         scatter_i.compute_Eloss_sAngles()
+        scattAngle_history.append(scatter_i.c2_halfTheta)
 
         # update electron energy
         e_i.update_energy(scatter_i.E_loss)
 
-        if (e_i.energy <= float(Emin)):
+        if (e_i.energy <= Emin):
             absorbed = True
             e_i.outcome = 'absorbed'
-
+            #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
+            return
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
@@ -61,14 +76,10 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
         #     scatteredTooLong = True
         #     e_i.outcome = 'scatteredManyTimes'
 
-        # update electron position
-        e_i.update_xyz(scatter_i.pathl)
 
-        # check if backscattered
-        if (e_i.xyz[2]<= 0.):
-            e_i.outcome = 'backscattered'
-
-    return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
+    #return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
+    #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
+    return
 
 ####################### w units #################
 def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
