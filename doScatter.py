@@ -72,8 +72,8 @@ if __name__ == '__main__': #this is necessary on Windows
     thisMaterial = material(inputPar['material'])
 
     # number of processes available
-    #num_proc = cpu_count()-1 # leave one cpu thread free for user
-    num_proc = 1
+    num_proc = cpu_count()-1 # leave one cpu thread free for user
+    #num_proc = 1
 
     print()
     print(' number of incident electrons:', inputPar['num_el']*num_proc)
@@ -197,7 +197,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_normal_short_10eVBin.h5'
+    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_70_long.h5'
 
 
     print ('---- writting to file')

@@ -348,7 +348,8 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
 
     # the integral function has the same shape as w
-    cumInt_extFunc = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    cumInt_extFunc = prob_table = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+
     # same for the absolute error of intergration at every step
     absErr = np.empty([nBinsE+1, nBinsW+1])
 
@@ -381,13 +382,20 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
             Wim1 = Wi
 
+        # the probability distribution list is the normalised cumulative integral
+        if (cumInt_extFunc[indx_E, -1]==0): # don't divide by zero
+            prob_table[indx_E] = cumInt_extFunc[indx_E, :]
+        else:
+            prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
+
     # put the energy loss tables in the store
     store.put('w_tables', DataFrame(w_tables.T, columns=e_tables),
                     format='table')
 
-    # put the integral in the store
-    store.put('cumInt_tables', DataFrame(cumInt_extFunc.T, columns=e_tables),
-                    format='table')
+    # put the normalised cumulative integral (ie. probability list) in the store
+    store.put('prob_tables', DataFrame(prob_table, columns=e_tables),
+                        format='table')
+
 
     # put the integral error in the store
     store.put('int_error', DataFrame(absErr.T, columns=e_tables),
@@ -399,7 +407,7 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     print ('Moller tables written to:', 'Moller.h5')
     return
 
-
+import time
 def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     '''
     the grid for E and W can be chosen by the user, but the integrals accuracy
@@ -407,13 +415,6 @@ def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
     write an HDF5 file with the cumulative array
     '''
-
-    path = 'Gryz.h5'
-    if os.path.exists(path):
-        os.remove(path)
-
-    # define the hdf5 file name
-    store = HDFStore(path)
 
     # e contains the array of possible incident energies in the tables
     e_tables = binEdges(Emin, Einc, nBinsE) # we will bisect left
@@ -426,17 +427,30 @@ def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
     # make the energy array into a pandas DataFrame and then add it to the hdf5 file
     e_index = ['energy_'+str(i) for i in range(len(e_tables))]
-    store.put('energy', DataFrame(e_tables), format='table', index=e_index)
 
     # make a DataFrame for the energy loss table
     w_tables = np.empty([nBinsE+1, nBinsW+1])
 
     # the integral fuction has the same shape as w
-    cumInt_extFunc = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+    cumInt_extFunc = prob_table = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
+
     # same for the absolute error of intergration at every step
     absErr = np.empty([nBinsE+1, nBinsW+1])
 
+    time0 = time.time()
+
     for ishell in range(n_e.size):
+        # make a different storage file for each shell
+        path = 'Gryz' + str(ishell) + '.h5'
+        if os.path.exists(path):
+            os.remove(path)
+
+        # make a store
+        store = HDFStore(path)
+
+        # store the energy list
+        store.put('energy', DataFrame(e_tables), format='table', index=e_index)
+
         # minimum energy that can be lost by an electron to scatter of this shell
         W_min = Wmin[ishell]
 
@@ -466,29 +480,36 @@ def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
                 Wim1 = Wi
 
+        # the probability distribution list is the normalised cumulative integral
+        if (cumInt_extFunc[indx_E, -1]==0): # don't divide by zero
+            prob_table[indx_E] = cumInt_extFunc[indx_E, :]
+        else:
+            prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
+
         # put the energy loss tables in the store
         w_tables_df = DataFrame(w_tables.T, columns=e_index)
         # add shell column
-        w_tables_df['shell'] =  Series([ishell]*(nBinsW+1))
+        w_tables_df['shell'] = Series([ishell]*(nBinsW+1))
 
-        store.append('w_tables', w_tables_df, data_columns = True,
-                        format='table', index=False)
+        store.put('w_tables', w_tables_df, data_columns = True,
+                        format='table')
 
-        # put the integral in the store
-        cumInt_df = DataFrame(cumInt_extFunc.T, columns=e_index)
+        # put the normalised cumulative integral in the store
+        prob_df = DataFrame(prob_table.T, columns=e_index)
+
         # add shell column
-        cumInt_df['shell'] =  Series([ishell]*(nBinsW+1))
+        prob_df['shell'] =  Series([ishell]*(nBinsW+1))
 
-        store.append('cumInt_tables', cumInt_df, data_columns = True,
+        store.put('prob_tables', prob_df, data_columns = True,
                         format='table', index=False)
 
         # put the integral error in the store
-        store.append('int_error', DataFrame(absErr.T, columns=e_index),
+        store.put('int_error', DataFrame(absErr.T, columns=e_index),
                         format='table', index=False)
 
-    # close the store
-    store.close()
+        # close the store
+        store.close()
 
-    print ('Gryzinski tables written to:', 'Gryz.h5')
+        print ('Gryzinski table written to:', path)
 
     return

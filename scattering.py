@@ -80,7 +80,8 @@ def pickMollerTable(tables_M, energy):
     '''
 
     # read the table store from disk
-    store = HDFStore(tables_M, 'r')
+    path = 'Moller.h5'
+    store = HDFStore(path, 'r')
 
     # read energy dataframe from h5 file
     energy_table = store.energy.values
@@ -91,16 +92,14 @@ def pickMollerTable(tables_M, energy):
     # exactly equal to the starting value and we end up with index -1
     # I avoided that by setting electrons of energies <= starting value to absorbed
 
-    energy_col = store.get('cumInt_tables').columns.values[Eidx_table]
+    energy_col = store.get('prob_tables').columns.values[Eidx_table]
 
     # the list of integrals depending on W is then
-    cumInt_table = store.select('cumInt_tables')[energy_col].values
+    prob_table = store.select('prob_tables')[energy_col].values
 
     # let's pick a value. integral(E, Wi) is rr * total integral
-    integral = random.random() * cumInt_table[-1]
-
     # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(cumInt_table, integral)
+    Widx_table = bisect.bisect_left(prob_table, random.random())
 
     # which is an energy loss of
     w_table = store.select('w_tables')[energy_col].values
@@ -108,7 +107,6 @@ def pickMollerTable(tables_M, energy):
 
     store.close()
 
-    print ('eloss M', E_loss)
     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
 def pickGryzTable(tables_G, ishell, energy):
@@ -120,17 +118,18 @@ def pickGryzTable(tables_G, ishell, energy):
     tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
     '''
     # read the table store from disk
-    store = HDFStore(tables_G, 'r')
+    path = 'Gryz' + str(ishell) + '.h5'
+    store = HDFStore(path, 'r')
 
     # read energy dataframe from h5 file
     energy_table = store.energy.values
 
     # find the index in the table for this energy
     Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
-    energy_col = store.get('cumInt_tables').columns.values[Eidx_table]
+    energy_col = store.get('prob_tables').columns.values[Eidx_table]
 
     # the list of integrals depending on W is then
-    cumInt_table = store.select('cumInt_tables', where=('shell == ishell'))[energy_col].values
+    cumInt_table = store.select('prob_tables')[energy_col].values
 
     # let's pick a value. integral(E, Wi) is rr * total integral
     integral = random.random() * cumInt_table[-1]
@@ -139,11 +138,12 @@ def pickGryzTable(tables_G, ishell, energy):
     Widx_table = bisect.bisect_left(cumInt_table, integral)
 
     # which is an energy loss of
-    w_table = store.select('w_tables', where=('shell == ishell'))[energy_col].values
+    w_table = store.select('w_tables')[energy_col].values
     E_loss = w_table[Widx_table]
     store.close()
     print ('eloss G', E_loss)
     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
+
 
 def Rutherford_azimuthal(energy, Z):
     '''
