@@ -2,23 +2,83 @@
 # for generating the discrete cross section integral tables
 import numpy as np
 import os
+import pickle
+import sys
+from tqdm import tqdm
+
+from multiprocessing import Process, cpu_count, Queue
 from errors import mTooLarge, mTooSmall
 
 def binMiddles(Xmin, Xmax, numBins):
-    ''' how many times do I have to see this written wrong?
-        For a given range and number of bins
+    ''' For a given range and number of bins
         return the numpy array of the bins middles
     '''
     dX = (Xmax-Xmin)/numBins
     return np.linspace(Xmin+dX/2, Xmax-dX/2, num=numBins, retstep=True)
 
+
 def binEdges(Xmin, Xmax, numBins):
-    ''' how many times do I have to see this written wrong?
-        For a given range and number of bins
+    ''' For a given range and number of bins
         return the numpy array of the bins edges and the step size
     '''
     return np.linspace(Xmin, Xmax, num=numBins+1)
 
+
+def binEdgePairs(inList):
+    ''' For a given list, like the binEdges,
+        return list of sets of two edges for each bin
+    '''
+    outList = [(inList[0], inList[0])]
+    for i in range(len(inList)-1):
+        outList.append((inList[i], inList[i+1]))
+    return outList
+
+
+def chunks(mylist, n):
+    '''Yield n successive chunks from mylist'''
+    chunk_size = int(len(mylist)/n)
+    for i in range(0, len(mylist), chunk_size):
+        yield mylist[i:i + chunk_size]
+
+
+def genProbSeries(Ein, Ec, Ef, W_min, nbins, integrand):
+    ''' For a given energy return the probability
+        table for all energy losses
+    '''
+    W_max = extF_limits_moller(Ein, Ec, Ef)
+    w_tables = np.linspace(W_min, W_max, nbins+1)
+
+    # integral at every step
+    intSteps = []
+    absErrors = []
+
+    for (Wint_min, Wint_max) in binEdgePairs(w_tables):
+        intValue, error = quad(integrand, Wint_min, Wint_max, args=(Ein,))
+        intSteps.append(intValue)
+        absErrors.append(error)
+
+    cumInt_extFunc = np.cumsum(np.asarray(intSteps))
+
+    # the probability distribution list is the normalised cumulative integral
+    if (cumInt_extFunc[-1]==0): # don't divide by zero
+        prob_table = cumInt_extFunc
+    else:
+        prob_table = cumInt_extFunc/cumInt_extFunc[-1]
+
+    return w_tables, prob_table, absErrors
+
+
+def probTable(Elist, Emin, Ef, Wmin, nBinsW, integrand, output):
+    ''' iterate through all energies in list Ei
+        and compute energy loss probabilities
+        Add results to the output Queue
+    '''
+    try:
+        # make tuples out of lists and pickle them
+        output.put(pickle.dumps([genProbSeries(Ei, Emin, Ef, Wmin, nBinsW, integrand) for Ei in Elist] , protocol=2 ) )
+    except :
+        print ( "Unexpected error:", sys.exc_info()[0])
+        raise
 
 
 def extF_limits_moller(E, Ec, Ef):
@@ -318,90 +378,92 @@ def logSpace(a, b, E, n_e, ext_func, nSeg, *Wc):
 from scipy.integrate import quad
 from pandas import HDFStore, DataFrame, Series
 
-
-
-def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE, path='tables', csize = 1000):
     '''
     the grid for E and W can be chosen by the user, but the integrals accuracy
-    is independed on the grid size. Unlike the trapez case.
+    is less dependent on the grid size relative to the trapez case.
 
     write an HDF5 file with the cumulative array
     '''
 
-    # define the hdf5 file name
-    store = HDFStore('Moller.h5')
+    # define the hdfStore
+    target = os.path.join(path, 'Moller.h5')
+    if os.path.exists(target):
+        os.remove(target)
+    store = HDFStore(target)
 
     # e contains the array of possible incident energies in the tables
     e_tables = binEdges(Emin, Einc, nBinsE) # we will bisect left
-    #      if (Emin > Einc):
-    #          raise ERangeError
-    # except ERangeError as err:
-    #     print ('! Error: the incident energy is larger than the minimum energy')
-    #     print ('E0:', Einc)
-    #     print ('Emin:', Emin)
+
+    # generate index for energy columns
+    e_index = [str(e_idx) for e_idx in np.arange(nBinsE+1)]
 
     # make the energy array into a pandas DataFrame and then add it to the hdf5 file
-    store.put('energy', DataFrame(e_tables),
-                format='table')
-    # make the energy array into a pandas DataFrame and then add it to the hdf5 file
-    e_index = ['energy_'+str(i) for i in range(len(e_tables))]
-
-    w_tables = np.empty([nBinsE+1, nBinsW+1])
-
-
-    # the integral function has the same shape as w
-    cumInt_extFunc = prob_table = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
-
-    # same for the absolute error of intergration at every step
-    absErr = np.empty([nBinsE+1, nBinsW+1])
-
-    # minimum energy that can be lost by an electron to scatter of this shell
-    W_min = Wmin
+    store.put( key = 'energy',
+               value = DataFrame(e_tables),
+               format = 'table',
+               index = e_index )
 
     # simplify the excitation function to depend only on E and W
     integrand = lambda W, E: ext_func(E, W, n_e)
 
-    for indx_E, Ei in enumerate(e_tables):
-        # the upper integral limit depends on Ei
-        W_max =  extF_limits_moller(Ei, W_min, Ef)
+    # use n-1 threads
+    num_proc = cpu_count()-2
 
-        # initialise the integral for the recursive function
-        cumInt_extFunc[indx_E, 0] = 0.
-        absErr[indx_E, 0] = 0.
+    # save results in a Queue
+    output = Queue()
 
-        w_tables[indx_E, :] = binEdges(W_min, W_max, nBinsW)
+    # spin out processes to compute in parallel num_bins/numproc per thread
+    processes = [Process(target=probTable,
+                         args=(Elist, Emin, Ef, Wmin, nBinsW, integrand, output)) for Elist in chunks(e_tables, num_proc)]
 
-        Wim1 = W_min # first limit 0
-        E = Ei       # argument in integrand
+    # start threads
+    for p in processes:
+        p.start()
+        print ('process', p, 'started')
 
-        # actual integral
-        for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
-            indx_W = indx_W+1
-            intStep = quad(integrand, Wim1, Wi, args=(E))
+    print ('loading results')
 
-            cumInt_extFunc[indx_E, indx_W] = intStep[0] + cumInt_extFunc[indx_E, indx_W-1]
-            absErr[indx_E, indx_W] = intStep[1]
+    results = [pickle.loads(output.get()) for p in processes]
 
-            Wim1 = Wi
+    print ('results in memory')
 
-        # the probability distribution list is the normalised cumulative integral
-        if (cumInt_extFunc[indx_E, -1]==0): # don't divide by zero
-            prob_table[indx_E] = cumInt_extFunc[indx_E, :]
-        else:
-            prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
+    for p in processes:
+        p.join()
+        p.terminate()
+
+    # unpack the results into a table list and an error list
+    w_list, prob_list, error_list = [], [], []
+
+    for resultlist in results:
+        for result in resultlist:
+            # append results to lists
+            w_list.append(result[0])
+            prob_list.append(result[1])
+            error_list.append(result[2])
+
+    # stack the list into a 2D array
+    w_array = np.stack(w_list, axis=0)
+    prob_array = np.stack(prob_list, axis=0)
+    error_array = np.stack(error_list, axis=0)
 
     # put the energy loss tables in the store
-    store.put('w_tables', DataFrame(w_tables.T, columns=e_index),
-                    format='table', data_columns = True)
+    print ('w_array', w_array.shape)
+    store.append(key = 'w_tables',
+              value = DataFrame.from_records(w_array.T, columns=e_index),
+              format='table')
 
     # put the normalised cumulative integral (ie. probability list) in the store
-    store.put('prob_tables', DataFrame(prob_table.T, columns=e_index),
-                        format='table')
-
+    store.append(key = 'prob_tables',
+                 value = DataFrame(prob_array.T, columns=e_index),
+                 format = 'table',
+                 chunksize = csize )
 
     # put the integral error in the store
-    store.put('int_error', DataFrame(absErr.T, columns=e_index),
-                    format='table')
+    store.append(key = 'int_error',
+                 value = DataFrame(error_array.T, columns=e_index),
+                 format = 'table',
+                 chunksize = csize)
 
     # close the store
     store.close()
@@ -409,8 +471,8 @@ def cumQuadInt_Moller(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
     print ('Moller tables written to:', 'Moller.h5')
     return
 
-import time
-def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
+
+def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE, path='tables', csize = 1000):
     '''
     the grid for E and W can be chosen by the user, but the integrals accuracy
     is independed on the grid size. Unlike the trapez case.
@@ -420,89 +482,85 @@ def cumQuadInt_Gryz(Einc, Emin, Wmin, Ef, n_e, ext_func, nBinsW, nBinsE):
 
     # e contains the array of possible incident energies in the tables
     e_tables = binEdges(Emin, Einc, nBinsE) # we will bisect left
-    #      if (Emin > Einc):
-    #          raise ERangeError
-    # except ERangeError as err:
-    #     print ('! Error: the incident energy is larger than the minimum energy')
-    #     print ('E0:', Einc)
-    #     print ('Emin:', Emin)
+
 
     # make the energy array into a pandas DataFrame and then add it to the hdf5 file
-    e_index = ['energy_'+str(i) for i in range(len(e_tables))]
+    e_index = [str(e_idx) for e_idx in np.arange(nBinsE+1)]
 
-    # make a DataFrame for the energy loss table
-    w_tables = np.empty([nBinsE+1, nBinsW+1])
 
-    # the integral fuction has the same shape as w
-    cumInt_extFunc = prob_table = np.empty([nBinsE+1, nBinsW+1]) # [0:n_e-1], [0:nBinsE-1], [0:nBinsW-1]
-
-    # same for the absolute error of intergration at every step
-    absErr = np.empty([nBinsE+1, nBinsW+1])
-
-    time0 = time.time()
-
+    # make one table for every shell
     for ishell in range(n_e.size):
-        # make a different storage file for each shell
-        path = 'Gryz' + str(ishell) + '.h5'
-        if os.path.exists(path):
-            os.remove(path)
 
-        # make a store
-        store = HDFStore(path)
+        # define the hdfStore
+        target = os.path.join(path, 'Gryz_'+str(ishell)+'.h5')
+        if os.path.exists(target):
+            os.remove(target)
+        store = HDFStore(target)
 
         # store the energy list
-        store.put('energy', DataFrame(e_tables), format='table', index=e_index)
-
-        # minimum energy that can be lost by an electron to scatter of this shell
-        W_min = Wmin[ishell]
+        store.put(key = 'energy',
+                  value = DataFrame(e_tables),
+                  format = 'table',
+                  index = e_index)
 
         # simplify the excitation function to depend only on E and W
-        #func = lambda E, W: ext_func(E, W, n_e, Wmin) # Patrick's gryz
-        integrand = lambda W, E: ext_func(E, W, n_e[ishell], W_min)
+        integrand = lambda W, E: ext_func(E, W, n_e[ishell], Wmin[ishell])
 
-        for indx_E, Ei in enumerate(e_tables):
-            # the upper integral limit depends on Ei
-            W_max = extF_limits_gryz(Ei, W_min, Ef)
+        # use n-1 threads
+        num_proc = cpu_count()-2
 
-            # initialise the integral for the recursive function
-            cumInt_extFunc[indx_E, 0] = 0.
-            absErr[indx_E, 0] = 0.
+        # save results in a Queue
+        output = Queue()
 
-            w_tables[indx_E, :] = binEdges(W_min, W_max, nBinsW)
+        # spin out processes to compute in parallel num_bins/numproc per thread
+        processes = [Process(target=probTable,
+                             args=(Elist, Emin, Ef, Wmin[ishell], nBinsW, integrand, output)) for Elist in chunks(e_tables,num_proc)]
 
-            Wim1 = W_min # first limit 0
-            E = Ei       # argument in integrand
-            # actual integral
-            for indx_W, Wi in enumerate(w_tables[indx_E, 1:]):
-                indx_W = indx_W+1
-                intStep = quad(integrand, Wim1, Wi, args=(E))
+        # start threads
+        for p in processes:
+            p.start()
 
-                cumInt_extFunc[indx_E, indx_W] = intStep[0] + cumInt_extFunc[indx_E, indx_W-1]
-                absErr[indx_E, indx_W] = intStep[1]
+        results = [pickle.loads(output.get()) for p in processes]
 
-                Wim1 = Wi
+        for p in processes:
+            p.join()
+            p.terminate()
 
-        # the probability distribution list is the normalised cumulative integral
-        if (cumInt_extFunc[indx_E, -1]==0): # don't divide by zero
-            prob_table[indx_E] = cumInt_extFunc[indx_E, :]
-        else:
-            prob_table[indx_E] = cumInt_extFunc[indx_E, :]/cumInt_extFunc[indx_E, -1]
+        # unpack the results into a table list and an error list
+        w_list, prob_list, error_list = [], [], []
 
-        # put the energy loss tables in the store
-        store.put('w_tables', DataFrame(w_tables.T, columns=e_index),
-                    data_columns = True,  format='table')
+        for resultlist in results:
+            for result in resultlist:
+                # append results to lists
+                w_list.append(result[0])
+                prob_list.append(result[1])
+                error_list.append(result[2])
 
-        # put the normalised cumulative integral in the store
-        store.put('prob_tables', DataFrame(prob_table.T, columns=e_index),
-                    data_columns = True,  format='table')
+        # stack the list into a 2D array
+        w_array = np.stack(w_list, axis=0)
+        prob_array = np.stack(prob_list, axis=0)
+        error_array = np.stack(error_list, axis=0)
+
+        # put the normalised cumulative integral (ie. probability list) in the store
+        store.append(key = 'w_tables',
+                  value = DataFrame.from_records(w_array.T, columns=e_index),
+                  format='table')
+
+        # put the normalised cumulative integral (ie. probability list) in the store
+        store.append(key = 'prob_tables',
+                     value = DataFrame(prob_array.T, columns=e_index),
+                     format = 'table',
+                     chunksize = csize )
 
         # put the integral error in the store
-        store.put('int_error', DataFrame(absErr.T, columns=e_index),
-                        format='table', index=False)
+        store.append(key = 'int_error',
+                     value = DataFrame(error_array.T, columns=e_index),
+                     format = 'table',
+                     chunksize = csize)
 
         # close the store
         store.close()
 
-        print ('Gryzinski table written to:', path)
+        print ('Gryzinski shell', ishell, 'table written to:', target)
 
     return

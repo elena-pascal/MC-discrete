@@ -6,17 +6,14 @@ import sys
 import getopt
 import pickle
 
-from multiprocessing import Process, Queue, cpu_count
+from multiprocessing import Process, cpu_count, Queue
 from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
 from pandas import HDFStore
 
 from material import material
-from integrals import trapez_table, cumQuadInt_Moller, cumQuadInt_Gryz, extF_limits_gryz, extF_limits_moller
-from extFunctions import gryz_dCS, moller_dCS
-from parameters import u_pi_efour
-
+from genTables import genTables
 from electron import electron
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
@@ -85,21 +82,9 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     if (inputPar['mode'] == 'DS'):
-         print ('---- calculating Moller tables')
-         cumQuadInt_Moller( inputPar['E0'], inputPar['Emin'],\
-                                       inputPar['Wc'], thisMaterial.fermi_e,\
-                                       thisMaterial.params['n_val'], moller_dCS,\
-                                       inputPar['num_BinsW'], inputPar['num_BinsE'] )
+        # generate integration tables
+        genTables(inputPar, thisMaterial)
 
-         print ('---- calculating Gryzinski tables')
-         cumQuadInt_Gryz( inputPar['E0'], inputPar['Emin'],\
-                                    thisMaterial.params['Es'], thisMaterial.fermi_e,\
-                                    thisMaterial.params['ns'], gryz_dCS,\
-                                    inputPar['num_BinsW'], inputPar['num_BinsE'] )
-
-    # elif (inputPar['mode'] in ['diel', 'dielectric']):
-    #     print ' ---- calculating dielectric function integral table'
-    #     tables_diel =
 
 ############################## units ###########################################
     if use_units:
