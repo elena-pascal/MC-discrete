@@ -11,8 +11,8 @@ class electron:
     '''
     def __init__(self, energy, position, direction):
         self.energy = energy
-        self.xyz = position
-        self.dir = direction
+        self.xyz    = position
+        self.dir    = direction
 
         self.outcome = None
 
