@@ -1,5 +1,6 @@
 #from scimath.units.api import has_units
 from numpy import log
+import numpy as np
 import sys
 from errors import E_lossTooLarge
 
@@ -38,19 +39,28 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
     """
     try:
         eps = W*1./E
+        if isinstance(E, (int, np.float)):
+            if (W > E):
+                dCS = 0.
+                raise E_lossTooLarge
 
-        if (W > E):
-            dCS = 0.
-            raise E_lossTooLarge
+        elif isinstance(E, np.ndarray):
+            if (W.any() > E.all()):
+                dCS = 0.
+                raise E_lossTooLarge
+
         else:
-            dCS = nfree*c_pi_efour *( 1./(eps**2) +
-                         ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
+            print('Type error for E', type(E), E)
+            print()
+
     except E_lossTooLarge as err:
         print ()
         print (' ! Warning:', err)
         print (' The energy loss is larger than the current electron energy in Moller discrete CS')
         print (' W is', W ,'and E is', E)
 
+    dCS = nfree*c_pi_efour *( 1./(eps**2) +
+                  ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
     return dCS
 
 
