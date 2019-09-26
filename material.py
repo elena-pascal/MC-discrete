@@ -160,10 +160,12 @@ def scatter_params(species):
         material['name_s'] = ['1s', '2s', '2p']
 
         # binding energies
-        material['Es'] = np.array([1559, 118, 73.5])
+        #material['Es'] = np.array([1559, 118, 73.5])
+        material['Es'] = {'1s':1559, '2s':118, '2p':73.5}
 
         # number of electrons per shell
-        material['ns'] = np.array([2, 2, 6])
+        #material['ns'] = np.array([2, 2, 6])
+        material['ns'] = {'1s':2, '2s':2, '2p':6}
 
         # atomic  number
         material['Z'] = 13

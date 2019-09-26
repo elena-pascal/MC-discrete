@@ -1,4 +1,4 @@
-import os
+import os.path as path
 import sys
 import numpy as np
 from scipy.integrate import quad
@@ -27,10 +27,13 @@ def maxW_moller(E, Ef):
 def maxW_gryz(E, Ei, Ef):
     '''
 	return the lower limits of intergration of the gryzinski excitation function
-	in  :: E, Ef
+	in:
+        E  :: maximum energy to consider
+        Ei :: binding energy of shell i
+        Ef :: Fermi energy
 	'''
 
-    return  E - Ef
+    return  E - Ef + Ei
 
 
 
@@ -70,19 +73,26 @@ class probTable:
     The valid values in the table are just the top right triangle.
     '''
 
-    def __init__(self, type, func, E_range, Wmin, tol_E, tol_W, material, mapTarget, chunk_size):
+    def __init__(self, type, shell, func, E_range, Wmin, tol_E, tol_W, material, mapTarget, chunk_size):
         '''
         Define the table
 
-        type  = the type of table, Moller or Gryz + str(shell)
-        func  = the excitation function for this type of scattering
-        tol_E = relative difference in probabilities between two adiacent Es for same W
-        tol_W = relative difference in probabilities between two adiacent Ws for same E
+        type  = string; the type of table, Moller or Gryz
+
+        func  = function; the excitation function for this type of scattering
+        tol_E = float; relative difference in probabilities between two adiacent Es for same W
+        tol_W = float; relative difference in probabilities between two adiacent Ws for same E
 
         The two tolerances are not independent of each other.
         '''
         self.type = type
-        self.func = func  #f(E, W)
+
+        if(self.type == 'Moller'):
+            self.func = lambda E, W: func(E, W, thisMaterial.params['n_val']) #f(E, W)
+        elif('Gryzinski' in self.type):
+            self.func = lambda E, W: func(E, W, thisMaterial.params['ns'][shell], Wmin)
+        else:
+            sys.exit('I did not understand the type of table')
 
         self.Emin, self.Emax = E_range[0], E_range[1]
         self.Ef              = material.fermi_e
@@ -97,7 +107,7 @@ class probTable:
 
         self.table = None # dask 2D array for probabilities table
 
-        self.target = mapTarget
+        self.target = path.join(mapTarget, str(type), str(shell), '.table')
         self.chunk_size = chunk_size
 
 
@@ -310,39 +320,50 @@ class probTable:
 
     def computeBlock(self, E_block):
         '''
-        Compute dask dataframe with probabilities
+        Compute dask 2D array with probabilities for a given energy range block
         '''
 
-        if (self.Es is None):
-            sys.exit('Error! table.Es was not set before attempting to compute dataframe.')
-        else:
-            # array of max values of W
+        if (self.Ws == None):
+            # set Ws series
+            self.set_Ws()
+
+        if (self.Es == None):
+            # set Es series
+            self.set_Es()
+
+        # set max value for Ws
+        if (self.type == 'Moller'):
             W_max_ar = maxW_moller(E_block, self.Ef)
+        elif ('Gryz' in self.type):
+            W_max_ar = maxW_gryz(E_block, self.Wmin, self.Ef)
 
         # make a mesh of E_list and W_list
-        E_mesh, W_mesh = np.meshgrid(E_block, self.Ws)
+        E_mesh, W_mesh = np.meshgrid(E_block, self.Ws, indexing='ij')
 
         # mask values larger than W_max(E)
         # suppress operation on that side of the table
-        invalidMask = W_mesh>W_max_ar.T
+        invalidMask = W_mesh > np.broadcast_to(W_max_ar, W_mesh.T.shape).T
 
+        # online compute things on the masked W mesh
         W_mesh_masked = ma.masked_array(W_mesh, invalidMask)
 
+        # make a 3D array with the limits of integration
+        x_vals = np.ma.stack((W_mesh_masked[:, :-1], W_mesh_masked[:, 1:]))
+
         # function value at every step - 2D table
-        funcs_WE_table = self.func(E_mesh, W_mesh_masked)
+        funcs_EW_table = self.func(E_mesh, W_mesh_masked)
 
         # stack the function table with its duplicate moved up by one cell to create the limits of the trapez of integration
-        limits = np.ma.stack((funcs_WE_table[1: , :], funcs_WE_table[:-1, :]))
+        fun_vals = np.ma.stack((funcs_EW_table[: , :-1], funcs_EW_table[:, 1:]))
 
-        #intSteps = np.zeros((nbins, nbins))
+        # integrate the 2D table of functions between the two limits
+        intStep = np.trapz(y=fun_vals, x=x_vals, axis=0)
 
-        intStep = np.trapz(limits, x=W_mesh_masked, axis=0)
-
-        #cumInt_da = da.cumsum(da.from_array( intSteps, chunks=100 ), axis = 0)
-        cumInt_da = np.cumsum(intStep, axis=0)
+        # cumulative sum on the stepwise integral
+        cumInt_da = np.cumsum(intStep, axis=1)
 
         # compute probability table
-        prob = cumInt_da/np.max(cumInt_da, axis=0)
+        prob = cumInt_da/(np.broadcast_to(cumInt_da[:, -1], cumInt_da.T.shape).T)
 
         return prob
 
@@ -379,10 +400,14 @@ class probTable:
         # chunk Es to a dask array
         Es_da = da.from_array(self.Es, chunks = (self.chunk_size))
 
+        print ()
+        print ('Computing', self.type, 'table:')
         with ProgressBar():
             self.table = Es_da.map_blocks(func  = self.computeBlock,
                             chunks = (self.Es.size/self.chunk_size, self.Ws.size ),
                             dtype  = float).compute()
+        print ()
+
 
     def mapToMemory(self):
         '''
@@ -399,7 +424,7 @@ class probTable:
                        shape    = (self.Es.size, self.Ws.size)   )
 
         # write data to the memory map
-        map[:] = self.table[:]
+        map = self.table
 
         # flush memory changes to disk before removing the object
         del map
@@ -426,9 +451,9 @@ thisMaterial = material('Al')
 
 Erange = (5000, 20000)
 #mollerTable = probTable('Moller', moller_dCS, Erange, 50, 5e-7, 1e-7, thisMaterial, 'test')
-func = lambda E, W: moller_dCS(E, W, thisMaterial.params['n_val'])
+func = moller_dCS
 
-mollerTable = probTable('Moller', func, Erange, 50, 5e-7, 1e-7, thisMaterial, 'testData', 500)
+mollerTable = probTable('Moller','foo', func, Erange, 50, 5e-7, 1e-7, thisMaterial, 'testData/Moller.dat', 100)
 mollerTable.set_Ws()
 print ('Ws', len(mollerTable.Ws))
 
@@ -440,3 +465,6 @@ print ('Table was generated')
 
 mollerTable.mapToMemory()
 print ('Table was mapped to memory')
+
+mollerTable.readFromMemory()
+print ('Table was read from memory', type(mollerTable.table))
