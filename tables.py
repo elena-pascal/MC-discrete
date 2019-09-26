@@ -58,7 +58,7 @@ class probTable:
     P(E, W) = probability of W energy loss for an electron
               of incident energy E
 
-    Format is            E1 E2  ...  Einc
+    Format is:           E1 E2  ...  Einc
                         __________________
                    W1  | -- --  ...  --
                    W2  | -- --       --
@@ -70,7 +70,7 @@ class probTable:
     The valid values in the table are just the top right triangle.
     '''
 
-    def __init__(self, type, func, E_range, Wmin, tol_E, tol_W, material, target, num_chunks):
+    def __init__(self, type, func, E_range, Wmin, tol_E, tol_W, material, mapTarget, chunk_size):
         '''
         Define the table
 
@@ -94,10 +94,11 @@ class probTable:
 
         self.Es  = None
         self.Ws  = None
-        self.ddf = None # dask dataframe of propbabilities
 
-        self.target = target
-        self.num_chunks = num_chunks
+        self.table = None # dask 2D array for probabilities table
+
+        self.target = mapTarget
+        self.chunk_size = chunk_size
 
 
     def check_intTol(self, Wseries, refVal, integrand=None, W=None):
@@ -307,7 +308,7 @@ class probTable:
 
 
 
-    def compute_ddf(self, E_block):
+    def computeBlock(self, E_block):
         '''
         Compute dask dataframe with probabilities
         '''
@@ -343,59 +344,78 @@ class probTable:
         # compute probability table
         prob = cumInt_da/np.max(cumInt_da, axis=0)
 
-        # make dask dataframe
-        ddf = dd.from_array(prob)
-        ddf.columns = [str(e_idx) for e_idx in E_block]
-
-        self.ddf = ddf
+        return prob
 
 
-
-    def toParquet(self, target):
-        #put dataframe into parquet
-        self.ddf.to_parquet(target, has_nulls=False, compute=True)
-
+    # def toParquet(self, target):
+    #     #put dataframe into parquet
+    #     self.ddf.to_parquet(target, has_nulls=False, compute=True)
 
 
-    def oneBlock(self,E_block):
-        '''
-        input:
-            Ein: energy value, array
-
-        output:
-            prob = cumsum/max(cumsum) of the integral for that E
-
-        output is transformed to dask dataframe and saved to parquet
-        '''
-
-        #compute dataframe
-        dask_df = self.compute_ddf(E_block)
-
-        target = os.path.join(self.target, str(int(E_block[0])))
-        #put dataframe into parquet
-        self.toParquet(target)
-
-        return
+    # def oneBlock(self,E_block):
+    #     '''
+    #     input:
+    #         Ein: energy value, array
+    #
+    #     output:
+    #         prob = cumsum/max(cumsum) of the integral for that E
+    #
+    #     output is transformed to dask dataframe and saved to parquet
+    #     '''
+    #
+    #     #compute dataframe
+    #     dask_df = self.compute_ddf(E_block)
+    #
+    #     target = os.path.join(self.target, str(int(E_block[0])))
+    #     #put dataframe into parquet
+    #     self.toParquet(target)
+    #
+    #     return
 
     def generate(self):
         '''
         map genBlock on the entire range of Es one block at a time
         '''
         # chunk Es to a dask array
-        Es_da = da.from_array(self.Es, chunks = (self.num_chunks))
+        Es_da = da.from_array(self.Es, chunks = (self.chunk_size))
 
         with ProgressBar():
-            Es_da.map_blocks(self.oneBlock, dtype=float).compute()
+            self.table = Es_da.map_blocks(func  = self.computeBlock,
+                            chunks = (self.Es.size/self.chunk_size, self.Ws.size ),
+                            dtype  = float).compute()
 
-    # def bisect(self, ):
+    def mapToMemory(self):
+        '''
+        Create a memory map to the table stored in a binary file on disk
+        The binary file is the class target
+
+        Note:
+            See np.memmap for more info
+        '''
+        # create a memory map with defined dtype and shape
+        map = np.memmap(filename = self.target,
+                       dtype    = 'float32',
+                       mode     = 'w+',
+                       shape    = (self.Es.size, self.Ws.size)   )
+
+        # write data to the memory map
+        map[:] = self.table[:]
+
+        # flush memory changes to disk before removing the object
+        del map
 
 
+    def readFromMemory(self):
+        '''
+        Load the table from the memory map
 
-
-
-
-
-
+        Note:
+            See np.memmap for more info
+        '''
+        self.table =  np.memmap(filename = self.target,
+                       dtype    = 'float32',
+                       mode     = 'r',
+                       shape    = (self.Es.size, self.Ws.size)   )
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -416,4 +436,7 @@ mollerTable.set_Es()
 print ('Es', len(mollerTable.Es))
 
 mollerTable.generate()
-print ('Dataframe was saved to','testData')
+print ('Table was generated')
+
+mollerTable.mapToMemory()
+print ('Table was mapped to memory')

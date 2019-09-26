@@ -51,7 +51,7 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
 
         else:
             print('Type error for E', type(E), E)
-            print()
+
 
     except E_lossTooLarge as err:
         print ()
