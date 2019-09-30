@@ -10,15 +10,13 @@ def genTables(inputPar, material):
     # define the Erange from input parameters
     Erange = (inputPar['Emin'], inputPar['E0'])
 
-    # set tolerance and chunk_size
-    # note for these value you need at least 10G memory
-    tolE = 5e-7
-    tolW = 1e-7
+    # set chunk_size to whatever worked better on my machine
     csize = 100
 
     # generate Moller table
     mollerTable = probTable(type='Moller', shell='3s3p', func=moller_dCS,
-                            E_range=Erange, Wmin=inputPar['Wc'], tol_E=tolE, tol_W=tolW,
+                            E_range=Erange, Wmin=inputPar['Wc'],
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tolW'],
                             material=material, mapTarget='tables', chunk_size=csize)
     mollerTable.generate()
     mollerTable.mapToMemory()
@@ -33,7 +31,8 @@ def genTables(inputPar, material):
     # one table for each shell
     for Gshell in material.params['name_s']:
         gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
-                            E_range=Erange, Wmin=material['Es']['Gshell'], tol_E=tolE, tol_W=tolW,
+                            E_range=Erange, Wmin=material['Es']['Gshell'],
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tolW'],
                             material=material, mapTarget='tables', chunk_size=csize)
         gryzTable.generate()
         gryzTable.mapToMemory()

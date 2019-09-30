@@ -37,28 +37,8 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
         -------
         dCS  : array : units = cm**2
     """
-    try:
-        eps = W*1./E
-        if isinstance(E, (int, np.float)):
-            if (W > E):
-                dCS = 0.
-                raise E_lossTooLarge
-
-        elif isinstance(E, np.ndarray):
-            if (W.any() > E.all()):
-                dCS = 0.
-                raise E_lossTooLarge
-
-        else:
-            print('Type error for E', type(E), E)
-
-
-    except E_lossTooLarge as err:
-        print ()
-        print (' ! Warning:', err)
-        print (' The energy loss is larger than the current electron energy in Moller discrete CS')
-        print (' W is', W ,'and E is', E)
-
+    eps = W*1./E
+    
     dCS = nfree*c_pi_efour *( 1./(eps**2) +
                   ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
     return dCS
@@ -90,13 +70,12 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         dCS    : array : units = cm**2
     """
 
-    if  (W > E) or (Ebi > E):
-        dCS = 0.
-    else:
-        eps = W*1./E
-        epsB = Ebi*1./E
-        dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
-                                       4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
+    eps = W*1./E
+    epsB = Ebi*1./E
+    assert (eps<1.0), 'W is larger than E'
+    assert (epsB<1.0), 'Ebi larger than E'
+    dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
+                                   4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 
     return dCS
 

@@ -2,16 +2,18 @@
 
 num_el   : 50000  # per process; to be multiplied by number of processes
 E0       : 20000 # eV
-Emin     : 5000 # eV
+Emin     : 5000 # eV; cannot be smaller than Wc
 material : Al
 s_tilt   : 70.     # degrees
 mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe    : classical # classical, JL or explicit
 
-# bins are only relevant for discrete scattering
-num_BinsW   : 15000
-num_BinsE   : 15000
+# relative error tolerance for W and E integration tables
+# note the default values require at least 10G memory
+tol_E = 5e-6
+tol_W = 1e-7
+
 
 # minimum transfer energy only relevant for discrete scattering
 Wc       : 10     # eV; Wc = Ec*E0

@@ -81,6 +81,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print(' scattering mode is:', inputPar['mode'])
     print()
 
+    # compute integration tables
     if (inputPar['mode'] == 'DS'):
         # generate integration tables
         genTables(inputPar, thisMaterial)

@@ -3,6 +3,7 @@ import sys
 import numpy as np
 from scipy.integrate import quad
 import numpy.ma as ma
+import logging
 
 from dask import dataframe as dd
 from dask import array as da
@@ -24,7 +25,7 @@ def maxW_moller(E, Ef):
 
     return (E - Ef)*0.5
 
-def maxW_gryz(E, Ei, Ef):
+def maxW_gryz(E, Ef):
     '''
 	return the lower limits of intergration of the gryzinski excitation function
 	in:
@@ -33,12 +34,12 @@ def maxW_gryz(E, Ei, Ef):
         Ef :: Fermi energy
 	'''
 
-    return  E - Ef + Ei
+    return  E - Ef
 
 
 
 
-def ordersOfMag(maxSize = 100000, numIter = 4):
+def ordersOfMag(maxSize = 1000000, numIter = 5):
     ''' iterator over n = [100, 1000, 10000, 100000]'''
     #minSize = 100
     for n in np.geomspace(100, maxSize, num=numIter, dtype=int):
@@ -73,7 +74,7 @@ class probTable:
     The valid values in the table are just the top right triangle.
     '''
 
-    def __init__(self, type, shell, func, E_range, Wmin, tol_E, tol_W, material, mapTarget, chunk_size):
+    def __init__(self, type, shell, func, E_range, Wc, tol_E, tol_W, material, mapTarget, chunk_size):
         '''
         Define the table
 
@@ -87,17 +88,44 @@ class probTable:
         '''
         self.type = type
 
+        self.Ef   = material.fermi_e
+
         if(self.type == 'Moller'):
-            self.func = lambda E, W: func(E, W, thisMaterial.params['n_val']) #f(E, W)
-        elif('Gryzinski' in self.type):
-            self.func = lambda E, W: func(E, W, thisMaterial.params['ns'][shell], Wmin)
+            # asign minimum allowed energy loss
+            self.Wmin = Wc
+
+            # Wmax is a function of E
+            self.Wmax = lambda E: maxW_moller(E, self.Ef)
+
+            # assign excitation function
+            self.func = lambda W, E: func(E, W, material.params['n_val']) #f(E, W)
+
+            # assign energy range
+            self.Emin, self.Emax = E_range[0], E_range[1]
+
+        elif('Gryz' in self.type):
+            # asign minimum allowed energy loss
+            self.Wmin =  material.params['Es'][shell]
+
+            # Wmax is a function of E
+            self.Wmax = lambda E: maxW_gryz(E, self.Ef)
+
+            # assign excitation function
+            self.func = lambda W, E: func(E, W, material.params['ns'][shell], self.Wmin)
+
+            # check if Emin in the energy range was chosen to be above the binding energy
+            if(E_range[0] < self.Wmin):
+                # assign energy range
+                self.Emin, self.Emax = self.Wmin, E_range[1]
+            else:
+                # assign energy range
+                self.Emin, self.Emax = E_range[0], E_range[1]
+
         else:
             sys.exit('I did not understand the type of table')
 
-        self.Emin, self.Emax = E_range[0], E_range[1]
-        self.Ef              = material.fermi_e
-        #self.n_e             = material.params['n_val']
-        self.Wmin            = Wmin
+
+
 
         self.tol_E = tol_E
         self.tol_W = tol_W
@@ -107,39 +135,66 @@ class probTable:
 
         self.table = None # dask 2D array for probabilities table
 
-        self.target = path.join(mapTarget, str(type), str(shell), '.table')
+        self.target = path.join(mapTarget, str(type)+'_'+str(shell)+'.table')
+
         self.chunk_size = chunk_size
 
 
-    def check_intTol(self, Wseries, refVal, integrand=None, W=None):
-        ''' For a given Wseries for a set E, check if fine enough'''
+    def check_intTol(self, Wseries, refVal, integrand):
+        ''' For a given Wseries, check if fine enough
+        by looking at the trapezoidal integration error
 
-        # trapezoidal intergral
+        input:
+            Wseries      : array with W series values
+            refVal       : reference value for int(W), W=[Wseries[0]..Wseries[-1]]
+            integrand(W) : function that is to be the integrand
+
+        return:
+            boolean for this Wseries being fine enough that the
+            relative error between the trapezoidal integral and refVal (from scipy.quadrature)
+            is less than the set tolerance
+        '''
+
+        # trapezoidal intergral on Wseries
         trapezInt = np.trapz(np.array([integrand(W) for W in Wseries]), x=Wseries)
 
         # relative difference
         diff = abs(trapezInt-refVal)/refVal
+        logging.debug('difference between trapez integral on Wseries and quad is: %s', diff)
 
         # return the truth value
         return diff < self.tol_W
 
 
-    def check_probTol(self, Eseries, refVal, integrand=None, W=None):
-        ''' For a given Eseries for a set Wseries, check
-        if Eseries is fine enough'''
+    def check_probTol(self, Eseries, refVal, integrand):
+        ''' For a given Eseries, check if fine enough
+        by looking how fast the probability of looking energy W changes
+
+        input:
+            Eseries        : array with E series values
+            refVal         : reference value for prob(E, W)
+            integrand(W,E) : function that is to be the integrand
+
+        return:
+            boolean for this Eseries being fine enough that the
+            relative error between the trapezoidal integral and refVal
+            is less than the set tolerance
+
+        '''
 
         # energy position for which we test
-        E = Eseries[-2]
+        E = Eseries[-2] # second the largest energy
 
-        # simplify the excitation function to depend only on W
-        integrand = lambda W: self.func(E, W)
+        # Energy loss position for which we test
+        assert (self.Ws is not None), 'Set Ws first'
+        W = self.Ws[10]
 
         # trapezoidal intergral in the range [Wmin, W]
-        smalldWInt = np.trapz([integrand(self.Wmin), integrand(W)],
-                          x = [self.Wmin,               W              ] )
+        smalldWInt = np.trapz([integrand(self.Wmin, E), integrand(W, E)],
+                          x = [self.Wmin,               W         ] )
 
-        # gaussian quadrature integral for [Wmin, Wmax]
-        totalInt, _ = quad(integrand, self.Wmin, maxW_moller(E, self.Ef), limit=300, epsabs=1e-24)
+        # gaussian quadrature integral for the entire range [Wmin, Wmax]
+        totalInt, _ = quad(integrand, self.Wmin, self.Wmax(E), limit=300, epsabs=1e-30, args=(E,))
 
         # the probability is the fractional integral
         prob = smalldWInt/totalInt
@@ -152,38 +207,40 @@ class probTable:
 
 
     @staticmethod
-    def findGeomSeries(startVal, endVal, maxSize, generator, test, refVal, integrand=None, W=None):
+    def findGeomSeries(startVal, endVal, maxSize, generator, test_pass, refVal, integrand):
         ''' refine the number of values along a given iterator and using
             given acceptance test'''
 
         withinTol = False
         iterator = generator(maxSize)
+
         while not withinTol:
             num = next(iterator)
 
             # choose nW integration points in log space
             Wseries = np.geomspace(startVal, endVal, num=num)
 
-            if test(Wseries, refVal, integrand, W): # within tolerance
+            if test_pass(Wseries, refVal, integrand): # within tolerance
                 withinTol = True
 
         return num, Wseries
 
 
     @staticmethod
-    def findLinSeries(startVal, endVal, maxSize, generator, test, refVal, integrand=None, W=None):
+    def findLinSeries(startVal, endVal, maxSize, generator, test_pass, refVal, integrand):
         ''' refine the number of values along a given iterator and using
             given acceptance test'''
 
         withinTol = False
         iterator = generator(maxSize)
+
         while not withinTol:
             nE = next(iterator)
 
             # choose nE integration points in linear space
             Eseries = np.linspace(startVal, endVal, num=nE)
 
-            if test(Eseries, refVal, integrand, W): # within tolerance
+            if test_pass(Eseries, refVal, integrand): # within tolerance
                 withinTol = True
 
         return nE, Eseries
@@ -199,38 +256,42 @@ class probTable:
         the integrand curves are logarithmic.
 
         Check that the computed integral is within tol_Int of simpy.quad
+
+        input:
+                E: float
         '''
 
         # compute Wmax
-        W_max = maxW_moller(E, self.Ef)
+        W_max = self.Wmax(E)
 
         # simplify the excitation function to depend only on E and W
-        integrand = lambda W: self.func(E, W)
+        integrand = lambda W: self.func(W, E)
 
         # gaussian quadrature integral
-        quadInt, error = quad(integrand, self.Wmin, W_max, limit=300, epsabs=1e-24)
+        quadInt, errorInt = quad(integrand, self.Wmin, W_max, limit=300, epsabs=1e-34)
 
         # check if the intergation error is not larger than the tollerance we allow for
-        if (error > self.tol_W*quadInt):
-            print ('Warning! The W tolarance is smaller than the error of integration')
+        assert (errorInt < self.tol_W*quadInt),'The Ws tolarance is smaller than the error of integration'
 
         # first refine for order of magnitude
         nW1, _ = self.findGeomSeries(startVal = self.Wmin,
                                      endVal = W_max,
-                                     maxSize = 100000,
+                                     maxSize = 1000000,
                                      generator = ordersOfMag,
-                                     test = self.check_intTol,
+                                     test_pass = self.check_intTol,
                                      refVal = quadInt,
                                      integrand = integrand)
+        logging.info('in find W series, after first findGeomSeries the number of W bins is: %s', nW1)
 
         # second refine in multiple of 10% of the value
-        _, series = self.findGeomSeries(startVal = self.Wmin,
+        nW2, series = self.findGeomSeries(startVal = self.Wmin,
                                         endVal = W_max,
                                         maxSize = nW1,
                                         generator = percents,
-                                        test = self.check_intTol,
+                                        test_pass = self.check_intTol,
                                         refVal = quadInt,
                                         integrand = integrand)
+        logging.info('in find W series, after second findGeomSeries the number of W bins is: %s', nW2)
 
         # and return the value
         return series
@@ -252,38 +313,38 @@ class probTable:
         '''
 
         # first compute the reference probability value at E[-1]=Emax
-        E = self.Emax
-        # simplify the excitation function to depend only on W
-        integrandRef = lambda Wi: self.func(E, Wi)
+        Eref = self.Emax
+
+        # excitation function for Eref
+        integrandRef = lambda Wi: self.func(Wi, Eref)
 
         # trapezoidal intergral in the range [Wmin, W]
         smalldWInt = np.trapz([integrandRef(self.Wmin), integrandRef(W)],
                           x = [self.Wmin,               W              ] )
 
-        # total W intergral at this E
-        totalWInt,_ = quad(integrandRef, self.Wmin, maxW_moller(E, self.Ef), limit=300, epsabs=1e-24)
+        # total W intergral at this E. Absolute error must be smaller than inegral*tolerance
+        totalWInt,_ = quad(integrandRef, self.Wmin, maxW_moller(Eref, self.Ef), limit=300, epsabs=1e-34)
 
         # the probability is the fractional integral
         probEmax = smalldWInt/totalWInt
 
-
         # first refine for order of magnitude
-        nE1, _ = self.findGeomSeries(startVal = self.Emin,
-                                     endVal = self.Emax,
-                                     maxSize = 100000,
+        nE1, _ = self.findGeomSeries(startVal  = self.Emin,
+                                     endVal    = self.Emax,
+                                     maxSize   = 100000,
                                      generator = ordersOfMag,
-                                     test = self.check_probTol,
-                                     refVal = probEmax,
-                                     W = W)
+                                     test_pass = self.check_probTol,
+                                     refVal    = probEmax,
+                                     integrand = self.func)
 
         # second refine in multiple of 10% of the value
-        _, series = self.findLinSeries(startVal = self.Emin,
-                                        endVal = self.Emax,
-                                        maxSize = nE1,
-                                        generator = percents,
-                                        test = self.check_probTol,
-                                        refVal = probEmax,
-                                        W=W)
+        _, series = self.findLinSeries(startVal  = self.Emin,
+                                       endVal    = self.Emax,
+                                       maxSize   = nE1,
+                                       generator = percents,
+                                       test_pass = self.check_probTol,
+                                       refVal    = probEmax,
+                                       integrand = self.func)
 
         # and return the value
         return series
@@ -299,6 +360,9 @@ class probTable:
         # find W series and set it
         self.Ws = self.findWseries(E)
 
+        # test if W are still smaller than E
+        assert (self.Ws.any() < E), 'Energy loss was found to be larger than the current electron energy!'
+
 
     def set_Es(self):
         '''
@@ -308,10 +372,10 @@ class probTable:
         # check if Ws was set
         if (self.Ws is None):
             print ('Should maybe set W series first.')
-            W = 100.
+            W = 100. # use an aleatory but small energy loss for testing
         else:
             #the range of W to consider
-            W = self.Ws[1]
+            W = self.Ws[10]
 
         # find E series and set it
         self.Es = self.findEseries(W)
@@ -323,11 +387,11 @@ class probTable:
         Compute dask 2D array with probabilities for a given energy range block
         '''
 
-        if (self.Ws == None):
+        if self.Ws is None:
             # set Ws series
             self.set_Ws()
 
-        if (self.Es == None):
+        if self.Es is None:
             # set Es series
             self.set_Es()
 
@@ -351,7 +415,7 @@ class probTable:
         x_vals = np.ma.stack((W_mesh_masked[:, :-1], W_mesh_masked[:, 1:]))
 
         # function value at every step - 2D table
-        funcs_EW_table = self.func(E_mesh, W_mesh_masked)
+        funcs_EW_table = self.func(W_mesh_masked, E_mesh)
 
         # stack the function table with its duplicate moved up by one cell to create the limits of the trapez of integration
         fun_vals = np.ma.stack((funcs_EW_table[: , :-1], funcs_EW_table[:, 1:]))
@@ -450,21 +514,42 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 thisMaterial = material('Al')
 
 Erange = (5000, 20000)
-#mollerTable = probTable('Moller', moller_dCS, Erange, 50, 5e-7, 1e-7, thisMaterial, 'test')
-func = moller_dCS
+# 
+# func = moller_dCS
+#
+# mollerTable = probTable('Moller','foo', func, Erange, 50, 5e-7, 1e-7, thisMaterial, 'testData/Moller.dat', 100)
+# mollerTable.set_Ws()
+# print ('Ws', len(mollerTable.Ws))
+#
+# mollerTable.set_Es()
+# print ('Es', len(mollerTable.Es))
+#
+# mollerTable.generate()
+# print ('Table was generated')
+#
+# mollerTable.mapToMemory()
+# print ('Table was mapped to memory')
+#
+# mollerTable.readFromMemory()
+# print ('Table was read from memory', type(mollerTable.table))
 
-mollerTable = probTable('Moller','foo', func, Erange, 50, 5e-7, 1e-7, thisMaterial, 'testData/Moller.dat', 100)
-mollerTable.set_Ws()
-print ('Ws', len(mollerTable.Ws))
+logging.basicConfig(filename='tables.log',level=logging.INFO)
 
-mollerTable.set_Es()
-print ('Es', len(mollerTable.Es))
+func = gryz_dCS
 
-mollerTable.generate()
-print ('Table was generated')
+for shell in thisMaterial.params['name_s']:
+    gryzTable = probTable('Gryz',shell, func, Erange, 50, 5e-4, 1e-4, thisMaterial, 'testData', 100)
+    gryzTable.set_Ws()
+    print ('Ws', len(gryzTable.Ws))
 
-mollerTable.mapToMemory()
-print ('Table was mapped to memory')
+    gryzTable.set_Es()
+    print ('Es', len(gryzTable.Es))
 
-mollerTable.readFromMemory()
-print ('Table was read from memory', type(mollerTable.table))
+    gryzTable.generate()
+    print ('Table was generated')
+
+    gryzTable.mapToMemory()
+    print ('Table was mapped to memory')
+
+    gryzTable.readFromMemory()
+    print ('Table was read from memory')
