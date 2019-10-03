@@ -10,7 +10,7 @@ __pycache__/
 data/
 CASINO/
 testData/
-tales/
+tables/
 
 # Distribution / packaging
 .Python
