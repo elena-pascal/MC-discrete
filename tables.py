@@ -37,6 +37,14 @@ def maxW_gryz(E, Ef):
     return  E - Ef
 
 
+def binEdgePairs(inList):
+    ''' For a given list, like the binEdges,
+        return list of sets of two edges for each bin
+    '''
+    outList = [(inList[0], inList[0])]
+    for i in range(len(inList)-1):
+        outList.append((inList[i], inList[i+1]))
+    return outList
 
 
 def ordersOfMag(maxSize = 1000000, numIter = 5):
@@ -48,7 +56,7 @@ def ordersOfMag(maxSize = 1000000, numIter = 5):
 
 def percents(maxSize, numIter = 10):
     '''iterator over n = [n/10, 2*n/10 ... nW]'''
-    for n in np.linspace(maxSize/10, maxSize, numIter):
+    for n in np.linspace(maxSize/10, maxSize, numIter, dtype=np.float32):
         yield int(n)
 
 
@@ -74,7 +82,7 @@ class probTable:
     The valid values in the table are just the top right triangle.
     '''
 
-    def __init__(self, type, shell, func, E_range, Wc, tol_E, tol_W, material, mapTarget, chunk_size):
+    def __init__(self, type, shell, func, E_range, tol_E, tol_W, material, mapTarget, chunk_size, Wc=None ):
         '''
         Define the table
 
@@ -125,8 +133,6 @@ class probTable:
             sys.exit('I did not understand the type of table')
 
 
-
-
         self.tol_E = tol_E
         self.tol_W = tol_W
 
@@ -160,13 +166,13 @@ class probTable:
 
         # relative difference
         diff = abs(trapezInt-refVal)/refVal
-        logging.debug('difference between trapez integral on Wseries and quad is: %s', diff)
+        logging.info('difference between trapez integral on Wseries and quad is: %s', diff)
 
         # return the truth value
         return diff < self.tol_W
 
 
-    def check_probTol(self, Eseries, refVal, integrand):
+    def check_CDFTol(self, Eseries, refVal, integrand):
         ''' For a given Eseries, check if fine enough
         by looking how fast the probability of looking energy W changes
 
@@ -184,23 +190,27 @@ class probTable:
 
         # energy position for which we test
         E = Eseries[-2] # second the largest energy
+        logging.info('next bigger E: %s', E)
 
         # Energy loss position for which we test
-        assert (self.Ws is not None), 'Set Ws first'
-        W = self.Ws[10]
+        W = self.Ws[1]
+
 
         # trapezoidal intergral in the range [Wmin, W]
         smalldWInt = np.trapz([integrand(self.Wmin, E), integrand(W, E)],
                           x = [self.Wmin,               W         ] )
 
-        # gaussian quadrature integral for the entire range [Wmin, Wmax]
-        totalInt, _ = quad(integrand, self.Wmin, self.Wmax(E), limit=300, epsabs=1e-30, args=(E,))
+        # integral for the entire range [Wmin, Wmax]
+        totalInt = np.trapz(integrand(self.Ws[self.Ws<=self.Wmax(E)], E),
+                                x = self.Ws[self.Ws<=self.Wmax(E)])
 
         # the probability is the fractional integral
-        prob = smalldWInt/totalInt
+        CDF = smalldWInt/totalInt
+        logging.info('CDF: %s', totalInt)
+        logging.info('ref CDF: %s', refVal)
 
-        # relative difference
-        diff = abs(prob - refVal)/refVal
+        # relative difference; Note: CDF is normalised
+        diff = abs(totalInt - refVal)/refVal
 
         # return the truth value
         return diff < self.tol_E
@@ -216,14 +226,18 @@ class probTable:
 
         while not withinTol:
             num = next(iterator)
+            logging.info('next iterator in geom series: %s', num)
 
             # choose nW integration points in log space
-            Wseries = np.geomspace(startVal, endVal, num=num)
+            # NOTE: type is set to float32 because geomspace has a small rouding error for
+            # the last element which means Wseries[-1] could end up larger than Wmax
+            # this should be fine for a number of bins up to 1e7
+            series = np.geomspace(startVal, endVal, num=num, dtype=np.float32)
 
-            if test_pass(Wseries, refVal, integrand): # within tolerance
+            if test_pass(series, refVal, integrand): # within tolerance
                 withinTol = True
 
-        return num, Wseries
+        return num, series
 
 
     @staticmethod
@@ -238,7 +252,7 @@ class probTable:
             nE = next(iterator)
 
             # choose nE integration points in linear space
-            Eseries = np.linspace(startVal, endVal, num=nE)
+            Eseries = np.linspace(startVal, endVal, num=nE, dtype=np.float32)
 
             if test_pass(Eseries, refVal, integrand): # within tolerance
                 withinTol = True
@@ -302,11 +316,9 @@ class probTable:
         '''
         For the given energy tolerance compute the necessary Es array
 
-        Check the computed probabilities for (E[-1], W[1]) and (E[-2], W[1])
-        are within tol_E of each other [i.e. probability of loosing the smallest
-        amount of energy for an electron with max E is close within E_tol of the
-        probability of loosing the same mount of energy for an electron with the
-        next smaller energy]
+        The tolerance sets how smooth the change from one energy to another is.
+        This is done by comparing the total dW integral for two adiacent energy bins
+        The energy bins are chosen to be Emax and the next smaller one.
 
         The tol_E aims to ensure the probabity of energy loss W as a function
         of E is relatively smooth function.
@@ -314,6 +326,7 @@ class probTable:
 
         # first compute the reference probability value at E[-1]=Emax
         Eref = self.Emax
+        logging.info('Emax: %s', Eref)
 
         # excitation function for Eref
         integrandRef = lambda Wi: self.func(Wi, Eref)
@@ -322,19 +335,20 @@ class probTable:
         smalldWInt = np.trapz([integrandRef(self.Wmin), integrandRef(W)],
                           x = [self.Wmin,               W              ] )
 
-        # total W intergral at this E. Absolute error must be smaller than inegral*tolerance
-        totalWInt,_ = quad(integrandRef, self.Wmin, maxW_moller(Eref, self.Ef), limit=300, epsabs=1e-34)
+        # total W intergral at this E. Absolute error must be smaller than integral*tolerance
+        totalInt,_ = quad(integrandRef, self.Wmin, self.Wmax(Eref), limit=300, epsabs=1e-34)
 
         # the probability is the fractional integral
-        probEmax = smalldWInt/totalWInt
+        probEmax = smalldWInt/totalInt
+        logging.info('Reference probability is: %s', probEmax)
 
         # first refine for order of magnitude
         nE1, _ = self.findGeomSeries(startVal  = self.Emin,
                                      endVal    = self.Emax,
-                                     maxSize   = 100000,
+                                     maxSize   = 1000000,
                                      generator = ordersOfMag,
-                                     test_pass = self.check_probTol,
-                                     refVal    = probEmax,
+                                     test_pass = self.check_CDFTol,
+                                     refVal    = totalInt,
                                      integrand = self.func)
 
         # second refine in multiple of 10% of the value
@@ -342,8 +356,8 @@ class probTable:
                                        endVal    = self.Emax,
                                        maxSize   = nE1,
                                        generator = percents,
-                                       test_pass = self.check_probTol,
-                                       refVal    = probEmax,
+                                       test_pass = self.check_CDFTol,
+                                       refVal    = totalInt,
                                        integrand = self.func)
 
         # and return the value
@@ -361,7 +375,7 @@ class probTable:
         self.Ws = self.findWseries(E)
 
         # test if W are still smaller than E
-        assert (self.Ws.any() < E), 'Energy loss was found to be larger than the current electron energy!'
+        assert (np.all(self.Ws < E)), 'Energy loss was found to be larger than the current electron energy!'
 
 
     def set_Es(self):
@@ -370,12 +384,10 @@ class probTable:
         '''
 
         # check if Ws was set
-        if (self.Ws is None):
-            print ('Should maybe set W series first.')
-            W = 100. # use an aleatory but small energy loss for testing
-        else:
-            #the range of W to consider
-            W = self.Ws[10]
+        assert (self.Ws is not None), 'Set Ws first'
+
+        W = self.Ws[1]
+        logging.info('For W: %s, start finding Es', W)
 
         # find E series and set it
         self.Es = self.findEseries(W)
@@ -399,7 +411,7 @@ class probTable:
         if (self.type == 'Moller'):
             W_max_ar = maxW_moller(E_block, self.Ef)
         elif ('Gryz' in self.type):
-            W_max_ar = maxW_gryz(E_block, self.Wmin, self.Ef)
+            W_max_ar = maxW_gryz(E_block, self.Ef)
 
         # make a mesh of E_list and W_list
         E_mesh, W_mesh = np.meshgrid(E_block, self.Ws, indexing='ij')
@@ -417,7 +429,7 @@ class probTable:
         # function value at every step - 2D table
         funcs_EW_table = self.func(W_mesh_masked, E_mesh)
 
-        # stack the function table with its duplicate moved up by one cell to create the limits of the trapez of integration
+        # stack the function table with its duplicate moved up by one cell to create fthe limits of the trapez of integration
         fun_vals = np.ma.stack((funcs_EW_table[: , :-1], funcs_EW_table[:, 1:]))
 
         # integrate the 2D table of functions between the two limits
@@ -459,17 +471,28 @@ class probTable:
 
     def generate(self):
         '''
-        map genBlock on the entire range of Es one block at a time
+        map computeBlock on the entire range of Es one block at a time
         '''
+        print ()
+        print ('Computing', self.type, 'table:')
+
+        # set W series
+        self.set_Ws()
+        print ('Ws:', len(self.Ws))
+
+        # set E series
+        self.set_Es()
+        print ('Es:', len(self.Es))
+
         # chunk Es to a dask array
         Es_da = da.from_array(self.Es, chunks = (self.chunk_size))
 
-        print ()
-        print ('Computing', self.type, 'table:')
+        # actually compute table
         with ProgressBar():
-            self.table = Es_da.map_blocks(func  = self.computeBlock,
-                            chunks = (self.Es.size/self.chunk_size, self.Ws.size ),
-                            dtype  = float).compute()
+            self.table = Es_da.map_blocks(func = self.computeBlock,
+                            chunks = (int(self.Es.size/self.chunk_size), self.Ws.size ),
+                            dtype  = np.float_ ).compute()
+
         print ()
 
 
@@ -486,6 +509,8 @@ class probTable:
                        dtype    = 'float32',
                        mode     = 'w+',
                        shape    = (self.Es.size, self.Ws.size)   )
+
+        print ('Table written to target:', self.target)
 
         # write data to the memory map
         map = self.table
@@ -506,18 +531,21 @@ class probTable:
                        mode     = 'r',
                        shape    = (self.Es.size, self.Ws.size)   )
 
+
+
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+logging.basicConfig(filename='logs/tables.log',level=logging.INFO, filemode='w')
 # test things
 
 # set material
-thisMaterial = material('Al')
-
-Erange = (5000, 20000)
-# 
+# thisMaterial = material('Al')
+#
+# Erange = (5000., 20000.)
+#
 # func = moller_dCS
 #
-# mollerTable = probTable('Moller','foo', func, Erange, 50, 5e-7, 1e-7, thisMaterial, 'testData/Moller.dat', 100)
+# mollerTable = probTable('Moller',thisMaterial.params['name_val'], func, Erange, 50., 1e-4, 1e-7, thisMaterial, 'testData', 100)
 # mollerTable.set_Ws()
 # print ('Ws', len(mollerTable.Ws))
 #
@@ -533,23 +561,23 @@ Erange = (5000, 20000)
 # mollerTable.readFromMemory()
 # print ('Table was read from memory', type(mollerTable.table))
 
-logging.basicConfig(filename='tables.log',level=logging.INFO)
 
-func = gryz_dCS
 
-for shell in thisMaterial.params['name_s']:
-    gryzTable = probTable('Gryz',shell, func, Erange, 50, 5e-4, 1e-4, thisMaterial, 'testData', 100)
-    gryzTable.set_Ws()
-    print ('Ws', len(gryzTable.Ws))
-
-    gryzTable.set_Es()
-    print ('Es', len(gryzTable.Es))
-
-    gryzTable.generate()
-    print ('Table was generated')
-
-    gryzTable.mapToMemory()
-    print ('Table was mapped to memory')
-
-    gryzTable.readFromMemory()
-    print ('Table was read from memory')
+# func = gryz_dCS
+#
+# for shell in thisMaterial.params['name_s']:
+#     gryzTable = probTable('Gryz',shell, func, Erange, 50., 1e-4, 1e-7, thisMaterial, 'testData', 100)
+#     gryzTable.set_Ws()
+#     print ('Ws', len(gryzTable.Ws))
+#
+#     gryzTable.set_Es()
+#     print ('Es', len(gryzTable.Es))
+#
+#     gryzTable.generate()
+#     print ('Table was generated')
+#
+#     gryzTable.mapToMemory()
+#     print ('Table was mapped to memory')
+#
+#     gryzTable.readFromMemory()
+#     print ('Table was read from memory')

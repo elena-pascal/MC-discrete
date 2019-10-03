@@ -1,6 +1,7 @@
 #from scimath.units.api import has_units
 from numpy import log
 import numpy as np
+import numpy.ma as ma
 import sys
 from errors import E_lossTooLarge
 
@@ -37,8 +38,19 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
         -------
         dCS  : array : units = cm**2
     """
-    eps = W*1./E
-    
+    eps = W/E
+
+    # check if W arrived here to be smaller than E
+    if ( (type(W) is np.float32) or (type(W) is float) ):
+        assert (eps<1.0), 'W is larger than E'
+
+    elif ((type(W) is np.ndarray) or (type(W) is ma.core.MaskedArray)):
+        assert (np.all(eps<1.0)), 'W is larger than E'
+    else:
+        print ('W:', type(W))
+        sys.exit('W has the wrong type in moller_dCS')
+
+
     dCS = nfree*c_pi_efour *( 1./(eps**2) +
                   ( 1./((1.-eps)**2) ) - ( 1./(eps*(1.-eps)) ) )/ E**3
     return dCS
@@ -70,10 +82,27 @@ def gryz_dCS(E, W, nsi, Ebi, c_pi_efour=pi_efour):
         dCS    : array : units = cm**2
     """
 
-    eps = W*1./E
-    epsB = Ebi*1./E
-    assert (eps<1.0), 'W is larger than E'
-    assert (epsB<1.0), 'Ebi larger than E'
+    eps = W/E
+    epsB = Ebi/E
+
+    # check if W arrived here to be smaller than E
+    if ( (type(W) is np.float32) or (type(W) is float) ):
+        assert (eps<1.0), 'W is larger than E'
+
+    elif ((type(W) is np.ndarray) or (type(W) is ma.core.MaskedArray)):
+        assert (np.all(eps<1.0)), 'W is larger than E'
+    else:
+        sys.exit('W has the wrong type in gryz_dCS')
+
+    # check if E is not smaller than Ebi
+    if ((type(E) is np.float32) or (type(E) is float)):
+        assert (epsB<1.0), 'Ebi larger than E'
+
+    elif ((type(E) is np.ndarray) or (type(E) is ma.core.MaskedArray)):
+        assert (np.all(epsB<1.0)), 'Ebi larger than E'
+    else:
+        sys.exit('E has the wrong type in gryz_dCS')
+
     dCS = nsi * c_pi_efour * eps * (1. + epsB)**(-1.5) * (1. - eps)**(epsB/(epsB+eps)) * ((1. - epsB) +
                                    4. * epsB * log(2.7 + ((1. - eps)/epsB)**(0.5) )/(3.*eps) )   /( W**3)
 

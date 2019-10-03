@@ -13,28 +13,33 @@ def genTables(inputPar, material):
     # set chunk_size to whatever worked better on my machine
     csize = 100
 
+    # instance for Moller table
+    mollerTable = probTable(type='Moller', shell=material.params['name_val'], func=moller_dCS,
+                            E_range=Erange,
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
+                            material=material, mapTarget='tables', chunk_size=csize,
+                            Wc=inputPar['Wc'])
+
     # generate Moller table
-    mollerTable = probTable(type='Moller', shell='3s3p', func=moller_dCS,
-                            E_range=Erange, Wmin=inputPar['Wc'],
-                            tol_E=inputPar['tol_E'], tol_W=inputPar['tolW'],
-                            material=material, mapTarget='tables', chunk_size=csize)
     mollerTable.generate()
+
+    # map to memory
     mollerTable.mapToMemory()
 
 
-    # generate Gryzinski tables
-    cumQuadInt_Gryz( inputPar['E0'], inputPar['Emin'],\
-                                material.params['Es'], material.fermi_e,\
-                                material.params['ns'], gryz_dCS,\
-                                inputPar['num_BinsW'], inputPar['num_BinsE'] )
 
-    # one table for each shell
+    # one Gryzinki table for each shell
     for Gshell in material.params['name_s']:
+        # instance for Gryzinski table
         gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
-                            E_range=Erange, Wmin=material['Es']['Gshell'],
-                            tol_E=inputPar['tol_E'], tol_W=inputPar['tolW'],
+                            E_range=Erange,
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
                             material=material, mapTarget='tables', chunk_size=csize)
+
+        # generate Gryzinski table for shell Gshell
         gryzTable.generate()
+
+        # map to memory
         gryzTable.mapToMemory()
 
 

@@ -11,8 +11,8 @@ Bethe    : classical # classical, JL or explicit
 
 # relative error tolerance for W and E integration tables
 # note the default values require at least 10G memory
-tol_E = 5e-6
-tol_W = 1e-7
+tol_E : 1e-4
+tol_W : 1e-7
 
 
 # minimum transfer energy only relevant for discrete scattering
