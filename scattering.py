@@ -46,10 +46,6 @@ def pickFromSigmas(sigma_dict):
     '''
     # ordered dictionary of sigmas in reverse order
     sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
-    #sorted_sigmas = OrderedDict()
-    #sorted_sigmas['Rutherford'] = sigma_dict['Rutherford']
-    #sorted_sigmas['Gryzinski'] = sigma_dict['Gryzinski']
-    #sorted_sigmas['Moller'] = sigma_dict['Moller']
     #sorted_sigmas['Quinn'] = sigma_dict['Quinn']
 
     #extract = lambda x, y: dict(zip(x, map(y.get, x)))
@@ -69,70 +65,74 @@ def pickFromSigmas(sigma_dict):
 
 
 
-def pickMollerTable(store, energy):
+def pickTable(table, energy):
     '''
     From Moller tables containing the integral under the excitation function
     for a list of incident energies and energies losses
     pick an energy loss value
 
-    tables_moller are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
-    return (E_loss, equivalent energy in table, neighbouring energy losses in table)
+    input:
+        table  : a type table object
+        energy : float value
+
+    return:
+        (E_loss, equivalent energy in table, neighbouring energy losses in table)
     '''
 
     # read energy dataframe from h5 file
-    energy_table = store.energy.values
+    energies_table = table.Es
+    #print ('list of energies', energies_table)
 
     # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
-    # this is not a bad implementation, except for the cases when the energy is
+    Eidx_table = bisect.bisect_left(table.Es, energy)   # less than value
+    # NOTE: this is not a bad implementation, except for the cases when the energy is
     # exactly equal to the min value and we end up with index -1
-    # I avoided that by setting electrons of energies <= starting value to absorbed
+    # I avoided that by setting electrons of energies <= starting value to be absorbed
+    #print(energy, 'corresponds to ', table.Es[Eidx_table])
 
-    energy_col = store.get('prob_tables').columns.values[Eidx_table]
-
-    # the list of integrals depending on W is then
-    prob_table = store.select('prob_tables')[energy_col].values
-
-    # let's pick a value. integral(E, Wi) is rr * total integral
-    # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(prob_table, random.random())
-
-    # which is an energy loss of
-    w_table = store.select('w_tables')[energy_col].values
-    E_loss = w_table[Widx_table]
-
-    return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
-
-def pickGryzTable(store, ishell, energy):
-    '''
-    From Gryzinski tables containing the integral under the excitation function
-    for a list of incident energies and energies losses
-    pick an energy loss value
-
-    tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
-    '''
-
-    # read energy dataframe from h5 file
-    energy_table = store.energy.values
-
-    # find the index in the table for this energy
-    Eidx_table = bisect.bisect_left(energy_table, energy) - 1  # less than value
-    energy_col = store.get('prob_tables').columns.values[Eidx_table]
-
-    # the list of integrals depending on W is then
-    cumInt_table = store.select('prob_tables')[energy_col].values
+    # get the column in the table for this energy
+    CDF_list = table.table[Eidx_table]
+    #print('list of prob for energy losses', CDF_list)
 
     # let's pick a value. integral(E, Wi) is rr * total integral
-    integral = random.random() * cumInt_table[-1]
-
-    # corresponding to energy loss index
-    Widx_table = bisect.bisect_left(cumInt_table, integral)
+    Widx_table = bisect.bisect_left(CDF_list, random.random())
+    #print ('picked W index', Widx_table)
 
     # which is an energy loss of
-    w_table = store.select('w_tables')[energy_col].values
-    E_loss = w_table[Widx_table]
+    E_loss = table.Ws[Widx_table]
+    #print ('Eloss value', E_loss)
+    #print ()
+    return (E_loss, energies_table[Eidx_table])
 
-    return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
+# def pickGryzTable(store, ishell, energy):
+#     '''
+#     From Gryzinski tables containing the integral under the excitation function
+#     for a list of incident energies and energies losses
+#     pick an energy loss value
+#
+#     tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
+#     '''
+#
+#     # find the index in the table for this energy
+#     Eidx_table = bisect.bisect_left(table.Es, energy) - 1  # less than value
+#
+#     # get the column in the table for this energy
+#     CDF_list = table.table[Eidx_table]
+#
+#     # the list of integrals depending on W is then
+#     cumInt_table = store.select('prob_tables')[energy_col].values
+#
+#     # let's pick a value. integral(E, Wi) is rr * total integral
+#     integral = random.random() * cumInt_table[-1]
+#
+#     # corresponding to energy loss index
+#     Widx_table = bisect.bisect_left(cumInt_table, integral)
+#
+#     # which is an energy loss of
+#     w_table = store.select('w_tables')[energy_col].values
+#     E_loss = w_table[Widx_table]
+#
+#     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
 
 
 def Rutherford_azimuthal(energy, Z):
@@ -171,7 +171,7 @@ class scatter_discrete:
             - scattering parameters to be update by the functions in the class
     '''
 
-    def __init__(self, electron, material, free_param, tables_EW_M, tables_EW_G):
+    def __init__(self, electron, material, free_param, table_EW_M, tables_EW_G):
         # incident particle params
         self.i_energy = electron.energy  # incident particle energy
 
@@ -188,15 +188,15 @@ class scatter_discrete:
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
-        self.tables_EW_M = tables_EW_M
+        self.table_EW_M = table_EW_M
         self.tables_EW_G = tables_EW_G
 
         # scattering params
-        self.pathl = 0.
+        self.pathl = None
         self.type = 'Rutherford' # first entry is elastic
-        self.E_loss = 0.
-        self.c2_halfTheta = 1.
-        self.halfPhi = 0.
+        self.E_loss = None
+        self.c2_halfTheta = None
+        self.halfPhi = None
 
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
@@ -211,10 +211,9 @@ class scatter_discrete:
         #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
         # else the probability of Moller scattering is the default zero
 
-        for i in range(len(self.m_Es)):
+        for shell in self.m_names:
             #if (self.i_energy >= self.m_Es[i]):
-            self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i])
-            #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+            self.sigma['Gryzinski' + shell] = gryz_sigma(self.i_energy, self.m_Es[shell], self.m_ns[shell])
 
         # Patricks gryz sum
         # self.sigma['Gryzinski'] = np.sum([self.sigma['Gryzinski1s'], self.sigma['Gryzinski2s'], self.sigma['Gryzinski2p']])
@@ -238,30 +237,8 @@ class scatter_discrete:
         '''
         pathl = -self.mfp_total * log(random.random())
 
-        try: # ask for forgiveness
-            self.pathl = pathl
-            # if pathl is too small or too large
-            #if (float(pathl) < 1.e-5):
-            #    raise lTooSmall
-            if (float(pathl) > 1.e4):
-                raise lTooLarge
-
-        # except lTooSmall:
-        #     print ' Fatal error! in compute_pathl in scattering class'
-        #     print ' Value of l is', pathl  ,'less than 0.0001 Angstroms.'
-        #     print ' Mean free paths were:', self.mfp
-        #     print ' Stopping.'
-        #     sys.exit()
-        except lTooLarge as err:
-            print ('-----------------------------------------------------')
-            print (' Fatal error:', err)
-            print (' in compute_pathl in scattering class')
-            print (' Value of l is', pathl, 'larger than 10000 Angstroms.')
-            print (' Mean free paths were:', mfp_from_sigma(self.sigma_total, self.m_atnd))
-            print (' Stopping.')
-            sys.exit()
-
-
+        assert pathl < 1e4, "Mean free path larger than 10000 A: %s > %s" %(pathl, 1e4)
+        self.pathl = pathl
 
     def det_type(self):
         '''
@@ -280,31 +257,15 @@ class scatter_discrete:
         '''
         ######## Rutherford ########
         if(self.type == 'Rutherford'):
-            #self.E_loss = 0.
+            self.E_loss = 0.
             self.c2_halfTheta = Rutherford_azimuthal(self.i_energy, self.m_Z)
 
         ##### Moller ###############
         elif(self.type == 'Moller'):
-            E_loss, tables_e, tables_W = pickMollerTable(self.tables_EW_M, self.i_energy)
+            E_loss, tables_e = pickTable(self.table_EW_M, self.i_energy)
 
-            try:
-                self.E_loss = E_loss
-                # if (E_loss < 1.e-3):
-                #     raise E_lossTooSmall
-                if (E_loss >= self.i_energy ):
-                    raise E_lossTooLarge
-
-            # except E_lossTooSmall:
-            #     print ' Fatal error! in compute_Eloss for Moller scattering in scattering class'
-            #     print ' Value of energy loss less than 0.001 eV.'
-            #     print ' Stopping.'
-            #     sys.exit()
-            except E_lossTooLarge as err:
-                ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
-
-            #print('Eloss from tables', E_loss)
-            #print('Eloss from SP', moller_sp(self.i_energy, self.free_param, self.m_nval, self.m_atnd)*self.pathl)
-            #print ()
+            assert E_loss < self.i_energy, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
+            self.E_loss = E_loss
 
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
@@ -314,25 +275,11 @@ class scatter_discrete:
         elif('Gryzinski' in self.type):
             # the shell name is the lefover string after substracting Gryzinski
             shell = self.type.replace('Gryzinski', '')
-            ishell = self.m_names.index(shell)
 
-            E_loss, tables_e, tables_W = pickGryzTable(self.tables_EW_G[ishell], ishell, self.i_energy)
-            try:
-                self.E_loss = E_loss
-                # if (E_loss < 1.e-3):
-                #     raise E_lossTooSmall
-                #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
-                if (E_loss >= self.i_energy ):
-                    raise E_lossTooLarge
+            E_loss, tables_e = pickTable(self.tables_EW_G[0], self.i_energy)
 
-            # except E_lossTooSmall:
-            #     print ' ---------------------------------------------------------------------------'
-            #     print ' Fatal error! in compute_Eloss for Gryzinski scattering in scattering class'
-            #     print ' Value of energy loss less than 0.001 eV.'
-            #     print ' Stopping.'
-            #     sys.exit()
-            except E_lossTooLarge as err:
-                ElossGTEnergy(self.i_energy, tables_e, E_loss, tables_W, self.type)
+            assert E_loss < self.i_energy, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
+            self.E_loss = E_loss
 
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
@@ -342,46 +289,13 @@ class scatter_discrete:
         elif(self.type == 'Quinn'):
             self.E_loss = self.m_pl_e
 
+            # for plasmon scattering assume no change in direction
+            self.c2_halfTheta = 1.
         else:
             print (' I did not understand the type of scattering in scatter.calculate_Eloss')
 
         # polar angle is the same for all scatterings
         self.halfPhi = pi*random.random()
-
-
-
-    #
-    # def compute_sAngles(self):
-    #     if (self.type == 'Rutherford'):
-    #
-    #         #print 'Theta R is', np.degrees(2.*acos(self.c2_halfTheta**0.5))
-    #
-    #     elif((self.type == 'Moller') or ('Gryzinski' in self.type)):
-    #         if (self.E_loss == 0.):
-    #             print (" you're getting zero energy losses for Moller or Gryz. I suggest you increase the size of the integration table")
-    #
-    #         try:
-    #             self.c2_halfTheta = 0.5*( (1. - (( self.E_loss / float(self.i_energy) ) )**0.5) + 1.)
-    #             if (self.E_loss > self.i_energy):
-    #                 raise wrongUpdateOrder
-    #         except wrongUpdateOrder as err:
-    #             print ( 'Error:', err)
-    #             print (' You might be updating energy before calculating the scattering angle')
-    #             print (' Stopping.')
-    #             sys.exit()
-    #
-    #
-    #         self.halfPhi = pi*random.random() # radians
-    #
-    #
-    #     #elif(self.type == 'Quinn'):
-    #         # we assume plasmon scattering does not affect travelling direction
-    #         # TODO: small angles for Quinn
-    #     #    self.halfPhi = 0.
-    #
-    #     #else:
-    #     #    print 'I did not understand the scattering type in scatter.calculate_sAngles'
-
 
 
 
@@ -419,11 +333,11 @@ class scatter_discrete_wUnits(scatter_discrete):
         self.tables_EW_G = tables_EW_G
 
         # scattering params
-        self.pathl = 0.
-        self.type = 0.
-        self.E_loss = 0.
-        self.c2_halfTheta = 1.
-        self.halfPhi = 0.
+        self.pathl = None
+        self.type = None
+        self.E_loss = None
+        self.c2_halfTheta = None
+        self.halfPhi = None
 
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
@@ -475,10 +389,10 @@ class scatter_continuous_classical:
         self.m_atnd = material.atnd      # atomic number density
 
         # scattering params
-        self.pathl = 0.
-        self.E_loss = 0.
-        self.c2_halfTheta = 1.
-        self.halfPhi = 0.
+        self.pathl = None
+        self.E_loss = None
+        self.c2_halfTheta = None
+        self.halfPhi = None
 
 
         # intitalise scattering probabilities dictionary
@@ -498,54 +412,19 @@ class scatter_continuous_classical:
         '''
         pathl = -self.mfp['Rutherford'] * log(random.random())
 
-        try: # ask for forgiveness
-            self.pathl = pathl
-            if (float(pathl) > 1.e4):
-                raise lTooLarge
-
-        except lTooLarge as err:
-            print (' Error:', err)
-            print (' Fatal error! in compute_pathl in scattering class')
-            print (' Value of l is', pathl, 'larger than 1000 Angstroms.')
-            print (' Mean free paths were:', mfp_from_sigma(self.sigma, self.m_atnd))
-            print (' Stopping.')
-            sys.exit()
-
-
+        assert (pathl < 1e4), "Path length larger than 10000A: %s > %s" %(pathl, 1e4)
+        self.pathl = pathl
 
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
         '''
+        assert (self.pathl is not None), "Atempted to compute Eloss when path length is unknown"
+        E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
 
-        if (self.pathl == 0.):
-            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
+        assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
+        self.E_loss = E_loss
 
-            try:
-                self.E_loss = E_loss
-                # if (E_loss < 1.e-5):
-                #     raise E_lossTooSmall
-                if (E_loss >= self.i_energy ):
-                    raise E_lossTooLarge
-
-            # TODO: set lower limit of pathl ?
-            # except E_lossTooSmall:
-            #     print ' ---------------------------------------------------------------------------'
-            #     print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-            #     print ' Value of energy loss less than 0.001 eV.'
-            #     print ' Stopping.'
-            #     sys.exit()
-            except E_lossTooLarge as err:
-                print (' --------------------------------------------------------------------------')
-                print (' Fatal error:', err)
-                prinnt(' in compute_Eloss for Bethe scattering in scattering class')
-                print (' Value of energy loss larger than half the current energy.')
-                print (' The current energy lost is:',  E_loss)
-                print (' The current energy is:',  self.i_energy)
-                print (' Stopping.')
-                sys.exit()
 
     def compute_sAngles(self):
         alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
@@ -572,11 +451,11 @@ class scatter_continuous_JL(scatter_continuous_classical):
 
 
         # scattering params
-        self.pathl = 0.
-        self.type = 0.
-        self.E_loss = 0.
-        self.c2_halfTheta = 1.
-        self.halfPhi = 0.
+        self.pathl = None
+        self.type = None
+        self.E_loss = None
+        self.c2_halfTheta = None
+        self.halfPhi = None
 
 
         # intitalise scattering probabilities dictionary
@@ -592,34 +471,11 @@ class scatter_continuous_JL(scatter_continuous_classical):
         energy loss is calculated from Bethe's CSDA
         '''
 
-        if (self.pathl == 0.):
-            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k)
-            try:
-                self.E_loss = E_loss
-                # if (E_loss < 1.e-6):
-                #     raise E_lossTooSmall
-                #elif (E_loss > ((self.i_energy + max(self.m_Es)*0.5))):
-                if (E_loss >= self.i_energy ):
-                    raise E_lossTooLarge
-            #
-            # except E_lossTooSmall:
-            #     print ' ---------------------------------------------------------------------------'
-            #     print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-            #     print ' Value of energy loss less than 0.001 eV.'
-            #     print ' Path lenght was', self.pathl
-            #     print ' Stopping.'
-            #     sys.exit()
-            except E_lossTooLarge as err:
-                print (' --------------------------------------------------------------------------')
-                print (' Fatal error:', err)
-                print (' in compute_Eloss for Bethe scattering in scattering class')
-                print (' Value of energy loss larger than half the current energy.')
-                print (' The current energy lost is:',  E_loss)
-                print (' The current energy is:',  self.i_energy)
-                print (' Stopping.')
-                sys.exit()
+        assert (self.pathl is not None), "Atempted to compute Eloss when path length is unknown"
+        E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
+
+        assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
+        self.E_loss = E_loss
 
 
 # explicit shells contributions Bethe as extention from the classical one
@@ -643,11 +499,11 @@ class scatter_continuous_explicit(scatter_continuous_classical):
 
 
         # scattering params
-        self.pathl = 0.
-        self.type = 0.
-        self.E_loss = 0.
-        self.c2_halfTheta = 1.
-        self.halfPhi = 0.
+        self.pathl = None
+        self.type = None
+        self.E_loss = None
+        self.c2_halfTheta = None
+        self.halfPhi = None
 
 
         # intitalise scattering probabilities dictionary
@@ -664,36 +520,11 @@ class scatter_continuous_explicit(scatter_continuous_classical):
         energy loss is calculated from Bethe's CSDA
         '''
 
-        if (self.pathl == 0.):
-            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
-                                    self.m_Es, self.m_nval, self.m_Eval)
+        assert (self.pathl is not None), "Atempted to compute Eloss when path length is unknown"
+        E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
 
-            try:
-                self.E_loss = E_loss
-                # TODO: is there a lower limit
-                # if (E_loss < 1.e-5):
-                #      raise E_lossTooSmall
-                if (E_loss >= self.i_energy ):
-                    raise E_lossTooLarge
-
-            # except E_lossTooSmall:
-            #     print ' ---------------------------------------------------------------------------'
-            #     print ' Fatal error! in compute_Eloss for Bethe scattering in scattering class'
-            #     print ' Value of energy loss less than 0.001 eV.'
-            #     print ' Path lenght is', self.pathl
-            #     print ' Stopping.'
-            #     sys.exit()
-            except E_lossTooLarge as err:
-                print (' --------------------------------------------------------------------------')
-                print (' Fatal error;', err)
-                print (' in compute_Eloss for Bethe scattering in scattering class')
-                print (' Value of energy loss larger than half the current energy.')
-                print (' The current energy lost is:',  E_loss)
-                print (' The current energy is:',  self.i_energy)
-                print (' Stopping.')
-                sys.exit()
+        assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
+        self.E_loss = E_loss
 
 
 
@@ -705,10 +536,7 @@ class scatter_continuous_classical_wUnits(scatter_continuous_classical):
         energy loss is calculated from Bethe's CSDA
         '''
 
-        if (self.pathl == 0.):
-            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            self.E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd, u_pi_efour)
+        self.E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd, u_pi_efour)
 
 ## 2)
 class scatter_continuous_JL_wUnits(scatter_continuous_JL):
@@ -717,10 +545,7 @@ class scatter_continuous_JL_wUnits(scatter_continuous_JL):
         energy loss is calculated from Bethe's CSDA
         '''
 
-        if (self.pathl == 0.):
-            print ("I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            self.E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k, u_pi_efour)
+        self.E_loss = self.pathl * bethe_mod_sp_k(self.m_Z, self.i_energy, self.m_atnd, self.m_k, u_pi_efour)
 
 ## 3)
 class scatter_continuous_explicit_wUnits(scatter_continuous_explicit):
@@ -729,8 +554,5 @@ class scatter_continuous_explicit_wUnits(scatter_continuous_explicit):
         energy loss is calculated from Bethe's CSDA
         '''
 
-        if (self.pathl == 0.):
-            print (" I'm not telling you how to live your life, but it helps to calculate path lengths before energy losses for CSDA")
-        else:
-            self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
+        self.E_loss = self.pathl * bethe_mod_sp(self.i_energy, self.m_atnd, self.m_ns, \
                                     self.m_Es, self.m_nval, self.m_Eval, u_pi_efour)

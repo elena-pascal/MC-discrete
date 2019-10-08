@@ -42,7 +42,7 @@ def moller_dCS(E, W, nfree, c_pi_efour=pi_efour):
 
     # check if W arrived here to be smaller than E
     if ( (type(W) is np.float32) or (type(W) is float) ):
-        assert (eps<1.0), 'W is larger than E'
+        assert (eps<1.0), 'W is larger than E: %s > %s' % (W,E)
 
     elif ((type(W) is np.ndarray) or (type(W) is ma.core.MaskedArray)):
         assert (np.all(eps<1.0)), 'W is larger than E'

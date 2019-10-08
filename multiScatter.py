@@ -9,7 +9,7 @@ from electron import electron
 from singleScatter import scatterOneEl_DS, scatterOneEl_cont_cl, scatterOneEl_cont_JL, scatterOneEl_cont_expl
 
 
-def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gryz, Wc, output, count):
+def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, table_moller, tables_gryz, Wc, output, count):
     # for parallel processes we need to make sure the random number seeds are different
     # use for instance the process id multiplied by the current time
     #if parallel:
@@ -42,7 +42,7 @@ def scatterMultiEl_DS(num_el, material, E0, Emin, tilt, tables_moller, tables_gr
         e_i = electron(E0, pos0, dir0)
 
         # scatter until end of scatter
-        res_dict = scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz)
+        res_dict = scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz)
 
         # append data for all electrons
         #for index in res_dict.keys():

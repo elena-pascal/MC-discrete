@@ -1,11 +1,11 @@
 # input file
 
-num_el   : 50000  # per process; to be multiplied by number of processes
-E0       : 20000 # eV
-Emin     : 5000 # eV; cannot be smaller than Wc
+num_el   : 5000  # per process; to be multiplied by number of processes
+E0       : 30000 # eV
+Emin     : 15000 # eV; cannot be smaller than Wc
 material : Al
 s_tilt   : 70.     # degrees
-mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+mode     : cont   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe    : classical # classical, JL or explicit
 

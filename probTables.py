@@ -106,7 +106,7 @@ class probTable:
             self.Wmax = lambda E: maxW_moller(E, self.Ef)
 
             # assign excitation function
-            self.func = lambda W, E: func(E, W, material.params['n_val']) #f(E, W)
+            self.func_EW = lambda E, W: func(E, W, material.params['n_val']) #f(E, W)
 
             # assign energy range
             self.Emin, self.Emax = E_range[0], E_range[1]
@@ -119,7 +119,7 @@ class probTable:
             self.Wmax = lambda E: maxW_gryz(E, self.Ef)
 
             # assign excitation function
-            self.func = lambda W, E: func(E, W, material.params['ns'][shell], self.Wmin)
+            self.func_EW = lambda E, W: func(E, W, material.params['ns'][shell], self.Wmin)
 
             # check if Emin in the energy range was chosen to be above the binding energy
             if(E_range[0] < self.Wmin):
@@ -197,11 +197,11 @@ class probTable:
 
 
         # trapezoidal intergral in the range [Wmin, W]
-        smalldWInt = np.trapz([integrand(self.Wmin, E), integrand(W, E)],
+        smalldWInt = np.trapz([integrand(E, self.Wmin), integrand(E, W)],
                           x = [self.Wmin,               W         ] )
 
         # integral for the entire range [Wmin, Wmax]
-        totalInt = np.trapz(integrand(self.Ws[self.Ws<=self.Wmax(E)], E),
+        totalInt = np.trapz(integrand(E, self.Ws[self.Ws<=self.Wmax(E)]),
                                 x = self.Ws[self.Ws<=self.Wmax(E)])
 
         # the probability is the fractional integral
@@ -279,7 +279,7 @@ class probTable:
         W_max = self.Wmax(E)
 
         # simplify the excitation function to depend only on E and W
-        integrand = lambda W: self.func(W, E)
+        integrand = lambda W: self.func_EW(E, W)
 
         # gaussian quadrature integral
         quadInt, errorInt = quad(integrand, self.Wmin, W_max, limit=300, epsabs=1e-34)
@@ -329,7 +329,7 @@ class probTable:
         logging.info('Emax: %s', Eref)
 
         # excitation function for Eref
-        integrandRef = lambda Wi: self.func(Wi, Eref)
+        integrandRef = lambda Wi: self.func_EW(Eref, Wi)
 
         # trapezoidal intergral in the range [Wmin, W]
         smalldWInt = np.trapz([integrandRef(self.Wmin), integrandRef(W)],
@@ -349,7 +349,7 @@ class probTable:
                                      generator = ordersOfMag,
                                      test_pass = self.check_CDFTol,
                                      refVal    = totalInt,
-                                     integrand = self.func)
+                                     integrand = self.func_EW)
 
         # second refine in multiple of 10% of the value
         _, series = self.findLinSeries(startVal  = self.Emin,
@@ -358,7 +358,7 @@ class probTable:
                                        generator = percents,
                                        test_pass = self.check_CDFTol,
                                        refVal    = totalInt,
-                                       integrand = self.func)
+                                       integrand = self.func_EW)
 
         # and return the value
         return series
@@ -427,10 +427,10 @@ class probTable:
         x_vals = np.ma.stack((W_mesh_masked[:, :-1], W_mesh_masked[:, 1:]))
 
         # function value at every step - 2D table
-        funcs_EW_table = self.func(W_mesh_masked, E_mesh)
+        funcs_EW_table = self.func_EW(E_mesh, W_mesh_masked)
 
         # stack the function table with its duplicate moved up by one cell to create fthe limits of the trapez of integration
-        fun_vals = np.ma.stack((funcs_EW_table[: , :-1], funcs_EW_table[:, 1:]))
+        fun_vals = np.ma.stack((funcs_EW_table[:, :-1], funcs_EW_table[:, 1:]))
 
         # integrate the 2D table of functions between the two limits
         intStep = np.trapz(y=fun_vals, x=x_vals, axis=0)
@@ -438,10 +438,10 @@ class probTable:
         # cumulative sum on the stepwise integral
         cumInt_da = np.cumsum(intStep, axis=1)
 
-        # compute probability table
-        prob = cumInt_da/(np.broadcast_to(cumInt_da[:, -1], cumInt_da.T.shape).T)
+        # compute cumulative distribution function table by dividing by cumInt_da[:, Wmax]
+        CDF = cumInt_da/(np.broadcast_to(cumInt_da[:, -1], cumInt_da.T.shape).T)
 
-        return prob
+        return CDF
 
 
     # def toParquet(self, target):
@@ -485,15 +485,14 @@ class probTable:
         print ('Es:', len(self.Es))
 
         # chunk Es to a dask array
-        Es_da = da.from_array(self.Es, chunks = (self.chunk_size))
+        Es_da = da.from_array(self.Es, chunks = self.chunk_size)
 
         # actually compute table
         with ProgressBar():
             self.table = Es_da.map_blocks(func = self.computeBlock,
-                            chunks = (int(self.Es.size/self.chunk_size), self.Ws.size ),
-                            dtype  = np.float_ ).compute()
+                            #chunks = (self.chunk_size, self.Ws.size-1 ),
+                            dtype  = float ).compute()
 
-        print ()
 
 
     def mapToMemory(self):
@@ -508,16 +507,15 @@ class probTable:
         map = np.memmap(filename = self.target,
                        dtype    = 'float32',
                        mode     = 'w+',
-                       shape    = (self.Es.size, self.Ws.size)   )
+                       shape    = (self.Es.size, self.Ws.size-1)   )
 
-        print ('Table written to target:', self.target)
 
-        # write data to the memory map
-        map = self.table
+        # replace masked values with zero and save the table to the memory map
+        map[:] = self.table.filled(0)[:]
 
         # flush memory changes to disk before removing the object
         del map
-
+        print ('Table written to target:', self.target)
 
     def readFromMemory(self):
         '''
@@ -526,10 +524,89 @@ class probTable:
         Note:
             See np.memmap for more info
         '''
-        self.table =  np.memmap(filename = self.target,
+        # set W series
+        self.set_Ws()
+        print ('Ws:', len(self.Ws))
+
+        # set E series
+        self.set_Es()
+        print ('Es:', len(self.Es))
+
+        readTable =  np.memmap(filename = self.target,
                        dtype    = 'float32',
                        mode     = 'r',
-                       shape    = (self.Es.size, self.Ws.size)   )
+                       shape    = (self.Es.size, self.Ws.size-1)   )
+
+        # mask zeros
+        self.table = ma.masked_array(readTable, readTable==0)
+
+
+
+
+
+def genTables(inputPar, material):
+    '''
+    '''
+
+    # define the Erange from input parameters
+    Erange = (inputPar['Emin'], inputPar['E0'])
+
+    # set chunk_size to whatever worked better on my machine
+    csize = 100
+
+    tables = []
+
+    # instance for Moller table
+    mollerTable = probTable(type='Moller', shell=material.params['name_val'], func=moller_dCS,
+                            E_range=Erange,
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
+                            material=material, mapTarget='tables', chunk_size=csize,
+                            Wc=inputPar['Wc'])
+
+    # generate Moller table
+    mollerTable.generate()
+
+    # map to memory
+    mollerTable.mapToMemory()
+
+
+    # read from disk
+    mollerTable.readFromMemory()
+
+
+    tables.append(mollerTable)
+
+
+    # one Gryzinki table for each shell
+    for Gshell in material.params['name_s']:
+        # instance for Gryzinski table
+        gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
+                            E_range=Erange,
+                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
+                            material=material, mapTarget='tables', chunk_size=csize)
+
+        # generate Gryzinski table for shell Gshell
+        gryzTable.generate()
+
+        # map to memory
+        gryzTable.mapToMemory()
+
+        # read from disk
+        gryzTable.readFromMemory()
+
+
+
+        tables.append(gryzTable)
+
+
+    return tables
+
+
+    # elif (inputPar['mode'] in ['diel', 'dielectric']):
+    #     print ' ---- calculating dielectric function integral table'
+    #     tables_diel =
+
+
 
 
 
@@ -537,15 +614,15 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 logging.basicConfig(filename='logs/tables.log',level=logging.INFO, filemode='w')
 # test things
-
-# set material
+#
+# # set material
 # thisMaterial = material('Al')
 #
 # Erange = (5000., 20000.)
 #
 # func = moller_dCS
 #
-# mollerTable = probTable('Moller',thisMaterial.params['name_val'], func, Erange, 50., 1e-4, 1e-7, thisMaterial, 'testData', 100)
+# mollerTable = probTable('Moller',thisMaterial.params['name_val'], func, Erange, 1e-4, 1e-7, thisMaterial, 'testData', 100, 50.)
 # mollerTable.set_Ws()
 # print ('Ws', len(mollerTable.Ws))
 #
@@ -553,13 +630,13 @@ logging.basicConfig(filename='logs/tables.log',level=logging.INFO, filemode='w')
 # print ('Es', len(mollerTable.Es))
 #
 # mollerTable.generate()
-# print ('Table was generated')
+# print ('Table was generated', mollerTable.table)
 #
 # mollerTable.mapToMemory()
 # print ('Table was mapped to memory')
 #
 # mollerTable.readFromMemory()
-# print ('Table was read from memory', type(mollerTable.table))
+# print ('Table was read from memory', mollerTable.table)
 
 
 
@@ -574,10 +651,10 @@ logging.basicConfig(filename='logs/tables.log',level=logging.INFO, filemode='w')
 #     print ('Es', len(gryzTable.Es))
 #
 #     gryzTable.generate()
-#     print ('Table was generated')
+#     print ('Tables were generated')
 #
 #     gryzTable.mapToMemory()
-#     print ('Table was mapped to memory')
+#     print ('Tables were mapped to memory')
 #
 #     gryzTable.readFromMemory()
-#     print ('Table was read from memory')
+#     print ('Tables were read from memory')

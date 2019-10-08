@@ -7,7 +7,7 @@ from scattering import scatter_continuous_classical_wUnits, scatter_continuous_J
 from scattering import scatter_discrete
 
 
-def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
+def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False
     num_scatt = 0
@@ -36,7 +36,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
     # now scatter untill absorbed or we decided it went through too many scatterings
     while ((not absorbed) and (not scatteredTooLong)):
         # new instance of scatter
-        scatter_i = scatter_discrete(e_i, material, Wc, tables_moller, tables_gryz)
+        scatter_i = scatter_discrete(e_i, material, Wc, table_moller, tables_gryz)
         num_scatt += 1
 
         # let the electron travel depending on the model used
@@ -68,7 +68,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, tables_moller, tables_gryz):
             absorbed = True
             e_i.outcome = 'absorbed'
             #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
-            return
+            return # exit while loop
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 

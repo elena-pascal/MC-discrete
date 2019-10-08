@@ -10,10 +10,9 @@ from multiprocessing import Process, cpu_count, Queue
 from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
-from pandas import HDFStore
 
 from material import material
-from genTables import genTables
+from probTables import genTables
 from electron import electron
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
@@ -69,12 +68,9 @@ if __name__ == '__main__': #this is necessary on Windows
     # set material
     thisMaterial = material(inputPar['material'])
 
-    # number of processes available
-    num_proc = cpu_count()-1 # leave one cpu thread free for user
-    #num_proc = 1
 
     print()
-    print(' number of incident electrons:', inputPar['num_el']*num_proc)
+    print(' number of incident electrons per processor:', inputPar['num_el'])
     print()
     print(' material is:', thisMaterial.species)
     print()
@@ -84,7 +80,7 @@ if __name__ == '__main__': #this is necessary on Windows
     # compute integration tables
     if (inputPar['mode'] == 'DS'):
         # generate integration tables
-        genTables(inputPar, thisMaterial)
+        tables = genTables(inputPar, thisMaterial)
 
 
 ############################## units ###########################################
@@ -132,9 +128,9 @@ if __name__ == '__main__': #this is necessary on Windows
 
 ###############################################################################
 
-
-
-
+    # number of processes available
+    num_proc = cpu_count()-1 # leave one cpu thread free for user
+    #num_proc = 1
 
     print()
     print (' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them')
@@ -142,20 +138,12 @@ if __name__ == '__main__': #this is necessary on Windows
 
     output = Queue()
 
-    # read the table store from disk
-    storeM = HDFStore('Moller.h5', 'r')
-
-    storeG = []
-    for ishell in range(len(thisMaterial.params['Es'])):
-        path = 'Gryz' + str(ishell) + '.h5'
-        storeG.append(HDFStore(path, 'r'))
-
     # define the function for scattering of multiple electrons depending on the model
     if (inputPar['mode'] == 'DS'):
         processes = [Process(target=scatterMultiEl_DS, args=(inputPar['num_el'], thisMaterial,
                                                             inputPar['E0'], inputPar['Emin'],
-                                                            inputPar['s_tilt'], storeM,
-                                                            storeG, inputPar['Wc'],
+                                                            inputPar['s_tilt'], tables[0],
+                                                            tables[1:4], inputPar['Wc'],
                                                             output, count)) for count in range(num_proc)]
 
     elif (inputPar['mode'] == 'cont'):
@@ -185,11 +173,6 @@ if __name__ == '__main__': #this is necessary on Windows
         p.join()
         p.terminate()
 
-    # close the tables stores
-    storeM.close()
-    storeG.close()
-
-
     print ('---- finished scattering')
 
     print()
@@ -197,7 +180,11 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE_' + str(inputPar['mode'])+ '_70_long.h5'
+    fileBSE = 'data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
+                                '_tilt:' + str(inputPar['s_tilt'])+\
+                                '_tolE:' + str(inputPar['tol_E']) +\
+                                '_tolW:' + str(inputPar['tol_W']) +\
+                                '.h5'
 
 
     print ('---- writting to file')
