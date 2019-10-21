@@ -25,7 +25,7 @@ def readInput(fileName):
                 if (param[0] in ['mode', 'material', 'Bethe']):
                     # assign string to dictionary
                     data[param[0]] = param[1]
-                elif ('Bins' in param[0]) or ('num_el' in param[0]):
+                elif (param[0] in ['num_el', 'maxScatt']):
                     # assign int to dictionary
                     data[param[0]] = int(param[1])
                 elif ('output' in param[0]):
@@ -63,6 +63,8 @@ def zipDict(dictA, dictB):
     for k in dictB.keys():
         if k in dictA:
             dictA[k] += dictB[k]
+        else:
+            dictA[k] =  dictB[k]
 
     return dictA
 
@@ -95,7 +97,6 @@ def writeBSEtoHDF5(results, input, filename):
             dataset[dataset_key] = zipDict(dataset[dataset_key], dictionary)
 
 
-
     # project directions on detector
     #onDet_pandasFrame = pd.DataFrame(projOnDetector(dataDictionary['direction'], alpha, xy_PC, L))
 
@@ -116,16 +117,11 @@ def writeBSEtoHDF5(results, input, filename):
         for dataset_key in dataset.keys():
             # make pandas dataframe
             df = pd.DataFrame.from_dict(dataset[dataset_key])
-
             # save to HDF5
             dataFile[dataset_key] = df
 
-    # write input parameters to pandas series
-    input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
-
-    with pd.HDFStore(filename) as dataFile:
-        # save some input parameters
-        dataFile['input'] = input_s
+        # write input parameters to pandas series
+        dataFile['input'] = pd.Series(input)
 
     # TODO: don't supress all performance warnings though
     # pandas is going to complain about performace for the input string table

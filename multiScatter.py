@@ -117,3 +117,27 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, thingsToS
     except:
         print (" Unexpected error:", sys.exc_info()[0])
         raise
+
+
+
+def recover(jobs, output):
+    ''' Recover results from Queue
+        The processes are set up such that there are p results items per queue
+
+        input :
+            jobs   : list of processes threads
+            output : {'electrons' : Queue(), 'scatterings' : Queue()}
+
+        return:
+            results: {'electrons' : list, 'scatterings' : list}
+    '''
+
+    results = {}
+    for key in output.keys():
+        results[key] = []
+
+    for p in jobs:
+        for key in output.keys():
+            results[key].append(pickle.loads(output[key].get()))
+
+    return results

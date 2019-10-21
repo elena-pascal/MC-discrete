@@ -13,31 +13,11 @@ from tqdm import tqdm
 
 from probTables import genTables
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
-from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
+from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont, recover
 from fileTools import readInput, writeBSEtoHDF5, thingsToSave
 
 
-def recover(jobs, output):
-    ''' Recover results from Queue
-        The processes are set up such that there are p results items per queue
 
-        input :
-            jobs   : list of processes threads
-            output : {'electrons' : Queue(), 'scatterings' : Queue()}
-
-        return:
-            results: {'electrons' : list, 'scatterings' : list}
-    '''
-
-    results = {}
-    for key in output.keys():
-        results[key] = []
-
-    for p in jobs:
-        for key in output.keys():
-            results[key].append(pickle.loads(output[key].get()))
-
-    return results
 
 
 # if the script is run with the -u option
@@ -202,13 +182,13 @@ if __name__ == '__main__': #this is necessary on Windows
                                 '_tilt:' + str(inputPar['s_tilt'])+\
                                 '_tolE:' + str(inputPar['tol_E']) +\
                                 '_tolW:' + str(inputPar['tol_W']) +\
+                                '_maxScat:' + str(inputPar['maxScatt']) +\
                                 '.h5'
 
 
     print ('---- writting to file')
     time_start = time.time()
 
-    from parameters import alpha, xy_PC, L
     writeBSEtoHDF5(results, inputPar, fileBSE)
     print()
     print (' time spent writting to file:', time.time()-time_start)

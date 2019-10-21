@@ -72,9 +72,6 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)
 
-        # if (num_scatt > 1000):
-        #     scatteredTooLong = True
-        #     e_i.outcome = 'scatteredManyTimes'
 
 
     #return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
