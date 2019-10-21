@@ -12,6 +12,9 @@ CASINO/
 testData/
 tables/
 
+# profiling files
+*.prof
+
 # Distribution / packaging
 .Python
 build/
