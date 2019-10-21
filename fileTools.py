@@ -28,6 +28,8 @@ def readInput(fileName):
                 elif ('Bins' in param[0]) or ('num_el' in param[0]):
                     # assign int to dictionary
                     data[param[0]] = int(param[1])
+                elif ('output' in param[0]):
+                    data[param[0]] = param[1].replace(" ", "").split(",")
                 else:
                     # assign float to dictionary
                     data[param[0]] = float(param[1])
@@ -37,8 +39,9 @@ def readInput(fileName):
 ##########################################
 def zipData(myData):
     '''
-    Data arrives here as a list of tuple, a tuple for each thread.
-    Zip the thread tuples together; returns lists of lists
+    Data arrives here as a list of tuple, a tuple for each thread,
+    for each entry in data dictionary
+    Zip the thread tuples together; returns list of lists instead
     '''
     zippedParam = []
 
@@ -57,7 +60,7 @@ def zipDict(dictA, dictB):
     For multiple dictionaries with same keys and of the form
     {'key' : [list]} merge the values in the same list
     '''
-    for k in dictB.iterkeys():
+    for k in dictB.keys():
         if k in dictA:
             dictA[k] += dictB[k]
 
@@ -66,26 +69,31 @@ def zipDict(dictA, dictB):
 
 
 ######## write HDF5 file ##################
-def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
+def writeBSEtoHDF5(results, input, filename):
     '''
-    save all the backscattering relevant information to a structured data file
+    Save the results to structured data file.
+    If parallel, the result dictionary arrives here from the multiprocessing Queue,
+    therefore we need to zip the list of lists of dictionaries into single dictionaries
 
-    filename = name of the file
+    ie. I made an overcomplicated results format and now I have to sort it
+
+    input:
+        results  : {'electrons' : [list], 'scatterings' : [list]}
+        input    : input data
+        filename : name of the file
     '''
 
-    # if parallel the dataDictionary arrives here as a list of dictionaries
-    # make one dict instead
-    BSE_dict = data[0]['BSE']
-    all_dict = data[0]['all']
+    dataset = {}
 
-    for dictionary in data[1:]:
-        for k in dictionary.iterkeys():
-            if (k == 'BSE'):
-                zipDict(BSE_dict, dictionary[k])
-            elif (k == 'all'):
-                zipDict(all_dict, dictionary[k])
-            else:
-                print ('Not all data is saved to h5 file')
+    # for every dataset in results
+    for dataset_key in results.keys():
+        dataset[dataset_key] = {}
+
+        # for every dictionary in the list of dictionaries
+        for dictionary in results[dataset_key]:
+            # zip the dictionaries together
+            dataset[dataset_key] = zipDict(dataset[dataset_key], dictionary)
+
 
 
     # project directions on detector
@@ -93,53 +101,35 @@ def writeBSEtoHDF5_old(data, input, filename, alpha, xy_PC, L):
 
     # pandas doesn't like mixed elements entries, so I'm replacing the direction
     # arrays into three separate entries until I figure out something nicer
-    BSEtable =  {'x_dir':[item[0] for item in BSE_dict['direction']],\
-                 'y_dir':[item[1] for item in BSE_dict['direction']],\
-                 'z_dir':[item[2] for item in BSE_dict['direction']]}
-
-    del BSE_dict['direction']
-    BSE_dict.update({'direction' : BSEtable})
+    # BSEtable =  {'x_dir':[item[0] for item in BSE_dict['direction']],\
+    #              'y_dir':[item[1] for item in BSE_dict['direction']],\
+    #              'z_dir':[item[2] for item in BSE_dict['direction']]}
+    #
+    # del BSE_dict['direction']
+    # BSE_dict.update({'direction' : BSEtable})
 
     # write direction results to pandas data frame
-    BSE_dir_df = pd.DataFrame(BSE_dict['direction'], columns=BSEtable.keys())
+    #BSE_dir_df = pd.DataFrame(BSE_dict['direction'], columns=BSEtable.keys())
 
-    # write energy results to pandas series
-    BSE_e_s = pd.Series(BSE_dict['energy'])
+    # make pandas dataframes from dataset dictionaries and save to HDF5
+    with pd.HDFStore(filename) as dataFile:
+        for dataset_key in dataset.keys():
+            # make pandas dataframe
+            df = pd.DataFrame.from_dict(dataset[dataset_key])
 
-    print ('---- number of BSEs:', len(BSE_dict['energy']))
-
-    # write mean path length, total length travelled and number of
-    # scattering events to pandas series
-    all_mpl_s = pd.Series(all_dict['mean_pathl'])
-    all_totalL_s = pd.Series(all_dict['total_path'])
-    all_numScatt_s = pd.Series(all_dict['num_scatter'])
-
-    # write on detector projection pandas to hdf5
-    #onDet_pandasFrame.to_hdf(filename, key='onDet', mode='w')
+            # save to HDF5
+            dataFile[dataset_key] = df
 
     # write input parameters to pandas series
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
 
-    # TODO: don't supress all performance warnings though
-    # pandas is going to complain about performace for the input string table
-    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-
-    # HDFstore is a dict like object that reads and writes pandas with the PyTables library
-    # pickled tables to be read with pandas:
-    # pd.read_hdf(filename, 'BSE/directions')
     with pd.HDFStore(filename) as dataFile:
         # save some input parameters
         dataFile['input'] = input_s
 
-        # write BSE energy and exit direction pandas data frame to hdf5
-        dataFile['BSE/directions'] = BSE_dir_df
-        dataFile['BSE/energy'] = BSE_e_s
-
-        # write all electron information
-        dataFile['all/mean_pathl'] = all_mpl_s
-        dataFile['all/total_l'] = all_totalL_s
-        dataFile['all/num_scatt'] = all_numScatt_s
-
+    # TODO: don't supress all performance warnings though
+    # pandas is going to complain about performace for the input string table
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
@@ -173,3 +163,25 @@ def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
 
         # write BSE energy and exit direction pandas data frame to hdf5
         dataFile['all_electrons'] = allData_df
+
+
+
+#### output dictionary class
+class thingsToSave:
+    """Parameters to save from the simulation"""
+
+    def __init__(self, args):
+        ''' An unknown number of parameters are passed in here.
+            Set up a dictionary which will contain the lists of values
+            for every argument we want to track'''
+        self.dict = {}
+        for arg in args:
+            self.dict[arg] = []
+
+    def addToList(self, par, value):
+        '''
+        Add value to the parameter list only if the parameter
+        is in the list of parameters we want to save
+        '''
+        if (par in self.dict.keys()):
+            self.dict[par].append(value)

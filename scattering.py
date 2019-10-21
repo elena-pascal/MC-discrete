@@ -104,37 +104,6 @@ def pickTable(table, energy):
     #print ()
     return (E_loss, energies_table[Eidx_table])
 
-# def pickGryzTable(store, ishell, energy):
-#     '''
-#     From Gryzinski tables containing the integral under the excitation function
-#     for a list of incident energies and energies losses
-#     pick an energy loss value
-#
-#     tables_gryz are of the form [0, ee, ww[ishell, indx_E, indx_W], Int[[ishell, indx_E, indx_W]]]]
-#     '''
-#
-#     # find the index in the table for this energy
-#     Eidx_table = bisect.bisect_left(table.Es, energy) - 1  # less than value
-#
-#     # get the column in the table for this energy
-#     CDF_list = table.table[Eidx_table]
-#
-#     # the list of integrals depending on W is then
-#     cumInt_table = store.select('prob_tables')[energy_col].values
-#
-#     # let's pick a value. integral(E, Wi) is rr * total integral
-#     integral = random.random() * cumInt_table[-1]
-#
-#     # corresponding to energy loss index
-#     Widx_table = bisect.bisect_left(cumInt_table, integral)
-#
-#     # which is an energy loss of
-#     w_table = store.select('w_tables')[energy_col].values
-#     E_loss = w_table[Widx_table]
-#
-#     return (E_loss, energy_table[Eidx_table], w_table[Widx_table-1:Widx_table+1])
-
-
 def Rutherford_azimuthal(energy, Z):
     '''
     compute the azimuthal angle for Rutherford scattering
@@ -171,7 +140,7 @@ class scatter_discrete:
             - scattering parameters to be update by the functions in the class
     '''
 
-    def __init__(self, electron, material, free_param, table_EW_M, tables_EW_G):
+    def __init__(self, electron, material, free_param, tables):
         # incident particle params
         self.i_energy = electron.energy  # incident particle energy
 
@@ -188,8 +157,8 @@ class scatter_discrete:
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
-        self.table_EW_M = table_EW_M
-        self.tables_EW_G = tables_EW_G
+        self.table_EW_M = tables['Moller']
+        self.tables_EW_G = tables['Gryz']
 
         # scattering params
         self.pathl = None
@@ -210,6 +179,11 @@ class scatter_discrete:
         self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
         #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
         # else the probability of Moller scattering is the default zero
+
+
+        # output lists object
+        self.scat_output = electron.scat_output
+
 
         for shell in self.m_names:
             #if (self.i_energy >= self.m_Es[i]):
@@ -237,19 +211,27 @@ class scatter_discrete:
         '''
         pathl = -self.mfp_total * log(random.random())
 
+        # check if the value is not ridiculous
         assert pathl < 1e4, "Mean free path larger than 10000 A: %s > %s" %(pathl, 1e4)
+
+        # assign it
         self.pathl = pathl
+
+        # save path length if we want it
+        self.scat_output.addToList('pathl', self.pathl)
+
 
     def det_type(self):
         '''
         Set the type of scattering after determining type
         '''
         self.type = pickFromSigmas(self.sigma)
+        # NOTE: Moller becomes more unprobable with increase value of Wc
 
-        # Moller becomes more unprobable with increase value of Wc
+        # save scatter type if we want it
+        self.scat_output.addToList('type', self.type)
 
-
-    def compute_Eloss_sAngles(self):
+    def compute_Eloss_and_angles(self):
         '''
         Compute both the energy loss and the scattering angles.
 
@@ -259,6 +241,12 @@ class scatter_discrete:
         if(self.type == 'Rutherford'):
             self.E_loss = 0.
             self.c2_halfTheta = Rutherford_azimuthal(self.i_energy, self.m_Z)
+
+            # save energy loss if we want it
+            self.scat_output.addToList('E_loss', self.E_loss)
+
+            # save azimuthal angle if we want it
+            self.scat_output.addToList('az_angle', self.c2_halfTheta)
 
         ##### Moller ###############
         elif(self.type == 'Moller'):
@@ -270,6 +258,11 @@ class scatter_discrete:
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
+            # save energy loss if we want it
+            self.scat_output.addToList('E_loss', self.E_loss)
+
+            # save azimuthal angle if we want it
+            self.scat_output.addToList('az_angle', self.c2_halfTheta)
 
         ##### Gryzinski ###########
         elif('Gryzinski' in self.type):
@@ -284,6 +277,11 @@ class scatter_discrete:
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
+            # save energy loss if we want it
+            self.scat_output.addToList('E_loss', self.E_loss)
+
+            # save azimuthal angle if we want it
+            self.scat_output.addToList('az_angle', self.c2_halfTheta)
 
         ##### Quinn ###########
         elif(self.type == 'Quinn'):
@@ -291,11 +289,21 @@ class scatter_discrete:
 
             # for plasmon scattering assume no change in direction
             self.c2_halfTheta = 1.
+
+            # save energy loss if we want it
+            self.scat_output.addToList('E_loss', self.E_loss)
+
+            # save azimuthal angle if we want it
+            self.scat_output.addToList('az_angle', self.c2_halfTheta)
+
         else:
             print (' I did not understand the type of scattering in scatter.calculate_Eloss')
 
         # polar angle is the same for all scatterings
         self.halfPhi = pi*random.random()
+
+        # save polar angle if we want it
+        self.scat_output.addToList('pol_angle', self.halfPhi)
 
 
 
@@ -404,6 +412,8 @@ class scatter_continuous_classical:
         self.sigma['Rutherford'] = ruther_N_sigma_wDefl(self.i_energy, self.m_Z)
         self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
+        # scattering output object
+        self.scat_output = electron.scat_output
 
     def compute_pathl(self):
         '''
@@ -415,6 +425,9 @@ class scatter_continuous_classical:
         assert (pathl < 1e4), "Path length larger than 10000A: %s > %s" %(pathl, 1e4)
         self.pathl = pathl
 
+        # save path length if we want it
+        self.scat_output.addToList('pathl', self.pathl)
+
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
@@ -425,6 +438,8 @@ class scatter_continuous_classical:
         assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
         self.E_loss = E_loss
 
+        # save energy loss if we want it
+        self.scat_output.addToList('E_loss', self.E_loss)
 
     def compute_sAngles(self):
         alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
@@ -432,6 +447,11 @@ class scatter_continuous_classical:
         self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
         self.halfPhi = pi*random.random()
 
+        # save azimuthal angle if we want it
+        self.scat_output.addToList('az_angle', self.c2_half_Theta)
+
+        # save polar angle if we want it
+        self.scat_output.addToList('pol_angle', self.halfPhi)
 
 # Joy and Luo Bethe as extended from the classical one
 class scatter_continuous_JL(scatter_continuous_classical):
@@ -440,32 +460,6 @@ class scatter_continuous_JL(scatter_continuous_classical):
     and Joy and Luo modiefied form of Bethe is the continuous energy loss
     '''
 
-    def __init__(self, electron, material):
-        # incident particle params
-        self.i_energy = electron.energy  # incident particle energy
-
-        # material params
-        self.m_Z = material.params['Z']           # atomic number
-        self.m_k = material.params['bethe_k']     # k value for Joy and Luo equation
-        self.m_atnd = material.atnd    # atomic number density
-
-
-        # scattering params
-        self.pathl = None
-        self.type = None
-        self.E_loss = None
-        self.c2_halfTheta = None
-        self.halfPhi = None
-
-
-        # intitalise scattering probabilities dictionary
-        self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {} # dictionary keeping all mfp
-
-        ## TODO: decide on sigma or mfp
-        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
-        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
-
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
@@ -477,6 +471,8 @@ class scatter_continuous_JL(scatter_continuous_classical):
         assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
         self.E_loss = E_loss
 
+        # save energy loss if we want it
+        self.scat_output.addToList('E_loss', self.E_loss)
 
 # explicit shells contributions Bethe as extention from the classical one
 class scatter_continuous_explicit(scatter_continuous_classical):
@@ -485,36 +481,6 @@ class scatter_continuous_explicit(scatter_continuous_classical):
     and the explicit modified version of Bethe is the continuous energy loss
     '''
 
-    def __init__(self, electron, material):
-        # incident particle params
-        self.i_energy = electron.energy  # incident particle energy
-
-        # material params
-        self.m_Z = material.params['Z']           # atomic number
-        self.m_Es = material.params['Es']         # inner shells energies
-        self.m_ns = material.params['ns']         # number of electrons per inner shell
-        self.m_nval = material.params['n_val']    # number of valence shell electrons
-        self.m_Eval = material.params['E_val']    # valence shell energy
-        self.m_atnd = material.atnd    # atomic number density
-
-
-        # scattering params
-        self.pathl = None
-        self.type = None
-        self.E_loss = None
-        self.c2_halfTheta = None
-        self.halfPhi = None
-
-
-        # intitalise scattering probabilities dictionary
-        self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {} # dictionary keeping all mfp
-
-        ## TODO: decide on sigma or mfp
-        self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
-        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
-
-
     def compute_Eloss(self):
         '''
         energy loss is calculated from Bethe's CSDA
@@ -526,6 +492,8 @@ class scatter_continuous_explicit(scatter_continuous_classical):
         assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
         self.E_loss = E_loss
 
+        # save energy loss if we want it
+        self.scat_output.addToList('E_loss', self.E_loss)
 
 
 #######################  with units  #########################################

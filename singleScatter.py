@@ -41,7 +41,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
 
         # let the electron travel depending on the model used
         scatter_i.compute_pathl()
-        #pathl_history.append(scatter_i.pathl)
+        pathl_history.append(scatter_i.pathl)
 
         # update electron position
         e_i.update_xyz(scatter_i.pathl)
@@ -161,9 +161,9 @@ def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
                 e_i.outcome = 'absorbed'
 
         num_scatt += 1
-        if (num_scatt > 1000):
-            scatteredTooLong = True
-            e_i.outcome = 'scatteredManyTimes'
+        # if (num_scatt > 1000):
+        #     scatteredTooLong = True
+        #     e_i.outcome = 'scatteredManyTimes'
 
     return
 

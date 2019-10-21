@@ -152,7 +152,7 @@ def browning_sigma(E, Z, c_pi_efour=pi_efour):
     return s_B
 
 
-    
+
 ###################################################################
 #                                                                 #
 #                      Inelastic total cross section              #

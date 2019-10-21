@@ -11,12 +11,34 @@ from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
 
-from material import material
 from probTables import genTables
-from electron import electron
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont
-from fileTools import readInput, writeAllEtoHDF5
+from fileTools import readInput, writeBSEtoHDF5, thingsToSave
+
+
+def recover(jobs, output):
+    ''' Recover results from Queue
+        The processes are set up such that there are p results items per queue
+
+        input :
+            jobs   : list of processes threads
+            output : {'electrons' : Queue(), 'scatterings' : Queue()}
+
+        return:
+            results: {'electrons' : list, 'scatterings' : list}
+    '''
+
+    results = {}
+    for key in output.keys():
+        results[key] = []
+
+    for p in jobs:
+        for key in output.keys():
+            results[key].append(pickle.loads(output[key].get()))
+
+    return results
+
 
 # if the script is run with the -u option
 # run all the code with units and return units
@@ -65,14 +87,11 @@ if __name__ == '__main__': #this is necessary on Windows
     # read input parameters
     inputPar = readInput(inputFile)
 
-    # set material
-    thisMaterial = material(inputPar['material'])
-
 
     print()
     print(' number of incident electrons per processor:', inputPar['num_el'])
     print()
-    print(' material is:', thisMaterial.species)
+    print(' material is:', inputPar['material'])
     print()
     print(' scattering mode is:', inputPar['mode'])
     print()
@@ -80,7 +99,7 @@ if __name__ == '__main__': #this is necessary on Windows
     # compute integration tables
     if (inputPar['mode'] == 'DS'):
         # generate integration tables
-        tables = genTables(inputPar, thisMaterial)
+        tables = genTables(inputPar)
 
 
 ############################## units ###########################################
@@ -136,21 +155,21 @@ if __name__ == '__main__': #this is necessary on Windows
     print (' you have', num_proc+1, "CPUs. I'm going to use", num_proc, 'of them')
     print()
 
-    output = Queue()
+    output = {'electrons' : Queue(), 'scatterings' : Queue()}
+
+    # dictionary of output objects
+    thingsToSave = {'el_output': thingsToSave(inputPar['electron_output']),
+                    'scat_output': thingsToSave(inputPar['scatter_output']) }
+
 
     # define the function for scattering of multiple electrons depending on the model
     if (inputPar['mode'] == 'DS'):
-        processes = [Process(target=scatterMultiEl_DS, args=(inputPar['num_el'], thisMaterial,
-                                                            inputPar['E0'], inputPar['Emin'],
-                                                            inputPar['s_tilt'], tables[0],
-                                                            tables[1:4], inputPar['Wc'],
-                                                            output, count)) for count in range(num_proc)]
+        processes = [Process(target=scatterMultiEl_DS, args=(inputPar, tables,
+                                                            thingsToSave, output, count)) for count in range(num_proc)]
 
     elif (inputPar['mode'] == 'cont'):
-        processes = [Process(target=scatterMultiEl_cont, args=(inputPar['num_el'], thisMaterial,
-                                                              inputPar['E0'], inputPar['Emin'],
-                                                              inputPar['s_tilt'], inputPar['Bethe'],
-                                                              output, count)) for count in range(num_proc)]
+        processes = [Process(target=scatterMultiEl_cont, args=(inputPar,
+                                                              thingsToSave, output, count)) for count in range(num_proc)]
 
 
     print ('---- starting scattering')
@@ -160,21 +179,20 @@ if __name__ == '__main__': #this is necessary on Windows
     for p in processes:
         p.start()
 
-    # wait for processes to end # this deadlocks the pipe so moved it after queue.get
-    # for p in processes:
-    #    p.join()
-    result = [pickle.loads(output.get()) for p in processes]
+    # get results from queue
+    results = recover(processes, output)
 
     print()
     print ('joining results ...')
     print()
 
+    # wait for processes to end
     for p in processes:
+        # wait until all processes have finished
         p.join()
         p.terminate()
 
     print ('---- finished scattering')
-
     print()
     print (' time spent in scattering', time.time()-time_start)
     print()
@@ -191,7 +209,7 @@ if __name__ == '__main__': #this is necessary on Windows
     time_start = time.time()
 
     from parameters import alpha, xy_PC, L
-    writeAllEtoHDF5(result, inputPar, fileBSE, alpha, xy_PC, L)
+    writeBSEtoHDF5(results, inputPar, fileBSE)
     print()
     print (' time spent writting to file:', time.time()-time_start)
     print()

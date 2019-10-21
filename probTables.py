@@ -82,7 +82,7 @@ class probTable:
     The valid values in the table are just the top right triangle.
     '''
 
-    def __init__(self, type, shell, func, E_range, tol_E, tol_W, material, mapTarget, chunk_size, Wc=None ):
+    def __init__(self, type, shell, func, E_range, tol_E, tol_W, mat, mapTarget, chunk_size, Wc=None ):
         '''
         Define the table
 
@@ -96,7 +96,9 @@ class probTable:
         '''
         self.type = type
 
-        self.Ef   = material.fermi_e
+        self.Ef   = mat.fermi_e
+
+        self.shell = shell
 
         if(self.type == 'Moller'):
             # asign minimum allowed energy loss
@@ -105,21 +107,27 @@ class probTable:
             # Wmax is a function of E
             self.Wmax = lambda E: maxW_moller(E, self.Ef)
 
+            # number of electrons in shell
+            self.numEl = mat.params['n_val']
+
             # assign excitation function
-            self.func_EW = lambda E, W: func(E, W, material.params['n_val']) #f(E, W)
+            self.func_EW = lambda E, W: func(E, W, self.numEl) #f(E, W)
 
             # assign energy range
             self.Emin, self.Emax = E_range[0], E_range[1]
 
         elif('Gryz' in self.type):
             # asign minimum allowed energy loss
-            self.Wmin =  material.params['Es'][shell]
+            self.Wmin =  mat.params['Es'][shell]
 
             # Wmax is a function of E
             self.Wmax = lambda E: maxW_gryz(E, self.Ef)
 
+            # number of electrons in shell
+            self.numEl = mat.params['ns'][shell]
+
             # assign excitation function
-            self.func_EW = lambda E, W: func(E, W, material.params['ns'][shell], self.Wmin)
+            self.func_EW = lambda E, W: func(E, W, self.numEl, self.Wmin)
 
             # check if Emin in the energy range was chosen to be above the binding energy
             if(E_range[0] < self.Wmin):
@@ -474,7 +482,7 @@ class probTable:
         map computeBlock on the entire range of Es one block at a time
         '''
         print ()
-        print ('Computing', self.type, 'table:')
+        print ('Computing %s table for shell %s' %(self.type, self.shell))
 
         # set W series
         self.set_Ws()
@@ -526,11 +534,9 @@ class probTable:
         '''
         # set W series
         self.set_Ws()
-        print ('Ws:', len(self.Ws))
 
         # set E series
         self.set_Es()
-        print ('Es:', len(self.Es))
 
         readTable =  np.memmap(filename = self.target,
                        dtype    = 'float32',
@@ -539,12 +545,12 @@ class probTable:
 
         # mask zeros
         self.table = ma.masked_array(readTable, readTable==0)
+        print ('read %s table for shell %s from memory' %(self.type, self.shell))
+        print()
 
 
 
-
-
-def genTables(inputPar, material):
+def genTables(inputPar):
     '''
     '''
 
@@ -554,49 +560,51 @@ def genTables(inputPar, material):
     # set chunk_size to whatever worked better on my machine
     csize = 100
 
-    tables = []
+    tables = {}
 
+    materialInst = material(inputPar['material'])
     # instance for Moller table
-    mollerTable = probTable(type='Moller', shell=material.params['name_val'], func=moller_dCS,
+    mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            material=material, mapTarget='tables', chunk_size=csize,
+                            mat=materialInst, mapTarget='tables', chunk_size=csize,
                             Wc=inputPar['Wc'])
 
     # generate Moller table
-    mollerTable.generate()
+    #mollerTable.generate()
 
     # map to memory
-    mollerTable.mapToMemory()
+    #mollerTable.mapToMemory()
 
 
     # read from disk
     mollerTable.readFromMemory()
 
 
-    tables.append(mollerTable)
+    tables['Moller'] = mollerTable
 
 
+    gTables_list = []
     # one Gryzinki table for each shell
-    for Gshell in material.params['name_s']:
+    for Gshell in materialInst.params['name_s'][::-1]:
         # instance for Gryzinski table
         gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            material=material, mapTarget='tables', chunk_size=csize)
+                            mat=materialInst, mapTarget='tables', chunk_size=csize)
 
         # generate Gryzinski table for shell Gshell
-        gryzTable.generate()
+        #gryzTable.generate()
 
         # map to memory
-        gryzTable.mapToMemory()
+        #gryzTable.mapToMemory()
 
         # read from disk
         gryzTable.readFromMemory()
 
+        gTables_list.append(gryzTable)
 
-
-        tables.append(gryzTable)
+    tables['Gryz'] = gTables_list
 
 
     return tables
