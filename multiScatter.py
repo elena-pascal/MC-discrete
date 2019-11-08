@@ -7,7 +7,8 @@ from tqdm import tqdm
 import cProfile
 
 from material import material
-from electron import electron, trajectory_DS
+from electron import electron
+from singleScatter import trajectory_DS
 
 def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
     # for parallel processes we need to make sure the random number seeds are different
@@ -120,8 +121,8 @@ def scatterMultiEl_cont(num_el, material, E0, Emin, tilt, Bethe_model, thingsToS
 
 
 
-def recover(jobs, output):
-    ''' Recover results from Queue
+def retrieve(jobs, output):
+    ''' Retrieve results from Queue
         The processes are set up such that there are p results items per queue
 
         input :

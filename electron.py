@@ -83,7 +83,6 @@ class electron:
 
     def saveOutcomes(self):
         ''' save all the electron parameters we are interested in'''
-
         self.el_output.addToList('outcome', self.outcome)
 
         self.el_output.addToList('final_E', self.energy)
@@ -92,37 +91,3 @@ class electron:
 
 
 ###############################################################################
-from scattering import scatter_discrete
-
-def trajectory_DS(electron, E_i, material, Wc, maxScatt, tables):
-    ''' follow a full electron trajectory'''
-
-    num_scatt = 0
-
-    while ((electron.outcome is not 'absorbed') and (electron.outcome is not 'backscattered')): # not backscattered nor absorbed nor scattered too long
-        # new instance of scatter
-        scatter = scatter_discrete(electron, material, Wc, tables)
-
-        num_scatt += 1
-        if (num_scatt > maxScatt):
-             electron.outcome = 'scatteredTooLong'
-             electron.saveOutcomes()
-             return # exit while loop
-
-        # let the electron travel depending on the model used
-        scatter.compute_pathl()
-
-        # update electron position
-        electron.update_xyz(scatter.pathl)
-
-        # determine scattering type
-        scatter.det_type()
-
-        # determine energy loss and scattering angle
-        scatter.compute_Eloss_and_angles()
-
-        # update electron energy
-        electron.update_energy(scatter.E_loss)
-
-        # update electron new traveling direction
-        electron.update_direction(scatter.c2_halfTheta, scatter.halfPhi)

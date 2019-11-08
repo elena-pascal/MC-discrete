@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from probTables import genTables
 from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
-from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont, recover
+from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont, retrieve
 from fileTools import readInput, writeBSEtoHDF5, thingsToSave
 
 
@@ -138,18 +138,18 @@ if __name__ == '__main__': #this is necessary on Windows
     output = {'electrons' : Queue(), 'scatterings' : Queue()}
 
     # dictionary of output objects
-    thingsToSave = {'el_output': thingsToSave(inputPar['electron_output']),
-                    'scat_output': thingsToSave(inputPar['scatter_output']) }
+    whatToSave = {'el_output': thingsToSave(inputPar['electron_output']),
+                'scat_output': thingsToSave(inputPar['scatter_output']) }
 
 
     # define the function for scattering of multiple electrons depending on the model
     if (inputPar['mode'] == 'DS'):
         processes = [Process(target=scatterMultiEl_DS, args=(inputPar, tables,
-                                                            thingsToSave, output, count)) for count in range(num_proc)]
+                                                            whatToSave, output, count)) for count in range(num_proc)]
 
     elif (inputPar['mode'] == 'cont'):
         processes = [Process(target=scatterMultiEl_cont, args=(inputPar,
-                                                              thingsToSave, output, count)) for count in range(num_proc)]
+                                                              whatToSave, output, count)) for count in range(num_proc)]
 
 
     print ('---- starting scattering')
@@ -160,7 +160,7 @@ if __name__ == '__main__': #this is necessary on Windows
         p.start()
 
     # get results from queue
-    results = recover(processes, output)
+    results = retreve(processes, output)
 
     print()
     print ('joining results ...')

@@ -7,6 +7,22 @@ from parameters import pi_efour, bohr_r
 
 import numpy as np
 
+
+def alpha(energy, Z):
+    ''' screening parameter used in Rutherford scattering
+
+        Parameters
+        ----------
+        energy : array : units = KeV
+
+        Z      : array : units = dim
+
+        Returns
+        -------
+        alpha  : array : units = KeV**(-1)
+    '''
+    return  3.4e-3*(Z**(0.67)) / energy
+
 ###################################################################
 #                                                                 #
 #                      Elastic total cross section                #
@@ -25,6 +41,8 @@ def ruther_sigma(E, Z):
 
         Z      : array : units = dim
 
+        alpha  : array : units = dim
+
         Returns
         -------
         s_R    : array : units = cm**2
@@ -34,8 +52,10 @@ def ruther_sigma(E, Z):
     # correction factor for angular deflection of inelastic scattering
     # Z**2 - > Z*(Z + 1)
 
-    alpha =  3.4e-3*(Z**(0.67))/E
-    s_R = 5.21e-21 * (Z*Z/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
+    # compute the screening factor
+    alphaR = alpha(E, Z)
+
+    s_R = 5.21e-21 * (Z*Z/(E**2)) * (4.*pi)/(alphaR*(1. + alphaR)) * ((E + 511.)/(E + 1024.))**2
     return s_R
 
 
@@ -60,7 +80,9 @@ def ruther_sigma_wDefl(E, Z):
     # correction factor for angular deflection of inelastic scattering
     # Z**2 - > Z*(Z + 1)
 
-    alpha =  3.4e-3*(Z**(0.67))/E
+    # compute the screening factor
+    alphaR = alpha(E, Z)
+    
     s_R = 5.21e-21 * (Z*(Z+1)/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
     return s_R
 

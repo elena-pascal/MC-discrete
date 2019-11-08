@@ -12,7 +12,7 @@ from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
 
 from electron import electron
-from crossSections import ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
+from crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
 from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
 from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 
@@ -104,25 +104,45 @@ def pickTable(table, energy):
     #print ()
     return (E_loss, energies_table[Eidx_table])
 
-def Rutherford_azimuthal(energy, Z):
+
+def Rutherford_halfAz(energy, Z):
     '''
     compute the azimuthal angle for Rutherford scattering
     as a half angle
+
+    Parameters
+    ----------
+    energy : array : units = KeV
+
+    Z      : array : units = dim
+
+    Returns
+    -------
+    cos^2(halfTheta) : array : units = dim
     '''
-
-    alpha =  3.4*(Z**(0.67)) / energy
     rn = random.random()
-    c2_halfTheta = 1. - (alpha*rn/(1. + alpha - rn))
+    alphaR = alpha(energy, Z)
+    return 1. - (alphaR*rn/(1. + alphaR - rn))
 
-    return c2_halfTheta
+
 
 def binaryCollModel(energy, e_loss):
     '''
     Binary collision model is used for detemining the
     scattering azimuthal angle in Moller and Gryzinski type events
-    returns cos_square(0.5*phi)
-    Note that the binary collision model assumes the scattering angle
+
+    Note: that the binary collision model assumes the scattering angle
     to be [0, pi/2], this limits
+
+    Parameters
+    ----------
+    energy : array : units = KeV
+
+    e_loss : array : units = KeV
+
+    Returns
+    -------
+    cos^2(halfTheta) : array : units = dim
     '''
     return 0.5*( (1. - (e_loss / energy)**0.5) + 1.)
 
@@ -240,7 +260,10 @@ class scatter_discrete:
         ######## Rutherford ########
         if(self.type == 'Rutherford'):
             self.E_loss = 0.
-            self.c2_halfTheta = Rutherford_azimuthal(self.i_energy, self.m_Z)
+            self.c2_halfTheta = Rutherford_halfAz(self.i_energy, self.m_Z)
+
+            # save energy if we want it
+            self.scat_output.addToList('E', self.i_energy)
 
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
@@ -257,6 +280,9 @@ class scatter_discrete:
 
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
+
+            # save energy if we want it
+            self.scat_output.addToList('E', self.i_energy)
 
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
@@ -277,6 +303,9 @@ class scatter_discrete:
             # azimuthal angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
+            # save energy if we want it
+            self.scat_output.addToList('E', self.i_energy)
+
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
@@ -289,6 +318,9 @@ class scatter_discrete:
 
             # for plasmon scattering assume no change in direction
             self.c2_halfTheta = 1.
+
+            # save energy if we want it
+            self.scat_output.addToList('E', self.i_energy)
 
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
@@ -442,9 +474,8 @@ class scatter_continuous_classical:
         self.scat_output.addToList('E_loss', self.E_loss)
 
     def compute_sAngles(self):
-        alpha =  3.4*(self.m_Z**(2./3.))/(float(self.i_energy))
-        r = random.random()
-        self.c2_halfTheta = 1. - (alpha*r/(1. + alpha - r))
+        self.c2_halfTheta = Rutherford_halfAz(self.i_energy, self.m_Z)
+
         self.halfPhi = pi*random.random()
 
         # save azimuthal angle if we want it

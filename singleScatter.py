@@ -7,6 +7,43 @@ from scattering import scatter_continuous_classical_wUnits, scatter_continuous_J
 from scattering import scatter_discrete
 
 
+def trajectory_DS(electron, E_i, material, Wc, maxScatt, tables):
+    ''' follow a full electron trajectory'''
+
+    num_scatt = 0
+
+    while ((electron.outcome is not 'absorbed') and (electron.outcome is not 'backscattered')): # not backscattered nor absorbed nor scattered too long
+        # new instance of scatter
+        scatter = scatter_discrete(electron, material, Wc, tables)
+
+        num_scatt += 1
+        if (num_scatt > maxScatt):
+             electron.outcome = 'scatteredTooLong'
+             electron.saveOutcomes()
+             return # exit while loop
+
+        # let the electron travel depending on the model used
+        scatter.compute_pathl()
+
+        # update electron position
+        electron.update_xyz(scatter.pathl)
+
+        # determine scattering type
+        scatter.det_type()
+
+        # determine energy loss and scattering angle
+        scatter.compute_Eloss_and_angles()
+
+        # update electron energy
+        electron.update_energy(scatter.E_loss)
+
+        # update electron new traveling direction
+        electron.update_direction(scatter.c2_halfTheta, scatter.halfPhi)
+
+
+
+
+
 def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
     absorbed = False
     scatteredTooLong = False

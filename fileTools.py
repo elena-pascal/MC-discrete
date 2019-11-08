@@ -3,7 +3,7 @@ import pandas as pd
 import warnings
 import numpy as np
 ####### read input file ##################
-def readInput(fileName):
+def readInput(fileName='input.file'):
     '''
     Read parameters from a given file.
     '''
@@ -116,14 +116,14 @@ def writeBSEtoHDF5(results, input, filename):
     with pd.HDFStore(filename) as dataFile:
         for dataset_key in dataset.keys():
             # make pandas dataframe
-            df = pd.DataFrame.from_dict(dataset[dataset_key])
+            df = pd.DataFrame.from_dict(dataset[dataset_key], dtype=float)
+
             # save to HDF5
             dataFile[dataset_key] = df
 
-        # write input parameters to pandas series
-        dataFile['input'] = pd.Series(input)
+        # write input parameters to pandas series -> transposed dataframe
+        dataFile['input'] = pd.DataFrame(pd.Series(input)).T
 
-    # TODO: don't supress all performance warnings though
     # pandas is going to complain about performace for the input string table
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 

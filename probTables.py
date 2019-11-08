@@ -182,7 +182,7 @@ class probTable:
 
     def check_CDFTol(self, Eseries, refVal, integrand):
         ''' For a given Eseries, check if fine enough
-        by looking how fast the probability of looking energy W changes
+        by looking how fast the probability of loosing energy W changes
 
         input:
             Eseries        : array with E series values
