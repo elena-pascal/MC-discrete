@@ -19,9 +19,9 @@ def alpha(energy, Z):
 
         Returns
         -------
-        alpha  : array : units = KeV**(-1)
+        alpha  : array : units = dim
     '''
-    return  3.4e-3*(Z**(0.67)) / energy
+    return  3.4e-3*(Z**(0.666667)) / energy
 
 ###################################################################
 #                                                                 #
@@ -82,7 +82,7 @@ def ruther_sigma_wDefl(E, Z):
 
     # compute the screening factor
     alphaR = alpha(E, Z)
-    
+
     s_R = 5.21e-21 * (Z*(Z+1)/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
     return s_R
 

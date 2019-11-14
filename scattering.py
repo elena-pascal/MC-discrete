@@ -105,10 +105,15 @@ def pickTable(table, energy):
     return (E_loss, energies_table[Eidx_table])
 
 
-def Rutherford_halfAz(energy, Z):
+def Rutherford_halfPol(energy, Z):
     '''
-    compute the azimuthal angle for Rutherford scattering
-    as a half angle
+    compute the polar angle for Rutherford scattering
+    using the analytical solution of the integral
+    of the differential cross section.
+
+    See eq. 3.10 in Joy's.
+
+    Returns an array of values of the same length as the energy array.
 
     Parameters
     ----------
@@ -120,7 +125,12 @@ def Rutherford_halfAz(energy, Z):
     -------
     cos^2(halfTheta) : array : units = dim
     '''
-    rn = random.random()
+    # if energy arrives a scalar
+    if np.isscalar(energy):
+        rn = random.random()
+    else: # energy is a numpy array
+        rn = np.array([random.random() for _ in range(energy.size)])
+
     alphaR = alpha(energy, Z)
     return 1. - (alphaR*rn/(1. + alphaR - rn))
 
@@ -129,7 +139,7 @@ def Rutherford_halfAz(energy, Z):
 def binaryCollModel(energy, e_loss):
     '''
     Binary collision model is used for detemining the
-    scattering azimuthal angle in Moller and Gryzinski type events
+    scattering polar angle in Moller and Gryzinski type events
 
     Note: that the binary collision model assumes the scattering angle
     to be [0, pi/2], this limits
@@ -260,7 +270,7 @@ class scatter_discrete:
         ######## Rutherford ########
         if(self.type == 'Rutherford'):
             self.E_loss = 0.
-            self.c2_halfTheta = Rutherford_halfAz(self.i_energy, self.m_Z)
+            self.c2_halfTheta = Rutherford_halfPol(self.i_energy, self.m_Z)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.i_energy)
@@ -268,8 +278,8 @@ class scatter_discrete:
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
-            # save azimuthal angle if we want it
-            self.scat_output.addToList('az_angle', self.c2_halfTheta)
+            # save polar angle if we want it
+            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Moller ###############
         elif(self.type == 'Moller'):
@@ -278,7 +288,7 @@ class scatter_discrete:
             assert E_loss < self.i_energy, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
             self.E_loss = E_loss
 
-            # azimuthal angle
+            # polar angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
             # save energy if we want it
@@ -287,8 +297,8 @@ class scatter_discrete:
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
-            # save azimuthal angle if we want it
-            self.scat_output.addToList('az_angle', self.c2_halfTheta)
+            # save apolar angle if we want it
+            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Gryzinski ###########
         elif('Gryzinski' in self.type):
@@ -300,7 +310,7 @@ class scatter_discrete:
             assert E_loss < self.i_energy, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
             self.E_loss = E_loss
 
-            # azimuthal angle
+            # polar angle
             self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
 
             # save energy if we want it
@@ -309,8 +319,8 @@ class scatter_discrete:
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
-            # save azimuthal angle if we want it
-            self.scat_output.addToList('az_angle', self.c2_halfTheta)
+            # save pol angle if we want it
+            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Quinn ###########
         elif(self.type == 'Quinn'):
@@ -325,8 +335,8 @@ class scatter_discrete:
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
-            # save azimuthal angle if we want it
-            self.scat_output.addToList('az_angle', self.c2_halfTheta)
+            # save polar angle if we want it
+            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         else:
             print (' I did not understand the type of scattering in scatter.calculate_Eloss')
@@ -334,8 +344,8 @@ class scatter_discrete:
         # polar angle is the same for all scatterings
         self.halfPhi = pi*random.random()
 
-        # save polar angle if we want it
-        self.scat_output.addToList('pol_angle', self.halfPhi)
+        # save azimuthal angle if we want it
+        self.scat_output.addToList('az_angle', self.halfPhi)
 
 
 
@@ -474,15 +484,15 @@ class scatter_continuous_classical:
         self.scat_output.addToList('E_loss', self.E_loss)
 
     def compute_sAngles(self):
-        self.c2_halfTheta = Rutherford_halfAz(self.i_energy, self.m_Z)
+        self.c2_halfTheta = Rutherford_halfPol(self.i_energy, self.m_Z)
 
         self.halfPhi = pi*random.random()
 
-        # save azimuthal angle if we want it
-        self.scat_output.addToList('az_angle', self.c2_half_Theta)
-
         # save polar angle if we want it
-        self.scat_output.addToList('pol_angle', self.halfPhi)
+        self.scat_output.addToList('pol_angle', self.c2_half_Theta)
+
+        # save azimuthal angle if we want it
+        self.scat_output.addToList('az_angle', self.halfPhi)
 
 # Joy and Luo Bethe as extended from the classical one
 class scatter_continuous_JL(scatter_continuous_classical):

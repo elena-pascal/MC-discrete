@@ -5,9 +5,12 @@ import warnings
 from multiprocessing import Process, cpu_count, Queue
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-from scattering import alpha, binaryCollModel
+from scattering import alpha, binaryCollModel, Rutherford_halfPol
 from multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
 from material import material
 
@@ -32,41 +35,93 @@ def unique(inputList):
 
     return unique_list
 
-def az_polarPlot(plotDict):
-    ''' matplotlib polar plot'''
-    print()
-    print('plotting...')
-    print()
+def angleFreq(pdData, numBins, range):
+    '''
+    generate dataframe with frequency of angle appearance
 
-    #colorList = ['rgba(128, 177, 24 .9)', 'rgba(141, 211, 199 .9)']
-    colorList = ['lightcoral', 'cadetblue']
+    Parameters
+    ----------
+        pdData : pandas DataFrame
+            containing two columns: labels and angles
+        numBins : int
+            number of bins
+        range : tuple
+            either (0, pi] or (0, 2pi]
 
-    ax = plt.subplot(111, projection='polar')
+    Returns
+    -------
+        pdFreq : pandas DataFrame
+            containing the frequency of angles per bin
+    '''
+    bins = np.linspace(range[0], range[1], numBins+1)
 
-    # plot theoretical results as a continuous line
-    ax.plot(plotDict['theory']['thetas'], plotDict['theory']['radii'],
-                alpha = 0.75, label='theory', color=colorList[0])
+    # add a frequency column
+    pdData['freq'] = 1
 
-    # plot MC results as scatter
-    ax.scatter(plotDict['Monte Carlo']['thetas'], plotDict['Monte Carlo']['radii'],
-                alpha = 0.75, label='Monte Carlo', color=colorList[1])
+    # make a new pandas df with binned angle frequencies
+    pdFreq = pdData.groupby(['label', pd.cut(pdData.angles, bins)]).freq.sum().reset_index()
 
-    # plot only one hemisphere for azimuthal angle
-    ax.set_thetamin(0)
-    ax.set_thetamax(180)
+    # compute bin centers
+    pdFreq['degrees'] = [np.degrees(interval.mid) for interval in pdFreq.angles]
 
-    # log?
-    #ax.set_rlim((0.1, 1000))
-    #ax.set_rscale('log')
+    return pdFreq
 
-    #ax.set_title(title, va='bottom')
-    ax.legend()
-    plt.show()
+def plotPolar_polar_px(pdData):
+    ''' plotly express polar plot
+    This is the fewest lines plot but I don't know how to set a range for theta
+    '''
+    print('/n', 'plotting...', '/n')
+
+    numBins = 200
+
+    # frequency data
+    freq = angleFreq(pdData, numBins, (0, np.pi))
+
+    # make polar figure plot MC results as scatter
+    fig = px.line_polar(freq, r='freq', theta='degrees', line_dash='label',
+                        color='label', log_r=True, template="plotly_dark",
+                        start_angle=0, direction='counterclockwise')
+
+    fig.show()
+
+def plotPolar_polar_pltly(pdData):
+    ''' plotly graph_objects polar plot'''
+    print('\n', 'plotting...', '\n')
+
+    numBins = 800
+
+    # frequency data
+    freq = angleFreq(pdData, numBins, (0, np.pi))
+
+    # make figure
+    fig = make_subplots(rows=1, cols=1, specs=[[{'type': 'polar'}]*1]*1)
+
+    # add theoretical line
+    fig.add_trace( go.Scatterpolar( name = 'theory',
+                    r = freq[freq.label=='theory']['freq'],
+                    theta = freq[freq.label=='theory']['degrees'],
+                    mode = 'lines'), 1, 1)
+
+    # add MC scatter
+    fig.add_trace( go.Scatterpolar(name = 'MC',
+                    r = freq[freq.label=='MC']['freq'],
+                    theta = freq[freq.label=='MC']['degrees'],
+                    mode = 'markers' ), 1, 1)
+
+    # show only [0, 180]
+    fig.update_layout(
+    title = 'Polar angular distributions',
+    polar =dict(radialaxis = dict(tickangle = 45),
+                sector = [0, 180]))
+
+    fig.show()
+
 
 def binOnCircle(angleList, nbins):
     ''' For a list of angles return a binned data in nbins
 
-    Return :
+    Returns
+    -------
         tuple: (radius, edges of theta)
     '''
     return np.histogram(angleList, bins=nbins, range=(0, 2*np.pi))
@@ -74,6 +129,46 @@ def binOnCircle(angleList, nbins):
 def binCenters(binEdgesList):
     ''' For a list of bin edges return the centers'''
     return list(map(np.mean, zip(binEdgesList[:-1], binEdgesList[1:])))
+
+def thetaFromCos(Cos2HalfAngles):
+    '''
+    The angles are stored as cos^2(Theta/2). return the angles
+    '''
+    # these values should be withing arccos domain
+    assert ( (all( np.array(Cos2HalfAngles)>=-1)) & (all(np.array(Cos2HalfAngles)<=1)) ), 'Some cos values are outside arccos domain'
+
+    return  np.degrees(2*np.arccos(np.array(Cos2HalfAngles)**0.5))
+
+def rndAnglesFromDF(scatter_data, scatter_type, angle_type, size, E = None):
+    '''
+    Pick a random sample of given size of scattering angles,
+    either polar or azimuthal, for a given scattering type
+    from the pandas dataframe
+
+    Parameters
+    ----------
+    scatter_type : str
+        'Rutherford', 'Moller', 'Gryzinski' or 'Quinn'
+    angle_type : str
+        'az_angle' or 'pol_angle'
+    size : int
+        size of sample
+    E : float, optional
+        scattering energy
+
+    Returns
+    -------
+    angles :obj: `list` of float
+        list of scattering angles
+    '''
+    if E:
+        angles = random.sample(list(scatter_data[scatter_data.type==scatter_type][scatter_data.E==E][angle_type].values), size)
+    else:
+        angles = random.sample(list(scatter_data[scatter_data.type==scatter_type][angle_type].values), size)
+
+    # these are saved as cos^2(Theta/2), return as angles
+    return  thetaFromCos(angles)
+
 
 
 # test the Monte Carlo results match the underlying probability ditribution from which events are sampled
@@ -121,7 +216,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
         writeBSEtoHDF5(results, self.inputPar, self.file)
 
-    def watson_two_test(self, x, y, plot=False, xLabel=None, yLabel=None):
+    def watson_two_test(self, data, plot=False):
          '''
          Apply the Watson two test for two samples and check
          if the test statistics, U2, is larger than the critical value
@@ -129,23 +224,20 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
          Note: See page 151 in 'Directional statistics' K. V. Mardia and P. E. Jupp
 
-         input : x   : list, set 1 of observed measurements
-                 y   : list, set 2 of observed measurements
-                 plot: boolean
-                 xLabel, yLabel : labels for x and y curves if plotted
+         input :
+                data : pandas table of angles containing theoretical and MC results
+                plot : boolean
          '''
          if plot:
-            # polar plot
-            x_radii, x_thetas = binOnCircle(np.radians(x), 3600)
-            y_radii, y_thetas = binOnCircle(np.radians(y), 3600)
+            # polar plot for polar angle
+            plotPolar_polar_pltly(data)
 
-            plotDict = { xLabel:{'thetas':binCenters(x_thetas), 'radii':x_radii},
-                         yLabel:{'thetas':binCenters(y_thetas), 'radii':y_radii} }
+         # pick only the first 100 points; this is good enough for the test
+         data = data[0:100]
 
-            az_polarPlot(plotDict)
-
-         # sort x and y lists
-         x, y = sorted(x), sorted(y)
+         # sort angles into x and y lists
+         x = sorted(data[data.label=='theory'].angles.values)
+         y = sorted(data[data.label=='MC'].angles.values)
 
          # number of observations in each set
          nx, ny = len(x), len(y)
@@ -192,81 +284,90 @@ class TestScatterAnglesforDS(unittest.TestCase):
     #########################################################################
     ############################ Rutherford tests ###########################
     #########################################################################
-
-    def TestAzimProb_Ruth_E0(self):
+    def TestPolarProb_Ruth_E0(self):
         '''
-            Test if the azimuthal angle distribution of Rutherford scatterings
-            is within a certain range from the analytical probability distribution.
+        Test if the polar angle distribution of Rutherford scatterings
+        is within a certain range from the analytical probability distribution.
 
-            This is done by applying the Watson two test for two samples, one taken
-            from the simulated results and one from the analytical formulation and then
-            checking if the test statistics, U2, is larger than the critical value
-            with confidence 0.05 < p < 0.1
+        This is done by applying the Watson two test for two samples, one taken
+        from the simulated results and one from the analytical formulation and then
+        checking if the test statistics, U2, is larger than the critical value
+        with confidence 0.05 < p < 0.1
 
-            Only for incident energy
+        Only for incident energy
         '''
-        # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
-
-        # select only incident energy data
-        E = self.inputPar['E0']
-
-        # choose 100 random values from the MC Rutherford azimuthal scattering angles
-        MCCos2HalfAngles = random.sample(list(scatterings[scatterings.type=='Rutherford'][scatterings.E==E]['az_angle'].values), 100)
-        MCAngles = np.degrees(2*np.arccos(np.array(MCCos2HalfAngles)**0.5))
-
-        alphaR = alpha(E, self.material.params['Z'])
-
-        # choose 100 random values from the analythical expression
-        randomVals = np.array([random.random() for _ in range(100)])
-        calculatedCosAngles = list(1 - (2 * alphaR * randomVals) /( 1 - alphaR - randomVals))
-        calculatedAngles = np.degrees(np.arccos(np.array(calculatedCosAngles)))
-
-        self.watson_two_test(list(MCAngles), list(calculatedAngles))
-
-
-    def TestAzimProb_Ruth(self):
-        '''
-            Like above but for all energies.
-        '''
+        # size of sample
         n = 10000
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scatterings')
 
-        # choose 100 random values from the MC Rutherford azimuthal scattering angles
-        MCCos2HalfAngles = random.sample(list(scatterings[scatterings.type=='Rutherford']['az_angle'].values), n)
-        MCAngles = np.degrees(2*np.arccos(np.array(MCCos2HalfAngles)**0.5))
+        # select only incident energy data
+        E = np.array(self.inputPar['E0'])
 
-        # choose 100 random values from the analythical expression
+        # choose n random values from the MC Rutherford polar scattering angles
+        MCAngles = rndAnglesFromDF(scatterings, 'Rutherford', 'pol_angle', n, E)
+
+        # make a pandas dataframe
+        pdData = pd.DataFrame(data={'label':'MC', 'angles':MCAngles })
+
+        # choose n random values from the analytical expression
+        calculatedCos2HalfAngles = Rutherford_halfPol(E, self.material.params['Z'])
+        calculatedAngles = thetaFromCos(calculatedCos2HalfAngles)
+
+        # add to the dataframe
+        pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles':calculatedAngles }),
+                            ignore_index=True)
+
+        # are the two samples part of the same population?
+        self.watson_two_test(pdData, True)
+
+
+    def TestPolarProb_Ruth(self):
+        '''
+            Like above but for all energies.
+        '''
+        # size of sample
+        n = 200000
+
+        # read dataframe into pandas
+        scatterings = pd.read_hdf(self.file, 'scatterings')
+
+        # choose a random sample from the MC Rutherford polar scattering angles
+        MCAngles =  rndAnglesFromDF(scatterings, 'Rutherford', 'pol_angle', n)
+
+        # make a pandas dataframe
+        pdData = pd.DataFrame(data={'label':'MC', 'angles':MCAngles })
+
+        # choose n random values from the analytical expression
         # for a random sample of energies from the population of electron energies
         Elist = np.random.choice(scatterings.E, n)
 
-        alphaR = alpha(Elist, self.material.params['Z'])
+        calculatedCos2HalfAngles = Rutherford_halfPol(Elist, self.material.params['Z'])
+        calculatedAngles = thetaFromCos(calculatedCos2HalfAngles)
 
-        randomVals = np.array([random.random() for _ in range(n)])
-
-        calculatedCosAngles = list(1 - (2 * alphaR * randomVals) /( 1 - alphaR - randomVals))
-        calculatedAngles = np.degrees(np.arccos(np.array(calculatedCosAngles)))
+        # add to the dataframe
+        pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles':calculatedAngles }),
+                            ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(list(MCAngles), list(calculatedAngles), True, 'Monte Carlo', 'theory')
+        self.watson_two_test(pdData, True)
 
 
     #########################################################################
     ############################ Moller tests ###############################
     #########################################################################
 
-    def TestAzimProb_Moller(self):
+    def TestPolarProb_Moller(self):
         '''
-            Test if the azimuthal angle distribution of Moller scatterings
+            Test if the polar angle distribution of Moller scatterings
             is within a certain range from the computed probability distribution
         '''
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scatterings')
 
-        # choose 100 random values from the MC Rutherford azimuthal scattering angles
-        MCCos2HalfAngles = random.sample(list(scatterings[scatterings.type=='Moller']['az_angle'].values), 1000)
+        # choose 100 random values from the MC Moller polar scattering angles
+        MCCos2HalfAngles = random.sample(list(scatterings[scatterings.type=='Moller']['pol_angle'].values), 1000)
         MCAngles = np.degrees(2*np.arccos(np.array(MCCos2HalfAngles)**0.5))
 
         # pick 100 random rows from the dataframe
@@ -290,9 +391,9 @@ class TestScatterAnglesforDS(unittest.TestCase):
 #########################################################################
 def suite():
     suite = unittest.TestSuite()
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth_E0'))
-    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
     return suite
 
 if __name__ == '__main__':
