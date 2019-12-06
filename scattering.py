@@ -142,7 +142,7 @@ def binaryCollModel(energy, e_loss):
     scattering polar angle in Moller and Gryzinski type events
 
     Note: that the binary collision model assumes the scattering angle
-    to be [0, pi/2], this limits
+    to be [0, pi/2]
 
     Parameters
     ----------
@@ -154,7 +154,7 @@ def binaryCollModel(energy, e_loss):
     -------
     cos^2(halfTheta) : array : units = dim
     '''
-    return 0.5*( (1. - (e_loss / energy)**0.5) + 1.)
+    return 0.5*( (1 - (e_loss / energy))**0.5 + 1)
 
 
 #####################################################################

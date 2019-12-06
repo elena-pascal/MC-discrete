@@ -22,7 +22,7 @@ Wc       : 10     # eV; Wc = Ec*E0
 
 # list of desired outputs
 electron_output : outcome, final_E  # outcome, final_E, final_dir
-scatter_output : type, az_angle # type, E_loss, az_angle, pol_angle, pathl, position, energy
+scatter_output : type, az_angle, pol_angle # type, E_loss, az_angle, pol_angle, pathl, position, energy
 
 # detector information
 L        :   0

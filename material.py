@@ -128,6 +128,7 @@ class material:
         self.plasmon_e = plasmon_energy(self.atnd, self.params['n_val'])
         # fermi energy
         self.fermi_e = fermi_energy(self.atnd, self.params['n_val'])
+        
         # Powell c parameter
         self.powell_c = powell_c(self.params['penn_b'], self.plasmon_e)
 

@@ -1,19 +1,22 @@
+import numpy as np
+from scipy.constants import pi
+from scipy import stats
+
 from scimath.units.api import has_units
 from scimath.units.length import cm, m
 from scimath.units.energy import eV, KeV
-from scipy.constants import pi
 
 from parameters import pi_efour, bohr_r
 
-import numpy as np
 
 
+#@has_units
 def alpha(energy, Z):
     ''' screening parameter used in Rutherford scattering
 
         Parameters
         ----------
-        energy : array : units = KeV
+        energy : array : units = eV
 
         Z      : array : units = dim
 
@@ -21,7 +24,7 @@ def alpha(energy, Z):
         -------
         alpha  : array : units = dim
     '''
-    return  3.4e-3*(Z**(0.666667)) / energy
+    return  3.4*(Z**(0.666667)) / energy
 
 ###################################################################
 #                                                                 #
@@ -30,7 +33,7 @@ def alpha(energy, Z):
 ###################################################################
 
 #### 1a) Elastic Rutherford scattering cross section
-@has_units
+#@has_units
 def ruther_sigma(E, Z):
     """ Calculate the Rutherford elastic cross section
         per atom
@@ -41,21 +44,20 @@ def ruther_sigma(E, Z):
 
         Z      : array : units = dim
 
-        alpha  : array : units = dim
-
         Returns
         -------
         s_R    : array : units = cm**2
     """
+    # compute the screening factor
+    alphaR = alpha(E, Z)
+
+    # E must be in keV in Joy's formula
     E = E * eV/KeV
 
     # correction factor for angular deflection of inelastic scattering
     # Z**2 - > Z*(Z + 1)
 
-    # compute the screening factor
-    alphaR = alpha(E, Z)
-
-    s_R = 5.21e-21 * (Z*Z/(E**2)) * (4.*pi)/(alphaR*(1. + alphaR)) * ((E + 511.)/(E + 1024.))**2
+    s_R = 5.21e-21 * (Z*Z/(E*E))  * ((E + 511.)/(E + 1024.))**2 * (4.*pi)/(alphaR*(1. + alphaR))
     return s_R
 
 
@@ -317,3 +319,101 @@ def diel_sigma(E, ELF, powell_c, n):
     intergral = trapez(function, 0., E)
 
     return integral/(3.325*E*n)
+
+
+
+###################################################################
+#                                                                 #
+#                      Elastic differential cross section         #
+#                                                                 #
+###################################################################
+
+@has_units
+def ruther_sigma_p(E, Z, theta):
+    """ Calculate the Rutherford elastic differential cross section
+        per atom
+
+        Parameters
+        ----------
+        E      : array : units = eV
+
+        Z      : array : units = dim
+
+        theta  : array : units = dim
+                 scattering angle in degrees
+
+        Returns
+        -------
+        s_p_R    : array : units = cm**2
+    """
+    E = E * eV/KeV
+
+    # correction factor for angular deflection of inelastic scattering
+    # Z**2 - > Z*(Z + 1)
+
+    # compute the screening factor
+    alphaR = alpha(E, Z)
+
+    s_p_R = 5.21e-21 * (Z*Z/(E*E)) * ((E + 511.)/(E + 1024.))**2 /(((np.sin(np.radians(theta)*0.5))**2 + alphaR)**2)
+    return s_p_R
+
+
+#####################################################################
+#               differential cross section distributions            #
+#####################################################################
+class Ruth_diffCS_E(stats.rv_continuous):
+    '''
+    Angular continuous distribution for Rutherford sattering
+    at a specific energy
+    '''
+    def __init__(self, Z, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Z = Z
+
+    def _pdf(self, theta, E):
+        ''' prpbability distribution function'''
+        return np.array(ruther_sigma_p(E, self.Z, theta))
+
+    def _cdf(self, theta, E):
+        ''' cumulative distribution function'''
+        alphaR = np.array(alpha(E, self.Z))
+        return (-alphaR-1)*(1-np.cos(np.radians(theta)))/(-2*alphaR + np.cos(np.radians(theta))-1)
+
+    def _ppf(self, x, E):
+        '''
+        quantile function which applied to a set of random variants from a
+        uniform distribution returns a set of random variants from
+        the Rutherford angular scattering distribution.
+
+        The Rutherford scattering is a continuous distribution and its CDF can be
+        inversed analytically.
+
+        When rvs is called this is the function used if present
+        '''
+        alphaR = np.array(alpha(E, self.Z))
+        return np.degrees(np.arccos(1 - (2*alphaR*x)/(1+alphaR -x)))
+
+
+
+class Ruth_diffCS(stats.rv_continuous):
+    '''
+    Angular continuous distribution for Rutherford sattering
+    for a distribution of energies
+    '''
+    def __init__(self, Edist_df, Z, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Edist_df = Edist_df
+        self.Z = Z
+
+    # def _pdf(self, theta, Edist_df, Z):
+    #     ''' probability mass function'''
+    #     return Edist_df.weight * np.array(ruther_sigma_p(Edist_df.energy, Z, theta))
+
+    def _cdf(self, theta):
+        ''' cumulative distribution function is just the weighted
+        sum of all cmf at different samples of energy'''
+        # an instance of Ruth_diffCS
+        R_dist = Ruth_diffCS_E(Z=self.Z)
+
+        # the cumulative dstribution function for all the E in the DataFrame
+        return self.Edist_df.weight.values.dot(R_dist._cdf(theta, self.Edist_df.energy.values))

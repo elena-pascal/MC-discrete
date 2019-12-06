@@ -2,6 +2,7 @@
 from numpy import log
 import numpy as np
 import numpy.ma as ma
+from scipy import stats, integrate
 import sys
 from errors import E_lossTooLarge
 
@@ -198,3 +199,68 @@ def gryz_dCS_P(E, W, nsi, Ebi, c_pi_efour=pi_efour):
 #         sys.exit()
 #
 #     return dCS
+
+
+
+#####################################################################
+#                     energy loss distributions                     #
+#                                                                   #
+# NOTE: We don't have analytical expressions for the angular        #
+# distribututions for the inelastic scatterings, but we do have the #
+# binary collision model for finding a scattering angle based on    #
+# the energy loss in the event. We can then look at the energy      #
+# loss distributions to understand the theoretical angular distrib. #
+#####################################################################
+
+
+class Moller_W_E(stats.rv_continuous):
+    '''
+    Energy loss distribution of Moller events
+    for a specified incident energy
+    '''
+    def __init__(self, E, nfree, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.E = E
+        self.Wmin = self.a
+        self.Wmax = self.b
+        self.func = lambda W : moller_dCS(E, W, nfree)
+
+    def totalInt(self):
+        tInt, _ = integrate.quad(self.func, self.Wmin, self.Wmax, epsabs=1e-39)
+        return tInt
+
+    def integral(self, W):
+        if (W[0]==self.Wmin):
+            WInt=self.func(W)
+        else:
+            WInt, _ = integrate.quad(self.func, self.Wmin, W, epsabs=1e-39)
+        return WInt
+
+
+    def _cdf(self, W):
+        return self.integral(W)/self.totalInt
+
+
+
+class Moller_W(stats.rv_continuous):
+    '''
+    Angular continuous distribution for Rutherford sattering
+    for a distribution of energies
+    '''
+    def __init__(self, Edist_df, Z, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Edist_df = Edist_df
+        self.Z = Z
+
+    # def _pdf(self, theta, Edist_df, Z):
+    #     ''' probability mass function'''
+    #     return Edist_df.weight * np.array(ruther_sigma_p(Edist_df.energy, Z, theta))
+
+    def _cdf(self, theta):
+        ''' cumulative distribution function is just the weighted
+        sum of all cmf at different samples of energy'''
+        # an instance of Ruth_diffCS
+        R_dist = Ruth_diffCS_E(Z=self.Z)
+
+        # the cumulative dstribution function for all the E in the DataFrame
+        return self.Edist_df.weight.values.dot(R_dist._cdf(theta, self.Edist_df.energy.values))

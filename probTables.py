@@ -32,9 +32,14 @@ def maxW_gryz(E, Ef):
         E  :: maximum energy to consider
         Ei :: binding energy of shell i
         Ef :: Fermi energy
+
+    Note: Gryz seems to be defined on the entire range [0, E)
+        but in that case I wouldn't be able to use the
+        binary collision model (?). The angular distirbution is
+        strongly forward peaked anyway. 
 	'''
 
-    return  E - Ef
+    return  (E - Ef)*0.5
 
 
 def binEdgePairs(inList):
@@ -549,9 +554,13 @@ class probTable:
         print()
 
 
-
+##############################################################################
+#########                    callable function                  ##############
+##############################################################################
 def genTables(inputPar):
     '''
+    generate Moller and Gryz probability tables
+    for a set of input parameters defining the system
     '''
 
     # define the Erange from input parameters
@@ -563,6 +572,7 @@ def genTables(inputPar):
     tables = {}
 
     materialInst = material(inputPar['material'])
+
     # instance for Moller table
     mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
                             E_range=Erange,

@@ -160,7 +160,7 @@ if __name__ == '__main__': #this is necessary on Windows
         p.start()
 
     # get results from queue
-    results = retreve(processes, output)
+    results = retrieve(processes, output)
 
     print()
     print ('joining results ...')
