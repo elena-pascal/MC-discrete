@@ -425,7 +425,7 @@ class scatter_discrete_wUnits(scatter_discrete):
 
 #### 1) classical Bethe
 class scatter_continuous_classical:
-    ''' This is the CSDA scattering mode
+    ''' This is the CSDA scattering mode classical model
     Rutherford is the elastic scattering and accounts for angular deviation
     and classical Bethe is the continuous energy loss
     '''
@@ -478,7 +478,7 @@ class scatter_continuous_classical:
         E_loss = self.pathl * bethe_cl_sp(self.m_Z, self.i_energy, self.m_atnd)
 
         assert (E_loss < self.i_energy), "Energy loss larger than electron energy: %s > %s" %(E_loss, self.i_energy)
-        self.E_loss = E_loss
+        self.E_loss = np.array(E_loss)
 
         # save energy loss if we want it
         self.scat_output.addToList('E_loss', self.E_loss)
@@ -488,8 +488,11 @@ class scatter_continuous_classical:
 
         self.halfPhi = pi*random.random()
 
+        # save scatter type Rutherford if we want it
+        self.scat_output.addToList('type', 'Rutherford')
+
         # save polar angle if we want it
-        self.scat_output.addToList('pol_angle', self.c2_half_Theta)
+        self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         # save azimuthal angle if we want it
         self.scat_output.addToList('az_angle', self.halfPhi)
@@ -517,7 +520,7 @@ class scatter_continuous_JL(scatter_continuous_classical):
 
 # explicit shells contributions Bethe as extention from the classical one
 class scatter_continuous_explicit(scatter_continuous_classical):
-    ''' This is the CSLA scattering mode
+    ''' This is the CSDA scattering mode
     Rutherford is the elastic scattering and accounts for angular deviation
     and the explicit modified version of Bethe is the continuous energy loss
     '''

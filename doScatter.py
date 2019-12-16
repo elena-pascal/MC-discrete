@@ -106,11 +106,11 @@ if __name__ == '__main__': #this is necessary on Windows
             sys.exit()
 
         elif (inputPar['mode'] == 'cont'):
-            if (inputPar['Bethe'] == 'classical'):
+            if (inputPar['Bethe_model'] == 'classical'):
                 scatterOneEl_cont_cl_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
-            elif (inputPar['Bethe'] == 'JL'):
+            elif (inputPar['Bethe_model'] == 'JL'):
                 scatterOneEl_cont_JL_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
-            elif (inputPar['Bethe'] == 'explicit'):
+            elif (inputPar['Bethe_model'] == 'explicit'):
                 scatterOneEl_cont_expl_wUnits(oneElectron, thisMaterial, inputPar['Emin'])
             else:
                 print (' ! I did not understand the Bethe model type in units check')
@@ -180,9 +180,10 @@ if __name__ == '__main__': #this is necessary on Windows
     # save to file
     fileBSE = 'data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
                                 '_tilt:' + str(inputPar['s_tilt'])+\
+                                '_Emin:' + str(inputPar['Emin'])  +\
+                                '_E0:'   + str(inputPar['E0'])    +\
                                 '_tolE:' + str(inputPar['tol_E']) +\
                                 '_tolW:' + str(inputPar['tol_W']) +\
-                                '_maxScat:' + str(inputPar['maxScatt']) +\
                                 '.h5'
 
 

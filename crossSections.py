@@ -371,7 +371,7 @@ class Ruth_diffCS_E(stats.rv_continuous):
         self.Z = Z
 
     def _pdf(self, theta, E):
-        ''' prpbability distribution function'''
+        ''' probability distribution function'''
         return np.array(ruther_sigma_p(E, self.Z, theta))
 
     def _cdf(self, theta, E):
@@ -413,7 +413,7 @@ class Ruth_diffCS(stats.rv_continuous):
         ''' cumulative distribution function is just the weighted
         sum of all cmf at different samples of energy'''
         # an instance of Ruth_diffCS
-        R_dist = Ruth_diffCS_E(Z=self.Z)
+        R_dist = Ruth_diffCS_E(a=self.a, b=self.b, Z=self.Z)
 
         # the cumulative dstribution function for all the E in the DataFrame
-        return self.Edist_df.weight.values.dot(R_dist._cdf(theta, self.Edist_df.energy.values))
+        return self.Edist_df.weight.values.dot(R_dist.cdf(theta, self.Edist_df.energy.values))

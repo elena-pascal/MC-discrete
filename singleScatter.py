@@ -7,7 +7,7 @@ from scattering import scatter_continuous_classical_wUnits, scatter_continuous_J
 from scattering import scatter_discrete
 
 
-def trajectory_DS(electron, E_i, material, Wc, maxScatt, tables):
+def trajectory_DS(electron, material, Wc, maxScatt, tables):
     ''' follow a full electron trajectory'''
 
     num_scatt = 0
@@ -206,6 +206,41 @@ def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
 ###############################################################################
 ################### continuous ################################################
 ###############################################################################
+def trajectory_cont_cl(electron, material, maxScatt):
+    ''' follow a full electron trajectory'''
+
+    num_scatt = 0
+
+    while ((electron.outcome is not 'absorbed') and (electron.outcome is not 'backscattered')): # not backscattered nor absorbed nor scattered too long
+        # new instance of scatter
+        scatter = scatter_continuous_classical(electron, material)
+
+        num_scatt += 1
+        if (num_scatt > maxScatt):
+             electron.outcome = 'scatteredTooLong'
+             electron.saveOutcomes()
+             return # exit while loop
+
+        # let the electron travel depending on the model used
+        scatter.compute_pathl()
+
+        # update electron position
+        electron.update_xyz(scatter.pathl)
+
+        # determine energy loss and scattering angle
+        scatter.compute_Eloss()
+
+        # update electron energy
+        electron.update_energy(scatter.E_loss)
+
+        # determine scattering angles
+        scatter.compute_sAngles()
+
+        # update electron new traveling direction
+        electron.update_direction(scatter.c2_halfTheta, scatter.halfPhi)
+
+
+
 
 # 1)
 def scatterOneEl_cont_cl(e_i, material, Emin):
@@ -347,7 +382,6 @@ def scatterOneEl_cont_expl(e_i, material, Emin):
 
 
  ################ with units ####################
-
  #1)
 def scatterOneEl_cont_cl_wUnits(e_i, material, Emin):
     absorbed = False
