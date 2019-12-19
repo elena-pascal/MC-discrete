@@ -222,13 +222,13 @@ def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_efour):
 
         Parameters
         ----------
-        E      : array : units = eV
+        E      : scalar : units = eV
                 primary electron energy
 
-        Esi    : array : units = eV
+        Esi    : scalar : units = eV
                 shell i binding energy
 
-        nsi    : array : units = dim
+        nsi    : scalar : units = dim
                  number of electrons in i-shell
 
         c_pi_efour: scalar: units = cm**2 * eV**2
@@ -237,7 +237,7 @@ def gryz_sigma(E, Esi, nsi, c_pi_efour=pi_efour):
         -------
         s_G    : array : units = cm**2
     """
-    # if the ennergy of this electron is lower than the shell i binding energy
+    # if the energy of this electron is lower than the shell i binding energy
     # then this Gryzinski sigma is set to zero
     if (E <= Esi):
         s_G = 0.
@@ -404,10 +404,6 @@ class Ruth_diffCS(stats.rv_continuous):
         super().__init__(*args, **kwargs)
         self.Edist_df = Edist_df
         self.Z = Z
-
-    # def _pdf(self, theta, Edist_df, Z):
-    #     ''' probability mass function'''
-    #     return Edist_df.weight * np.array(ruther_sigma_p(Edist_df.energy, Z, theta))
 
     def _cdf(self, theta):
         ''' cumulative distribution function is just the weighted

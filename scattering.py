@@ -176,11 +176,14 @@ class scatter_discrete:
 
         # material params
         self.m_Z = material.params['Z']          # atomic number
+
         self.m_names = material.params['name_s'] # names of the inner shells
         self.m_ns = material.params['ns']        # number of electrons per inner shell
         self.m_Es = material.params['Es']        # inner shells energies
+
         self.m_nval = material.params['n_val']   # number of valence shell electrons
         self.m_Eval = material.params['E_val']   # valence shell energy
+
         self.m_atnd = material.atnd              # atomic number density
         self.m_pl_e = material.plasmon_e         # plasmon energy
         self.m_f_e = material.fermi_e            # Fermi energy
@@ -199,40 +202,23 @@ class scatter_discrete:
 
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
-        #self.mfp = {} # dictionary keeping all mfp
 
-        ## TODO: decide on sigma or mfp. Is sigma the inverse mean free path?
         self.sigma['Rutherford'] = ruther_N_sigma(self.i_energy, self.m_Z)
-        #self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
         # if the energy is larger than the valence energy consider Moller scattering
         self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
-        #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
-        # else the probability of Moller scattering is the default zero
 
+        for shell in self.m_names:
+            self.sigma['Gryzinski' + shell] = gryz_sigma(self.i_energy, self.m_Es[shell], self.m_ns[shell])
+
+        self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
+
+        self.sigma_total = sum(self.sigma.values())
+
+        self.mfp_total = mfp_from_sigma( self.sigma_total, self.m_atnd)
 
         # output lists object
         self.scat_output = electron.scat_output
-
-
-        for shell in self.m_names:
-            #if (self.i_energy >= self.m_Es[i]):
-            self.sigma['Gryzinski' + shell] = gryz_sigma(self.i_energy, self.m_Es[shell], self.m_ns[shell])
-
-        # Patricks gryz sum
-        # self.sigma['Gryzinski'] = np.sum([self.sigma['Gryzinski1s'], self.sigma['Gryzinski2s'], self.sigma['Gryzinski2p']])
-        # del self.sigma['Gryzinski1s']
-        # del self.sigma['Gryzinski2s']
-        # del self.sigma['Gryzinski2p']
-
-        #if (self.i_energy > self.m_pl_e):
-        self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
-        #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
-
-        self.sigma_total = sum(self.sigma.values())
-        #self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
-        self.mfp_total = mfp_from_sigma( self.sigma_total, self.m_atnd)
-
 
     def compute_pathl(self):
         '''
@@ -367,15 +353,18 @@ class scatter_discrete_wUnits(scatter_discrete):
         self.i_energy = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.params['Z']          # atomic number
-        self.m_names = material.params['name_s'] # names of the inner shells
-        #self.m_ns = material.params['ns']        # number of electrons per inner shell
-        self.m_Es = material.params['Es']        # inner shells energies
+        self.m_Z = material.params['Z']           # atomic number
+
+        self.m_names = material.params['name_s']  # names of the inner shells
+        self.m_ns = material.params['ns']         # number of electrons per inner shell
+        self.m_Es = material.params['Es']         # inner shells energies
+
         self.m_nval = material.params['n_val']    # number of valence shell electrons
         self.m_Eval = material.params['E_val']    # valence shell energy
-        self.m_atnd = material.atnd    # atomic number density
-        self.m_pl_e = material.plasmon_e    # plasmon energy
-        self.m_f_e = material.fermi_e  # Fermi energy
+
+        self.m_atnd = material.atnd               # atomic number density
+        self.m_pl_e = material.plasmon_e          # plasmon energy
+        self.m_f_e = material.fermi_e             # Fermi energy
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -395,22 +384,17 @@ class scatter_discrete_wUnits(scatter_discrete):
         self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
 
         # if the energy is larger than the valence energy consider Moller scattering
-        if (self.i_energy >= self.m_Eval):
-            self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval, u_pi_efour)
-            #self.mfp['Moller'] = mfp_from_sigma(self.sigma['Moller'], self.m_atnd)
-            # else the probability of Moller scattering is zero
+        self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval, u_pi_efour)
+        # else the probability of Moller scattering is zero
 
         for i in range(len(self.m_Es)):
-            if (self.i_energy > self.m_Es[i]):
-                self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], u_pi_efour)
-                #self.mfp['Gryzinski' + self.m_names[i]] = mfp_from_sigma(self.sigma['Gryzinski' + self.m_names[i]], self.m_atnd)
+            self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], u_pi_efour)
 
         if (self.i_energy > self.m_pl_e):
             self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd, u_bohr_r)
-            #self.mfp['Quinn'] = mfp_from_sigma(self.sigma['Quinn'], self.m_atnd)
 
         self.sigma_total = sum(self.sigma.values())
-        #self.mfp_total = 1. /sum(1./np.array(self.mfp.values()))
+
         self.mfp_total = mfp_from_sigma( self.sigma_total, self.m_atnd)
 
         self.halfPhi = pi*random.random() # radians

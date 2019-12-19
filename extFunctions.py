@@ -273,6 +273,8 @@ class Moller_W(stats.rv_continuous):
 
 
 #------------------------------- Gryz ------------------------------------------
+from crossSections import gryz_sigma
+
 class Gryz_W_E(stats.rv_continuous):
     '''
     Energy loss distribution of Gryzinski events
@@ -281,6 +283,10 @@ class Gryz_W_E(stats.rv_continuous):
     instead is set when cdf is called.
     '''
     def __init__(self, nsi, Ebi, Ef, *args, **kwargs):
+        '''
+        nsi : dict of number of electron per inner shell
+        Esi : dict of binding energies of the inner shells
+        '''
         super().__init__(*args, **kwargs)
         self.Wmin = self.a
         self.Wmax = lambda E : maxW_gryz(E, Ef)
@@ -301,10 +307,17 @@ class Gryz_W_E(stats.rv_continuous):
     def _cdf(self, W, E):
         # set energy value
 
-        # integrand function at this energy
-        self.func = lambda Wvar : gryz_dCS(E, Wvar, self.nsi, self.Ebi)
+        weighted_sum, sigma_sum = 0, 0
+        # weight the contributions of each shell by the cross section
+        for shell in self.nsi.keys():
+            # integrand function at this energy
+            self.func = lambda Wvar : gryz_dCS(E, Wvar, self.nsi[shell], self.Ebi[shell])
 
-        return self.integral(W)/self.totalInt(E)
+            sigma = gryz_sigma(E, self.Ebi[shell], self.nsi[shell])
+            weighted_sum += sigma * self.integral(W)/self.totalInt(E)
+            sigma_sum += sigma
+            
+        return weighted_sum/sigma_sum
 
 class Gryz_W(stats.rv_continuous):
     '''

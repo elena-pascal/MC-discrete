@@ -5,13 +5,14 @@ import warnings
 from multiprocessing import Process, cpu_count, Queue
 import pandas as pd
 import numpy as np
-from scipy import integrate
+from scipy import integrate, stats
 
 #import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 from crossSections import Ruth_diffCS, Ruth_diffCS_E
 from extFunctions import Moller_W_E, Moller_W, Gryz_W_E, Gryz_W
 
@@ -301,8 +302,75 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
          # assert if U2 < crit then the null hypothesis is not rejected
          # null hypothesis: the two sets of angles are not significantly different
-         print ('U2:', U2)
          self.assertTrue (U2 < crit), 'The two sets of angles are not from the same distribution'
+
+    #########################################################################
+    ############################ cross section tests ########################
+    #########################################################################
+    def Test_crossSection(self):
+        '''
+        Is the probability of different channels scattering matching
+        the theoretical cross section at incident energy?
+        '''
+        print ('\n', 'Cross sections at E0',
+               '\n',  '--------------------------------------')
+
+        # size of sample must be at least 500 for stats to work out
+        # if this is larger than the number of events at E0 than we oversample
+        n = 500
+
+        # select only incident energy data
+        E = np.array(self.inputPar['E0'])
+
+        ################ expected #############################################
+        sigmas = {}
+        # Rutherford CS at energy E0
+        sigmas['p_R'] = ruther_sigma(E, self.material.params['Z'])
+
+        # Moller CS at energy E0
+        sigmas['p_M'] = moller_sigma(E, self.inputPar['Wc'], self.material.params['n_val'])
+
+        # Gryzinski labels
+        Gryzinski = [i+j for i,j in zip(['Gryzinski']*len(self.material.params['name_s']), self.material.params['name_s'])]
+
+        # one Gryzinski CS for each inner shell
+        for key in self.material.params['name_s']:
+            sigmas['p_G'+key] = gryz_sigma(E, self.material.params['Es'][key], self.material.params['ns'][key])
+
+        # Quinn CS at energy E0
+        sigmas['p_Q'] = quinn_sigma(E, self.material.plasmon_e, self.material.fermi_e, self.material.atnd)
+
+        normalisation = sum(sigmas.values())
+        # sample n values from the theoretical cross sections
+        expected = np.random.choice(['Rutherford', 'Moller', *Gryzinski, 'Quinn'], n,
+                                    p=np.array(list(sigmas.values()))/normalisation)
+
+        # make a dataframe with the counts; last bit removes redundant multilevel index
+        exp_df = pd.crosstab(index=expected, columns=['count'], colnames=['type']).rename_axis(None)
+
+        ################### observed ##########################################
+        # read dataframe into pandas
+        scatterings = pd.read_hdf(self.file, 'scatterings')
+
+        # choose n random scattering types from the MC results
+        observed = np.random.choice(scatterings[scatterings.E==E]['type'].values, n)
+
+        # make it a pandas categorical to ensure we have all types even if we didn't sample some of them
+        observed = pd.Categorical(observed, categories=exp_df.index.values)
+
+        # make a dataframe with the counts; last bit removes redundant multilevel index
+        obs_df = pd.crosstab(index=observed, columns=['count'], colnames=['type'],
+                                        dropna=False).rename_axis(None)
+        # chi square statistic for observed data is the same as the expected distribution
+        chi2stat, _ = stats.chisquare(f_obs=obs_df, f_exp=exp_df)
+
+        # critical chi square statistics value
+        crit = stats.chi2.ppf(q=0.95,              # at 95% confidence
+                            df= len(exp_df)-1  ) # degrees of freedom
+
+        # reject null hypothesis that the two distributions are the same
+        # if chi2stat > crit
+        self.assertTrue (chi2stat < crit), 'The observed scattering types probabilities do not match those expected'
 
 
     #########################################################################
@@ -616,7 +684,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # make a probability distribution for Gryzinski angular scattering
         Gryz_W_dist = Gryz_W_E(a=self.inputPar['Wc'], b=b, xtol=1e-3,
-                                    nsi=self.material.params['n_val'],
+                                    nsi=self.material.params['ns'],
                                     Ebi=self.material.params['Es'],
                                     Ef=self.material.fermi_e)
 
@@ -625,7 +693,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # compute corresponding angles in degrees
         thAngles = thetaFromCos(binaryCollModel(E, Ws))
-
+        print ('th angles', thAngles)
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
                             ignore_index=True)
@@ -737,7 +805,8 @@ def suite():
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite
