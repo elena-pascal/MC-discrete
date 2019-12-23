@@ -1,0 +1,33 @@
+# input file
+
+num_el   : 50000  # per process; to be multiplied by number of processes
+E0       : 20000 # eV
+Emin     : 15000 # eV; cannot be smaller than Wc
+material : Al
+s_tilt   : 70     # degrees
+mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+# if continuous choose Bethe model
+Bethe_model : classical # classical, JL or explicit
+
+# relative error tolerance for W and E integration tables
+# note the default values require at least 10G memory
+tol_E : 1e-4
+tol_W : 1e-7
+
+# maximum number of scattering events per electron to consider
+maxScatt: 1000
+
+# minimum transfer energy only relevant for discrete scattering
+Wc       : 10     # eV; Wc = Ec*E0
+
+# list of desired outputs
+electron_output : outcome, final_E  # outcome, final_E, final_dir
+scatter_output :  # type, E_loss, az_angle, pol_angle, pathl, position, energy
+
+# detector information
+L        :   0
+delta    :   0
+x_PC     :   0
+y_PC     :   0
+
+d_tilt   :   0
