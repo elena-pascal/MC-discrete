@@ -5,7 +5,7 @@ from scimath.units.energy import  eV
 from scimath.units.length import  angstrom, cm, m
 from scimath.units.dimensionless import dim
 
-from parameters import pi_efour, bohr_r
+from MC.parameters import pi_efour, bohr_r
 
 
 ###################################################################

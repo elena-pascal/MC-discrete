@@ -7,9 +7,9 @@ import pickle
 from tqdm import tqdm
 import cProfile
 
-from material import material
-from electron import electron
-from singleScatter import trajectory_DS, trajectory_cont_cl
+from MC.material import material
+from MC.electron import electron
+from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 
 def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
     # for parallel processes we need to make sure the random number seeds are different

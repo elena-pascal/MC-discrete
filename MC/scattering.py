@@ -11,10 +11,10 @@ from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
 from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
 
-from electron import electron
-from crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
-from stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
-from errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
+from MC.electron import electron
+from MC.crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
+from MC.stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
+from MC.errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 
 @has_units
 def mfp_from_sigma(sigma, n):
@@ -336,7 +336,7 @@ class scatter_discrete:
 
 
 #######################  with units  #########################################
-from parameters import u_bohr_r, u_pi_efour
+from MC.parameters import u_bohr_r, u_pi_efour
 
 class scatter_discrete_wUnits(scatter_discrete):
     ''' scatter_discerte_wUnits inherits the class scatter_discrete

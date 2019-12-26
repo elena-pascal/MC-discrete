@@ -4,7 +4,7 @@ from math import cos, sin
 import quaternion
 
 
-from errors import q_azNotNormal, q_polNotNormal
+from MC.errors import q_azNotNormal, q_polNotNormal
 
 def rotate_vector_Lqv(q, v):
     '''

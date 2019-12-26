@@ -10,8 +10,8 @@ from dask import array as da
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 
-from extFunctions import gryz_dCS, moller_dCS
-from material import material
+from MC.extFunctions import gryz_dCS, moller_dCS
+from MC.material import material
 
 
 
@@ -36,7 +36,7 @@ def maxW_gryz(E, Ef):
     Note: Gryz seems to be defined on the entire range [0, E)
         but in that case I wouldn't be able to use the
         binary collision model (?). The angular distirbution is
-        strongly forward peaked anyway. 
+        strongly forward peaked anyway.
 	'''
 
     return  (E - Ef)*0.5
@@ -577,7 +577,7 @@ def genTables(inputPar):
     mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='tables', chunk_size=csize,
+                            mat=materialInst, mapTarget='../tables', chunk_size=csize,
                             Wc=inputPar['Wc'])
 
     # generate Moller table
@@ -601,7 +601,7 @@ def genTables(inputPar):
         gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='tables', chunk_size=csize)
+                            mat=materialInst, mapTarget='../tables', chunk_size=csize)
 
         # generate Gryzinski table for shell Gshell
         #gryzTable.generate()
@@ -630,7 +630,7 @@ def genTables(inputPar):
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-logging.basicConfig(filename='logs/tables.log',level=logging.INFO, filemode='w')
+logging.basicConfig(filename='../logs/tables.log',level=logging.INFO, filemode='w')
 # test things
 #
 # # set material

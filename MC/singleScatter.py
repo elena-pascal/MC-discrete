@@ -1,10 +1,10 @@
 import numpy as np
 
 
-from electron import electron
-from scattering import scatter_continuous_classical,scatter_continuous_JL, scatter_continuous_explicit
-from scattering import scatter_continuous_classical_wUnits, scatter_continuous_JL_wUnits, scatter_continuous_explicit_wUnits
-from scattering import scatter_discrete
+from MC.electron import electron
+from MC.scattering import scatter_continuous_classical,scatter_continuous_JL, scatter_continuous_explicit
+from MC.scattering import scatter_continuous_classical_wUnits, scatter_continuous_JL_wUnits, scatter_continuous_explicit_wUnits
+from MC.scattering import scatter_discrete
 
 
 def trajectory_DS(electron, material, Wc, maxScatt, tables):

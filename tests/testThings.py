@@ -12,16 +12,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
-from crossSections import Ruth_diffCS, Ruth_diffCS_E
-from extFunctions import Moller_W_E, Moller_W, Gryz_W_E, Gryz_W
+from MC.crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
+from MC.crossSections import Ruth_diffCS, Ruth_diffCS_E
+from MC.distributions import Moller_W_E, Moller_W, Gryz_W_E, Gryz_W
 
-from scattering import alpha, binaryCollModel, Rutherford_halfPol
-from multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
-from material import material
+from MC.scattering import alpha, binaryCollModel, Rutherford_halfPol
+from MC.multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
+from MC.material import material
 
-from fileTools import readInput, thingsToSave, writeBSEtoHDF5
-from probTables import genTables, maxW_moller, maxW_gryz
+from MC.fileTools import readInput, thingsToSave, writeBSEtoHDF5
+from MC.probTables import genTables, maxW_moller, maxW_gryz
 
 
 def unique(inputList):
@@ -205,7 +205,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
     def setUp(self):
         print ('Setting up...', '\n')
 
-        self.inputPar = readInput('testData/testInput.file')
+        self.inputPar = readInput('testInput.file')
         self.material = material(self.inputPar['material'])
         self.tables  = genTables(self.inputPar)
         self.whatToSave = {'el_output':thingsToSave(self.inputPar['electron_output']),
@@ -810,9 +810,9 @@ def suite():
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
+    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite

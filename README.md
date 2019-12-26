@@ -1,6 +1,15 @@
 # MC-discrete
 
-Discrete inelastic electron scattering Monte Carlo implementation
+Discrete inelastic electron scattering Monte Carlo python implementation
+
+## Required libraries
+* `numpy`
+* `scipy`
+* `scimath`
+* `math`
+* `multiprocessing`
+* `dask`
+
 
 MC/`doScatter.py` calls the rest of the code according to the parameters set in inputFile/`input.file`. The parametes in the input file are:
 * number of electron per process : `num_el`

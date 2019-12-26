@@ -1,4 +1,4 @@
-from rotation import newdir, newdircos_oldMC
+from MC.rotation import newdir, newdircos_oldMC
 
 from math import sin, cos
 import numpy as np

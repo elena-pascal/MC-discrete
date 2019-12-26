@@ -9,7 +9,7 @@ from scimath.units.time import s
 from scipy.constants import pi, Avogadro, hbar, m_e, e, epsilon_0
 
 #constants with units
-from parameters import u_hbar, u_me, u_e, u_eps0
+from MC.parameters import u_hbar, u_me, u_e, u_eps0
 
 @has_units
 def at_num_dens(dens, atom_mass):

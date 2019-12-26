@@ -6,7 +6,7 @@ from scimath.units.api import has_units
 from scimath.units.length import cm, m
 from scimath.units.energy import eV, KeV
 
-from parameters import pi_efour, bohr_r
+from MC.parameters import pi_efour, bohr_r
 
 
 

@@ -11,10 +11,10 @@ from functools import partial
 from scimath.units.api import UnitScalar, UnitArray
 from tqdm import tqdm
 
-from probTables import genTables
-from singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
-from multiScatter import scatterMultiEl_DS, scatterMultiEl_cont, retrieve
-from fileTools import readInput, writeBSEtoHDF5, thingsToSave
+from MC.probTables import genTables
+from MC.singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
+from MC.multiScatter import scatterMultiEl_DS, scatterMultiEl_cont, retrieve
+from MC.fileTools import readInput, writeBSEtoHDF5, thingsToSave
 
 
 
@@ -25,7 +25,7 @@ from fileTools import readInput, writeBSEtoHDF5, thingsToSave
 # useful when in doubt about units
 def main(argv):
     use_units = False
-    inputfile = 'input.file'
+    inputfile = '../inputFile/input.file'
 
     def usage():
         print ('doScatter.py -i <input file> ')
@@ -178,7 +178,7 @@ if __name__ == '__main__': #this is necessary on Windows
     print()
 
     # save to file
-    fileBSE = 'data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
+    fileBSE = '../data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
                                 '_tilt:' + str(inputPar['s_tilt'])+\
                                 '_Emin:' + str(inputPar['Emin'])  +\
                                 '_E0:'   + str(inputPar['E0'])    +\
