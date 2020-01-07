@@ -27,6 +27,12 @@ MC/`doScatter.py` calls the rest of the code according to the parameters set in 
 
 * the output is made of two dataframes in a hdf5 table with columns set here. `electron_output` contains all the electron parameters of interenst and `scatter_output` the scattering values. 
 
+## Set up
+Bacause I moved the python files in separate folders and used namespaces to call them, python needs to know the path we're in:
+
+`export PYTHONPATH=[where the repo is]/MC-discrete/`
+
+
 ## Tests
 
 tests/`testThings.py` runs some statistical tests for the stochastic patameters, set up follows tests/`inputTest.file`
