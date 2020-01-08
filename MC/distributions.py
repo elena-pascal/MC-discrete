@@ -30,14 +30,14 @@ class Moller_W_E(stats.rv_continuous):
         self.nfree = nfree
 
     def totalInt(self, E):
-        tInt, _ = integrate.quad(self.func, self.Wmin, self.Wmax(E), epsabs=1e-39)
+        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=1e-39)
         return tInt
 
     def integral(self, W):
         if (W==self.Wmin):
             WInt=self.func(W)
         else:
-            WInt, _ = integrate.quad(self.func, self.Wmin, W, epsabs=1e-39)
+            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=1e-39)
         return WInt
 
     def _cdf(self, W, E):
@@ -76,52 +76,56 @@ class Moller_W(stats.rv_continuous):
 
 #------------------------------- Gryz ------------------------------------------
 
-class Gryz_W_E(stats.rv_continuous):
+class Gryz_Last_W_E(stats.rv_continuous):
     '''
-    Energy loss distribution of Gryzinski events
-    for a specified incident energy.
+    Energy loss distribution of Gryzinski events for a specified incident energy.
+    For the last shell only; this is the channel with the highest sigma.
+    (Combining all shells into a single distribution is challenged by the fact
+    that the lower limit of the distribution depends on the shell)
     The energy is not a property of the instance,
-    instead is set when cdf is called.
+    instead, it is set when cdf is called.
     '''
-    def __init__(self, nsi, Ebi, Ef, *args, **kwargs):
+    def __init__(self, ns_last, Eb_last, Ef, *args, **kwargs):
         '''
-        nsi : dict of number of electron per inner shell
-        Esi : dict of binding energies of the inner shells
+        nsi : number of electrons in the last inner shell
+        Esi : binding energie of the last  inner shells
         '''
         super().__init__(*args, **kwargs)
-        self.nsi = nsi # dict
-        self.Ebi = Ebi # dict
+        self.ns_last = ns_last
+        self.Eb_last = Eb_last
 
-        self.Wmin = lambda shell : Ebi[shell]
+        self.Wmin = Eb_last
         self.Wmax = lambda E : maxW_gryz(E, Ef)
 
-    def totalInt(self, E, shell):
-        tInt, _ = integrate.quad(self.func, self.Wmin(shell), self.Wmax(E), epsabs=1e-39)
+    def totalInt(self, E):
+        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=1e-39)
         return tInt
 
-    def integral(self, W, shell):
+    def integral(self, W):
+        # is the distribution range correct?
+        assert (W>=self.Wmin), 'W should not be smaller than Wmin'
+
         if (W==self.Wmin):
-            WInt=self.func(W)
+            WInt = self.func(W)
         else:
-            WInt, _ = integrate.quad(self.func, self.Wmin(shell), W, epsabs=1e-39)
+            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=1e-39)
         return WInt
 
+
     def _cdf(self, W, E):
-        # set energy value
+        '''
+        Sets incident energy value when called
 
-        weighted_sum, sigma_sum = 0, 0
-        # weight the contributions of each shell by the cross section
-        for shell in self.nsi.keys():
-            # integrand function at this energy
-            self.func = lambda Wvar : gryz_dCS(E, Wvar, self.nsi[shell], self.Ebi[shell])
+        W and E arrive as np.arrays
+        '''
 
-            # cross section for this shell and energy
-            sigma = gryz_sigma(E, self.Ebi[shell], self.nsi[shell])
+        # define integrand function at this energy
+        self.func = lambda Wvar : gryz_dCS(E, Wvar, self.ns_last, self.Eb_last)
 
-            weighted_sum += sigma * self.integral(W, shell)/self.totalInt(E, shell)
-            sigma_sum += sigma
+        return self.integral(W)/self.totalInt(E)
 
-        return weighted_sum
+
+
 
 class Gryz_W(stats.rv_continuous):
     '''

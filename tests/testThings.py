@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 
 from MC.crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 from MC.crossSections import Ruth_diffCS, Ruth_diffCS_E
-from MC.distributions import Moller_W_E, Moller_W, Gryz_W_E, Gryz_W
+from MC.distributions import Moller_W_E, Moller_W, Gryz_Last_W_E, Gryz_W
 
 from MC.scattering import alpha, binaryCollModel, Rutherford_halfPol
 from MC.multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
@@ -178,7 +178,6 @@ def rndAnglesFromDF(scatter_data, scatter_type, angle_type, size, E = None):
         list of scattering angles in degrees
     '''
     if E:
-        print(scatter_data[(scatter_data.type.str.contains(scatter_type, regex=False ))& (scatter_data.E==E)])
         angles = random.sample(list(scatter_data[(scatter_data.type.str.contains(scatter_type, regex=False ))
                                         & (scatter_data.E==E)][angle_type].values), size)
     else:
@@ -262,8 +261,8 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
          # pick only the first 100 points for each label; this is good enough for the test
          # sort angles in degrees into x and y lists
-         x = sorted(data[data.label=='theory'].iloc[0:200].angles_deg.values)
-         y = sorted(data[data.label=='MC'].iloc[0:200].angles_deg.values)
+         x = sorted(data[data.label=='theory'].iloc[0:100].angles_deg.values)
+         y = sorted(data[data.label=='MC'].iloc[0:100].angles_deg.values)
 
          # number of observations in each set
          nx, ny = len(x), len(y)
@@ -660,11 +659,10 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
     def TestPolarProb_Gryz_E0(self):
         '''
-            Test if the polar angle distribution of Moller scatterings
+            Test if the polar angle distribution of Gryzinski scatterings
             is within a certain range from the computed probability distribution
         '''
-        print ('\n', 'Gryzinski polar angle scattering at E0',
-               '\n', '----------------------------------')
+        print ('\n', 'Gryzinski polar angle scattering at E0')
 
         # size of sample is equal to number of electrons scattered
         n = self.inputPar['num_el']
@@ -678,20 +676,25 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # choose n random values from the MC Gryzinski polar scattering angles
         MCAngles = rndAnglesFromDF(scatterings, 'Gryzinski', 'pol_angle', n, E)
 
-        print ('Mc angles', MCAngles)
         # add these angles in degrees to a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
 
-        # the right end of the prob distribution is min of binding energies of inner shells
-        a = min(list(self.material.params['Es'].values()))
+        # we're only testing the last inner shell
+        lastShell = min(self.material.params['Es'], key=self.material.params['Es'].get)
+
+        print ('   for shell', lastShell,
+                '\n', '----------------------------------')
+
+        # the right end of the prob distribution is last or min of binding energies of inner shells
+        a = self.material.params['Es'][lastShell]
 
         # the left end of the prob distribution is the def of max W
         b = maxW_gryz(E, self.material.fermi_e)
 
         # make a probability distribution for Gryzinski angular scattering
-        Gryz_W_dist = Gryz_W_E(a=a, b=b, xtol=1e-3,
-                                    nsi=self.material.params['ns'],
-                                    Ebi=self.material.params['Es'],
+        Gryz_W_dist = Gryz_Last_W_E(a=a, b=b, xtol=1e-3,
+                                    ns_last=self.material.params['ns'][lastShell],
+                                    Eb_last=a,
                                     Ef=self.material.fermi_e)
 
         # pick n Ws from this distribution
@@ -699,7 +702,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # compute corresponding angles in degrees
         thAngles = thetaFromCos(binaryCollModel(E, Ws))
-        print ('th angles', thAngles)
+
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
                             ignore_index=True)
@@ -810,9 +813,9 @@ def suite():
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
-    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
+    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite

@@ -81,27 +81,22 @@ def pickTable(table, energy):
 
     # read energy dataframe from h5 file
     energies_table = table.Es
-    #print ('list of energies', energies_table)
 
     # find the index in the table for this energy
     Eidx_table = bisect.bisect_left(table.Es, energy)   # less than value
     # NOTE: this is not a bad implementation, except for the cases when the energy is
     # exactly equal to the min value and we end up with index -1
     # I avoided that by setting electrons of energies <= starting value to be absorbed
-    #print(energy, 'corresponds to ', table.Es[Eidx_table])
 
     # get the column in the table for this energy
     CDF_list = table.table[Eidx_table]
-    #print('list of prob for energy losses', CDF_list)
 
     # let's pick a value. integral(E, Wi) is rr * total integral
     Widx_table = bisect.bisect_left(CDF_list, random.random())
-    #print ('picked W index', Widx_table)
 
     # which is an energy loss of
     E_loss = table.Ws[Widx_table]
-    #print ('Eloss value', E_loss)
-    #print ()
+
     return (E_loss, energies_table[Eidx_table])
 
 
