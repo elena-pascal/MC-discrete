@@ -1,6 +1,7 @@
 import unittest
 import random
 import warnings
+import os
 
 from multiprocessing import Process, cpu_count, Queue
 import pandas as pd
@@ -201,22 +202,23 @@ class TestScatterAnglesforDS(unittest.TestCase):
     from which events are sampled
     '''
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         print ('Setting up...', '\n')
 
-        self.inputPar = readInput('testInput.file')
-        self.material = material(self.inputPar['material'])
-        self.tables  = genTables(self.inputPar)
-        self.whatToSave = {'el_output':thingsToSave(self.inputPar['electron_output']),
-                         'scat_output': thingsToSave(self.inputPar['scatter_output']) }
-        self.file = 'testData/testAngles_DS.temp'
+        cls.inputPar = readInput('testInput.file')
+        cls.material = material(cls.inputPar['material'])
+        cls.tables  = genTables(cls.inputPar)
+        cls.whatToSave = {'el_output':thingsToSave(cls.inputPar['electron_output']),
+                         'scat_output': thingsToSave(cls.inputPar['scatter_output']) }
+        cls.file = 'testData/testAngles_DS.temp'
 
-        self.num_proc = cpu_count()-1
+        cls.num_proc = cpu_count()-1
 
         output = {'electrons': Queue(), 'scatterings': Queue()}
 
-        processes = [Process(target=scatterMultiEl_DS, args=(self.inputPar, self.tables,
-                                            self.whatToSave, output, count)) for count in range(self.num_proc)]
+        processes = [Process(target=scatterMultiEl_DS, args=(cls.inputPar, cls.tables,
+                                            cls.whatToSave, output, count)) for count in range(cls.num_proc)]
         # start threads
         for p in processes:
             p.start()
@@ -232,15 +234,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # save to file
         warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-        writeBSEtoHDF5(results, self.inputPar, self.file)
-
-    # @classmethod
-    # def setUpClass(cls):
-    #     """ get_some_resource() is slow, to avoid calling it for each test use setUpClass()
-    #         and store the result as class variable
-    #     """
-    #     super(TestScatterAnglesforDS, cls).setUpClass()
-    #     cls.MCdata = generateData()
+        writeBSEtoHDF5(results, cls.inputPar, cls.file)
 
     def watson_two_test(self, data, angle_type, plot=False, numBins=30):
          '''
@@ -832,19 +826,32 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # are the two samples part of the same population?
         self.watson_two_test(pdData, 'azimuthal', True, 50)
 
+    @classmethod
+    def tearDownClass(cls):
+        print ('Removing test data...', '\n')
+        os.remove(cls.file )
+
 ########################################################################
 ######################### main ##########################################
 #########################################################################
 def suite():
     suite = unittest.TestSuite()
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
+
+    # add cross sections sigma test
+    suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
+
+    # add Rutherford angle tests
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
+    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
+
+    # add Moller angle tests
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
-    #suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
+
+    # add Gryz angle tests
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
     suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite
