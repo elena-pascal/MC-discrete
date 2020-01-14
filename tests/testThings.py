@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 
 from MC.crossSections import ruther_sigma, moller_sigma, gryz_sigma, quinn_sigma
 from MC.crossSections import Ruth_diffCS, Ruth_diffCS_E
-from MC.distributions import Moller_W_E, Moller_W, Gryz_Last_W_E, Gryz_W
+from MC.distributions import Moller_W_E, Moller_W, Gryz_Last_W_E, Gryz_Last_W
 
 from MC.scattering import alpha, binaryCollModel, Rutherford_halfPol
 from MC.multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
@@ -441,8 +441,8 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # make a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
 
-        # choose 10*n energy values
-        Elist = np.random.choice(scatterings.E, 10*n)
+        # choose n energy values
+        Elist = np.random.choice(scatterings.E, n)
 
         # array of bins
         bins = np.linspace(start=self.inputPar['Emin'], stop=self.inputPar['E0'],
@@ -549,7 +549,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         Ws = Moller_W_dist.rvs(size=n, E=E)
 
         # compute corresponding angles in degrees
-        thAngles = thetaFromCos(binaryCollModel(E, Ws))
+        thAngles = thetaFromCos(binaryCollModel(E, Ws, self.material.fermi_e))
 
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
@@ -558,10 +558,14 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # are the two samples part of the same population?
         self.watson_two_test(pdData, 'polar', True, 50)
 
+
     def TestPolarProb_Moller(self):
         '''
             Like above but for all energies.
         '''
+        print ('\n', 'Moller polar angle scattering at all energies',
+               '\n', '----------------------------------')
+
         # size of sample
         n = self.inputPar['num_el']*self.num_proc
 
@@ -574,13 +578,11 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # make a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
 
-        # choose 10*n energy values
-        Elist = np.random.choice(scatterings.E, 10*n)
+        # choose n energy values
+        Elist = np.random.choice(scatterings.E, n)
 
         # array of bins
-        bins = np.linspace(start=self.inputPar['Emin'], stop=self.inputPar['E0']/2,
-                            endpoint=True, num=100)
-
+        bins = np.linspace(start=self.inputPar['Emin'], stop=self.inputPar['E0'], num=10)
 
         # get a histrogram from the energy list
         E_weight, _ = np.histogram(Elist, bins = bins)
@@ -594,11 +596,13 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # put these in a DataFrame
         E_df = pd.DataFrame({'energy':E_bins, 'weight':E_weight})
 
-        # the left end of the prob distribution is the def of max W
+        # the left end of the prob distribution is the max of W
         b = maxW_moller(self.inputPar['E0'], self.material.fermi_e)
+        # but most values are in this range
+        #b = maxW_moller(min(Elist), self.material.fermi_e)
 
-        # instance of probability ditribution at this sample of angles
-        Moller_W_dist = Moller_W(a=self.inputPar['Wc'], b=b,
+        # instance of W probability ditribution at this sample of energies
+        Moller_W_dist = Moller_W(a=self.inputPar['Wc'], b=b, xtol=1e-3,
                                 nfree=self.material.params['n_val'], Edist_df=E_df,
                                 Ef=self.material.fermi_e)
 
@@ -606,8 +610,14 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # pick n Ws from this distribution
         Ws = Moller_W_dist.rvs(size=n)
 
-        # compute corresponding angles in degrees
-        thAngles = thetaFromCos(binaryCollModel(E, Ws))
+        # compute the angles for the entire list of energies and Ws
+        angles_dist = (binaryCollModel(np.matrix(Elist), np.matrix(Ws).T, self.material.fermi_e)).flatten()
+
+        # select only n of those values
+        angles_n = np.random.choice(angles_dist, n)
+
+        # compute corresponding angles in degrees (only non NaN values)
+        thAngles = thetaFromCos(angles_n[~np.isnan(angles_n)])
 
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
@@ -701,7 +711,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         Ws = Gryz_W_dist.rvs(size=n, E=E)
 
         # compute corresponding angles in degrees
-        thAngles = thetaFromCos(binaryCollModel(E, Ws))
+        thAngles = thetaFromCos(binaryCollModel(E, Ws, self.material.fermi_e))
 
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
@@ -710,10 +720,13 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # are the two samples part of the same population?
         self.watson_two_test(pdData, 'polar', True, 50)
 
+
     def TestPolarProb_Gryz(self):
         '''
             Like above but for all energies.
         '''
+        print ('\n', 'Gryzinski polar angle scattering at all energies')
+
         # size of sample
         n = self.inputPar['num_el']*self.num_proc
 
@@ -726,13 +739,11 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # make a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
 
-        # choose 10*n energy values
-        Elist = np.random.choice(scatterings.E, 10*n)
+        # choose n energy values
+        Elist = np.random.choice(scatterings.E, n)
 
         # array of bins
-        bins = np.linspace(start=self.inputPar['Emin'], stop=self.inputPar['E0']/2,
-                            endpoint=True, num=100)
-
+        bins = np.linspace(start=self.inputPar['Emin'], stop=self.inputPar['E0'], num=10)
 
         # get a histrogram from the energy list
         E_weight, _ = np.histogram(Elist, bins = bins)
@@ -746,20 +757,38 @@ class TestScatterAnglesforDS(unittest.TestCase):
         # put these in a DataFrame
         E_df = pd.DataFrame({'energy':E_bins, 'weight':E_weight})
 
+        # we're only testing the last inner shell
+        lastShell = min(self.material.params['Es'], key=self.material.params['Es'].get)
+
+        print ('   for shell', lastShell,
+                '\n', '----------------------------------')
+
+        # the right end of the prob distribution is last or min of binding energies of inner shells
+        a = self.material.params['Es'][lastShell]
+
         # the left end of the prob distribution is the def of max W
-        b = maxW_moller(self.inputPar['E0'], self.material.fermi_e)
+        b = maxW_gryz(self.inputPar['E0'], self.material.fermi_e)
 
         # instance of probability ditribution at this sample of angles
-        Gryz_W_dist = Moller_W(a=self.inputPar['Wc'], b=b,
-                                nfree=self.material.params['n_val'], Edist_df=E_df,
+        Gryz_W_dist = Gryz_Last_W(a=a, b=b, xtol=1e-3,
+                                ns_last=self.material.params['ns'][lastShell],
+                                Eb_last=a,
+                                Edist_df=E_df,
                                 Ef=self.material.fermi_e)
 
         print ('\n', '...sampling from theoretical distribution', '\n')
+
         # pick n Ws from this distribution
         Ws = Gryz_W_dist.rvs(size=n)
 
-        # compute corresponding angles in degrees
-        thAngles = thetaFromCos(binaryCollModel(E, Ws))
+        # compute the angles for the entire list of energies and Ws
+        angles_dist = (binaryCollModel(np.matrix(Elist), np.matrix(Ws).T, self.material.fermi_e)).flatten()
+
+        # select only n of those values
+        angles_n = np.random.choice(angles_dist, n)
+
+        # compute corresponding angles in degrees (only non NaN values)
+        thAngles = thetaFromCos(angles_n[~np.isnan(angles_n)])
 
         # add to the dataframe
         pdData = pdData.append(pd.DataFrame(data={'label':'theory', 'angles_deg':thAngles }),
@@ -815,9 +844,9 @@ def suite():
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
+    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite
 
 if __name__ == '__main__':

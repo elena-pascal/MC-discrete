@@ -1,3 +1,4 @@
+import numpy as np
 from scipy import integrate, stats
 
 from MC.probTables import maxW_moller, maxW_gryz
@@ -30,18 +31,17 @@ class Moller_W_E(stats.rv_continuous):
         self.nfree = nfree
 
     def totalInt(self, E):
-        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=1e-39)
+        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=0)
         return tInt
 
     def integral(self, W):
         if (W==self.Wmin):
             WInt=self.func(W)
         else:
-            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=1e-39)
+            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=0)
         return WInt
 
-    def _cdf(self, W, E):
-        # set energy value
+    def _cdf(self, W, E): # sets energy value
 
         # integrand function at this energy
         self.func = lambda Wvar : moller_dCS(E, Wvar, self.nfree)
@@ -56,19 +56,18 @@ class Moller_W(stats.rv_continuous):
     def __init__(self, Edist_df, nfree, Ef, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.Edist_df = Edist_df
-        self.Wmin = self.a
-        self.Wmax = self.b
         self.nfree = nfree
         self.Ef = Ef
+        # an instance of Moller_W_E
+        self.Moller_W_dist = Moller_W_E(a=self.a, b=self.b, nfree=self.nfree, Ef=self.Ef)
 
     def _cdf(self, W):
         ''' cumulative distribution function is just the weighted
         sum of all cmf at different samples of energy'''
-        # an instance of Moller_W_E
-        Moller_W_dist = Moller_W_E(a=self.a , b=self.b, nfree=self.nfree, Ef=self.Ef)
 
         # an array of CDFs at the energy values in the distribution
-        CDFs = np.array(list(map(Moller_W_dist.cdf, list(W)*len(self.Edist_df.energy.values), self.Edist_df.energy.values)))
+        CDFs = np.array(list(map(self.Moller_W_dist._cdf, list(W)*len(self.Edist_df.energy.values),
+                                                          self.Edist_df.energy.values)          ))
 
         # the cumulative dstribution function for all the E in the DataFrame
         return self.Edist_df.weight.values.dot(CDFs)
@@ -98,7 +97,7 @@ class Gryz_Last_W_E(stats.rv_continuous):
         self.Wmax = lambda E : maxW_gryz(E, Ef)
 
     def totalInt(self, E):
-        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=1e-39)
+        tInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=self.Wmax(E), epsabs=0)
         return tInt
 
     def integral(self, W):
@@ -108,7 +107,7 @@ class Gryz_Last_W_E(stats.rv_continuous):
         if (W==self.Wmin):
             WInt = self.func(W)
         else:
-            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=1e-39)
+            WInt, _ = integrate.quad(func=self.func, a=self.Wmin, b=W, epsabs=0)
         return WInt
 
 
@@ -118,7 +117,6 @@ class Gryz_Last_W_E(stats.rv_continuous):
 
         W and E arrive as np.arrays
         '''
-
         # define integrand function at this energy
         self.func = lambda Wvar : gryz_dCS(E, Wvar, self.ns_last, self.Eb_last)
 
@@ -126,29 +124,26 @@ class Gryz_Last_W_E(stats.rv_continuous):
 
 
 
-
-class Gryz_W(stats.rv_continuous):
+class Gryz_Last_W(stats.rv_continuous):
     '''
     Angular continuous distribution for Gryzinski sattering
     for a distribution of energies
     '''
-    def __init__(self, Edist_df, nfree, Ef, *args, **kwargs):
+    def __init__(self, Edist_df, ns_last, Eb_last, Ef, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.Edist_df = Edist_df
-        self.Wmin = self.a
-        self.Wmax = self.b
-        self.nsi = nsi
-        self.Ebi = Ebi
+        self.ns_last = ns_last
+        self.Eb_last = Eb_last
         self.Ef = Ef
+        # an instance of Gryz_W_E
+        self.Gryz_W_dist = Gryz_Last_W_E(a=self.a , b=self.b, ns_last=self.ns_last, Eb_last=self.Eb_last, Ef=self.Ef)
 
     def _cdf(self, W):
         ''' cumulative distribution function is just the weighted
         sum of all cmf at different samples of energy'''
-        # an instance of Gryz_W_E
-        Gryz_W_dist = Gryz_W_E(a=self.a , b=self.b, nsi=self.nsi, Ebi=self.Ebi, Ef=self.Ef)
 
         # an array of CDFs at the energy values in the distribution
-        CDFs = np.array(list(map(Gryz_W_dist.cdf, list(W)*len(self.Edist_df.energy.values), self.Edist_df.energy.values)))
+        CDFs = np.array(list(map(self.Gryz_W_dist._cdf, list(W)*len(self.Edist_df.energy.values), self.Edist_df.energy.values)))
 
         # the cumulative dstribution function for all the E in the DataFrame
         return self.Edist_df.weight.values.dot(CDFs)

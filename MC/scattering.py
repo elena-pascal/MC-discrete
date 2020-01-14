@@ -15,6 +15,7 @@ from MC.electron import electron
 from MC.crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
 from MC.stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
 from MC.errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
+from MC.probTables import maxW_moller
 
 @has_units
 def mfp_from_sigma(sigma, n):
@@ -131,7 +132,7 @@ def Rutherford_halfPol(energy, Z):
 
 
 
-def binaryCollModel(energy, e_loss):
+def binaryCollModel(energy, e_loss, Ef):
     '''
     Binary collision model is used for detemining the
     scattering polar angle in Moller and Gryzinski type events
@@ -149,8 +150,12 @@ def binaryCollModel(energy, e_loss):
     -------
     cos^2(halfTheta) : array : units = dim
     '''
-    return 0.5*( (1 - (e_loss / energy))**0.5 + 1)
+    # NOTE: the np.sqrt might throw an error claiming invalid values
+    # I think this is an Anaconda bug since there are no negative values in the expression
 
+    return np.where(e_loss <= maxW_moller(energy, Ef),
+                    0.5*( np.sqrt(1 - (e_loss / energy)) + 1),
+                    np.NaN)
 
 #####################################################################
 ####################### Discrete inelastic scatter class ############
@@ -270,7 +275,7 @@ class scatter_discrete:
             self.E_loss = E_loss
 
             # polar angle
-            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
+            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss, self.m_f_e)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.i_energy)
@@ -292,7 +297,7 @@ class scatter_discrete:
             self.E_loss = E_loss
 
             # polar angle
-            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss)
+            self.c2_halfTheta = binaryCollModel(self.i_energy, self.E_loss, self.m_f_e)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.i_energy)

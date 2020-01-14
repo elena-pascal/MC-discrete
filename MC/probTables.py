@@ -35,7 +35,7 @@ def maxW_gryz(E, Ef):
 
     Note: Gryz seems to be defined on the entire range [0, E)
         but in that case I wouldn't be able to use the
-        binary collision model (?). The angular distirbution is
+        binary collision model (?). The angular distribution is
         strongly forward peaked anyway.
 	'''
 
@@ -543,6 +543,7 @@ class probTable:
         # set E series
         self.set_Es()
 
+        # read the table from memory
         readTable =  np.memmap(filename = self.target,
                        dtype    = 'float32',
                        mode     = 'r',
@@ -551,7 +552,7 @@ class probTable:
         # mask zeros
         self.table = ma.masked_array(readTable, readTable==0)
         print ('read %s table for shell %s from memory' %(self.type, self.shell))
-        print()
+        print ()
 
 
 ##############################################################################
