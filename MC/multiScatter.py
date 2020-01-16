@@ -11,11 +11,12 @@ from MC.material import material
 from MC.electron import electron
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 
-def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
-    # for parallel processes we need to make sure the random number seeds are different
-    # use for instance the process id multiplied by the current time
-
-    # if parallel use a different random number seed per thread
+def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, num, count):
+    '''
+    Does num electron scatterings. This can then be the target called by multiprocessing.
+    '''
+    # For parallel processes we need to make sure the random number seeds are different
+    # Use, for instance, the process id multiplied by the current time
     random.seed(os.getpid()) # getip only works on Unix
 
     # initialise new electron
@@ -24,15 +25,16 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
     # patricks coordinates definition:
     #dir0 = np.array([np.cos(np.radians(90.0-tilt)), 0., -np.sin(np.radians(90.-tilt))])
 
+    # make an iterator along the number of scattering events per process
     if (count == 0):
         # print progress bar for the first thread
-        def iterator(num):
-            return tqdm(range(num), desc='Scattering electrons')
+        def iterator(num_el):
+            return tqdm(range(num_el), desc='Scattering electrons')
     else:
-        def iterator(num):
-            return range(inputPar['num_el'])
+        def iterator(num_el):
+            return range(num_el)
 
-    for _ in iterator(inputPar['num_el']):
+    for _ in iterator(num):
         # start this electron
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 
@@ -52,7 +54,7 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
 
 
 
-def scatterMultiEl_cont(inputPar, thingsToSave, output, count):
+def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
     # for parallel processes we need to make sure the random number seeds are different
     # use for instance the process id multiplied by the current time
     #if parallel:
@@ -81,13 +83,13 @@ def scatterMultiEl_cont(inputPar, thingsToSave, output, count):
 
     if (count == 0):
         # print progress bar for the first thread
-        def iterator(num):
-            return tqdm(range(num), desc='Scattering electrons')
+        def iterator(num_el):
+            return tqdm(range(num_el), desc='Scattering electrons')
     else:
-        def iterator(num):
-            return range(inputPar['num_el'])
+        def iterator(num_el):
+            return range(num_el)
 
-    for _ in iterator(inputPar['num_el']):
+    for _ in iterator(num):
         # start this electron
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 

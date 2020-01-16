@@ -457,31 +457,6 @@ class probTable:
         return CDF
 
 
-    # def toParquet(self, target):
-    #     #put dataframe into parquet
-    #     self.ddf.to_parquet(target, has_nulls=False, compute=True)
-
-
-    # def oneBlock(self,E_block):
-    #     '''
-    #     input:
-    #         Ein: energy value, array
-    #
-    #     output:
-    #         prob = cumsum/max(cumsum) of the integral for that E
-    #
-    #     output is transformed to dask dataframe and saved to parquet
-    #     '''
-    #
-    #     #compute dataframe
-    #     dask_df = self.compute_ddf(E_block)
-    #
-    #     target = os.path.join(self.target, str(int(E_block[0])))
-    #     #put dataframe into parquet
-    #     self.toParquet(target)
-    #
-    #     return
-
     def generate(self):
         '''
         map computeBlock on the entire range of Es one block at a time
@@ -581,11 +556,12 @@ def genTables(inputPar):
                             mat=materialInst, mapTarget='../tables', chunk_size=csize,
                             Wc=inputPar['Wc'])
 
-    # generate Moller table
-    #mollerTable.generate()
+    if (inputPar['genTables']):
+        # generate Moller table
+        mollerTable.generate()
 
-    # map to memory
-    #mollerTable.mapToMemory()
+        # map to memory
+        mollerTable.mapToMemory()
 
 
     # read from disk
@@ -604,11 +580,12 @@ def genTables(inputPar):
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
                             mat=materialInst, mapTarget='../tables', chunk_size=csize)
 
-        # generate Gryzinski table for shell Gshell
-        #gryzTable.generate()
+        if (inputPar['genTables']):
+            # generate Gryzinski table for shell Gshell
+            gryzTable.generate()
 
-        # map to memory
-        #gryzTable.mapToMemory()
+            # map to memory
+            gryzTable.mapToMemory()
 
         # read from disk
         gryzTable.readFromMemory()

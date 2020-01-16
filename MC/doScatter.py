@@ -141,15 +141,15 @@ if __name__ == '__main__': #this is necessary on Windows
     whatToSave = {'el_output': thingsToSave(inputPar['electron_output']),
                 'scat_output': thingsToSave(inputPar['scatter_output']) }
 
-
+    num = 10000
     # define the function for scattering of multiple electrons depending on the model
     if (inputPar['mode'] == 'DS'):
         processes = [Process(target=scatterMultiEl_DS, args=(inputPar, tables,
-                                                            whatToSave, output, count)) for count in range(num_proc)]
+                                    whatToSave, output, num, count)) for count in range(int(inputPar['num_el']/num))]
 
     elif (inputPar['mode'] == 'cont'):
         processes = [Process(target=scatterMultiEl_cont, args=(inputPar,
-                                                              whatToSave, output, count)) for count in range(num_proc)]
+                                    whatToSave, output, num, count)) for count in range(num_proc)]
 
 
     print ('---- starting scattering')

@@ -25,11 +25,19 @@ def readInput(fileName='input.file'):
                 if (param[0] in ['mode', 'material', 'Bethe_model']):
                     # assign string to dictionary
                     data[param[0]] = param[1]
+
                 elif (param[0] in ['num_el', 'maxScatt']):
                     # assign int to dictionary
                     data[param[0]] = int(param[1])
+
                 elif ('output' in param[0]):
+                    # make dictionary with output values
                     data[param[0]] = param[1].replace(" ", "").split(",")
+
+                elif ('gen_tables' in param[0]):
+                    # set boolean parameter
+                    data[param[0]] = True if 'es' in param[1] else False
+                    
                 else:
                     # assign float to dictionary
                     data[param[0]] = float(param[1])
