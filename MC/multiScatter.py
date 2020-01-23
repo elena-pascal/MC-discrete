@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import logging
 import random
 
 import pickle
@@ -11,7 +12,7 @@ from MC.material import material
 from MC.electron import electron
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 
-def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, num, count):
+def scatterMultiEl_DS(inputPar, tables, whatToSave, output, num, count):
     '''
     Does num electron scatterings. This can then be the target called by multiprocessing.
     '''
@@ -34,25 +35,29 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, num, count):
         def iterator(num_el):
             return range(num_el)
 
+    # define material
+    targetMaterial = material(inputPar['material'])
+
     for _ in iterator(num):
         # start this electron
-        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
+        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, whatToSave)
 
         # profiler
         #cProfile.runctx('scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz)', globals(), locals(), 'prof%d_ds.prof' %count)
 
         # scatter a full trajectory
-        trajectory_DS(el, material(inputPar['material']), inputPar['Wc'], inputPar['maxScatt'], tables)
+        trajectory_DS(el, targetMaterial, inputPar['Wc'], inputPar['maxScatt'], tables)
 
     try:
-        # make tuples out of dictionaries and pickle them
+        # make tuples out of dictionaries and pickle them and them add to the queue
         output['electrons'].put(pickle.dumps(thingsToSave['el_output'].dict , protocol=2 ) )
         output['scatterings'].put(pickle.dumps(thingsToSave['scat_output'].dict , protocol=2 ) )
     except :
         print ( "Unexpected error when pickling results:", sys.exc_info()[0])
         raise
 
-
+    # flush info to terminal
+    sys.stdout.flush()
 
 def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
     # for parallel processes we need to make sure the random number seeds are different

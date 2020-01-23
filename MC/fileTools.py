@@ -2,6 +2,8 @@
 import pandas as pd
 import warnings
 import numpy as np
+
+
 ####### read input file ##################
 def readInput(fileName='input.file'):
     '''
@@ -37,7 +39,7 @@ def readInput(fileName='input.file'):
                 elif ('gen_tables' in param[0]):
                     # set boolean parameter
                     data[param[0]] = True if 'es' in param[1] else False
-                    
+
                 else:
                     # assign float to dictionary
                     data[param[0]] = float(param[1])
@@ -79,7 +81,7 @@ def zipDict(dictA, dictB):
 
 
 ######## write HDF5 file ##################
-def writeBSEtoHDF5(results, input, filename):
+def writeBSEtoHDF5(results, HDFstore):
     '''
     Save the results to structured data file.
     If parallel, the result dictionary arrives here from the multiprocessing Queue,
@@ -89,8 +91,7 @@ def writeBSEtoHDF5(results, input, filename):
 
     input:
         results  : {'electrons' : [list], 'scatterings' : [list]}
-        input    : input data
-        filename : name of the file
+        HDFstore : existing hd5 store
     '''
 
     dataset = {}
@@ -120,17 +121,15 @@ def writeBSEtoHDF5(results, input, filename):
     # write direction results to pandas data frame
     #BSE_dir_df = pd.DataFrame(BSE_dict['direction'], columns=BSEtable.keys())
 
-    # make pandas dataframes from dataset dictionaries and save to HDF5
-    with pd.HDFStore(filename) as dataFile:
+    # make pandas dataframes from dataset dictionaries and put in store
+    with HDFstore as store:
         for dataset_key in dataset.keys():
-            # make pandas dataframe
+
+            # make a pandas dataframe
             df = pd.DataFrame.from_dict(dataset[dataset_key], dtype=float)
 
-            # save to HDF5
-            dataFile[dataset_key] = df
-
-        # write input parameters to pandas series -> transposed dataframe
-        dataFile['input'] = pd.DataFrame(pd.Series(input)).T
+            # save entire dataframe to corresponding frame in the HDF5 file
+            store.put(dataset_key, df, format='table', data_column=True, append=True)
 
     # pandas is going to complain about performace for the input string table
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)

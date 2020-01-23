@@ -1,6 +1,6 @@
 # input file for tests
 
-num_el   : 100  # per process; to be multiplied by number of processes
+num_el   : 100  
 E0       : 20000 # eV
 Emin     : 5000 # eV; cannot be smaller than Wc
 material : Al

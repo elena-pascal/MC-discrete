@@ -1,6 +1,6 @@
 # input file
 
-num_el   : 500000  # per process; to be multiplied by number of processes
+num_el   : 500
 E0       : 20000 # eV
 Emin     : 15000 # eV; cannot be smaller than Wc
 material : Al
@@ -9,7 +9,7 @@ mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scatte
 # if continuous choose Bethe model
 Bethe_model : classical # classical, JL or explicit
 
-# generate new tables or read from memory?
+# generate new tables (or read from memory)?
 gen_tables : no
 
 # relative error tolerance for W and E integration tables

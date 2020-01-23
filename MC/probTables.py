@@ -14,7 +14,6 @@ from MC.extFunctions import gryz_dCS, moller_dCS
 from MC.material import material
 
 
-
 def maxW_moller(E, Ef):
     '''
 	returns the lower limits of intergration for the moller excitation function
@@ -526,8 +525,7 @@ class probTable:
 
         # mask zeros
         self.table = ma.masked_array(readTable, readTable==0)
-        print ('read %s table for shell %s from memory' %(self.type, self.shell))
-        print ()
+        print ('read %s table for shell %s from memory \n' %(self.type, self.shell))
 
 
 ##############################################################################
@@ -556,7 +554,7 @@ def genTables(inputPar):
                             mat=materialInst, mapTarget='../tables', chunk_size=csize,
                             Wc=inputPar['Wc'])
 
-    if (inputPar['genTables']):
+    if (inputPar['gen_tables']):
         # generate Moller table
         mollerTable.generate()
 
@@ -567,9 +565,7 @@ def genTables(inputPar):
     # read from disk
     mollerTable.readFromMemory()
 
-
     tables['Moller'] = mollerTable
-
 
     gTables_list = []
     # one Gryzinki table for each shell
@@ -580,7 +576,7 @@ def genTables(inputPar):
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
                             mat=materialInst, mapTarget='../tables', chunk_size=csize)
 
-        if (inputPar['genTables']):
+        if (inputPar['gen_tables']):
             # generate Gryzinski table for shell Gshell
             gryzTable.generate()
 
@@ -609,48 +605,3 @@ def genTables(inputPar):
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 logging.basicConfig(filename='../logs/tables.log',level=logging.INFO, filemode='w')
-# test things
-#
-# # set material
-# thisMaterial = material('Al')
-#
-# Erange = (5000., 20000.)
-#
-# func = moller_dCS
-#
-# mollerTable = probTable('Moller',thisMaterial.params['name_val'], func, Erange, 1e-4, 1e-7, thisMaterial, 'testData', 100, 50.)
-# mollerTable.set_Ws()
-# print ('Ws', len(mollerTable.Ws))
-#
-# mollerTable.set_Es()
-# print ('Es', len(mollerTable.Es))
-#
-# mollerTable.generate()
-# print ('Table was generated', mollerTable.table)
-#
-# mollerTable.mapToMemory()
-# print ('Table was mapped to memory')
-#
-# mollerTable.readFromMemory()
-# print ('Table was read from memory', mollerTable.table)
-
-
-
-# func = gryz_dCS
-#
-# for shell in thisMaterial.params['name_s']:
-#     gryzTable = probTable('Gryz',shell, func, Erange, 50., 1e-4, 1e-7, thisMaterial, 'testData', 100)
-#     gryzTable.set_Ws()
-#     print ('Ws', len(gryzTable.Ws))
-#
-#     gryzTable.set_Es()
-#     print ('Es', len(gryzTable.Es))
-#
-#     gryzTable.generate()
-#     print ('Tables were generated')
-#
-#     gryzTable.mapToMemory()
-#     print ('Tables were mapped to memory')
-#
-#     gryzTable.readFromMemory()
-#     print ('Tables were read from memory')
