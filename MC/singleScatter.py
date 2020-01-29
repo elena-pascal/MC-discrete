@@ -12,13 +12,13 @@ def trajectory_DS(electron, material, Wc, maxScatt, tables):
 
     num_scatt = 0
 
-    while ((electron.outcome is not 'absorbed') and (electron.outcome is not 'backscattered')): # not backscattered nor absorbed nor scattered too long
+    while ((electron.outcome is not 'abs') and (electron.outcome is not 'bks')): # not backscattered nor absorbed nor scattered too long
         # new instance of scatter
         scatter = scatter_discrete(electron, material, Wc, tables)
 
         num_scatt += 1
         if (num_scatt > maxScatt):
-             electron.outcome = 'scatteredTooLong'
+             electron.outcome = 'long'
              electron.saveOutcomes()
              return # exit while loop
 

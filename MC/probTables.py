@@ -4,6 +4,7 @@ import numpy as np
 from scipy.integrate import quad
 import numpy.ma as ma
 import logging
+from functools import partial
 
 from dask import dataframe as dd
 from dask import array as da
@@ -109,13 +110,15 @@ class probTable:
             self.Wmin = Wc
 
             # Wmax is a function of E
-            self.Wmax = lambda E: maxW_moller(E, self.Ef)
+            #self.Wmax = lambda E: maxW_moller(E, self.Ef)
+            self.Wmax = partial(maxW_moller, Ef=self.Ef)
 
             # number of electrons in shell
             self.numEl = mat.params['n_val']
 
             # assign excitation function
-            self.func_EW = lambda E, W: func(E, W, self.numEl) #f(E, W)
+            #self.func_EW = lambda E, W: func(E, W, self.numEl) #f(E, W)
+            self.func_EW = partial(func, nfree=self.numEl)
 
             # assign energy range
             self.Emin, self.Emax = E_range[0], E_range[1]
@@ -125,13 +128,15 @@ class probTable:
             self.Wmin =  mat.params['Es'][shell]
 
             # Wmax is a function of E
-            self.Wmax = lambda E: maxW_gryz(E, self.Ef)
+            #self.Wmax = lambda E: maxW_gryz(E, self.Ef)
+            self.Wmax = partial(maxW_gryz, Ef=self.Ef)
 
             # number of electrons in shell
             self.numEl = mat.params['ns'][shell]
 
             # assign excitation function
-            self.func_EW = lambda E, W: func(E, W, self.numEl, self.Wmin)
+            #self.func_EW = lambda E, W: func(E, W, self.numEl, self.Wmin)
+            self.func_EW = partial(func, nsi=self.numEl, Ebi=self.Wmin)
 
             # check if Emin in the energy range was chosen to be above the binding energy
             if(E_range[0] < self.Wmin):
@@ -291,7 +296,8 @@ class probTable:
         W_max = self.Wmax(E)
 
         # simplify the excitation function to depend only on E and W
-        integrand = lambda W: self.func_EW(E, W)
+        #integrand = lambda W: self.func_EW(E, W)
+        integrand = partial(self.func_EW, *[E])
 
         # gaussian quadrature integral
         quadInt, errorInt = quad(integrand, self.Wmin, W_max, limit=300, epsabs=1e-34)
@@ -341,7 +347,8 @@ class probTable:
         logging.info('Emax: %s', Eref)
 
         # excitation function for Eref
-        integrandRef = lambda Wi: self.func_EW(Eref, Wi)
+        #integrandRef = lambda Wi: self.func_EW(Eref, Wi)
+        integrandRef = partial(self.func_EW, *[Eref])
 
         # trapezoidal intergral in the range [Wmin, W]
         smalldWInt = np.trapz([integrandRef(self.Wmin), integrandRef(W)],

@@ -1,5 +1,5 @@
 from MC.rotation import newdir, newdircos_oldMC
-
+from MC.fileTools import thingsToSave
 from math import sin, cos
 import numpy as np
 
@@ -9,7 +9,7 @@ class electron:
         direction in the sample frame.
         Input can have units.
     '''
-    def __init__(self, energy, Emin, position, direction, thingsToSave):
+    def __init__(self, energy, Emin, position, direction, outputList):
         self.energy = energy
         self.Emin   = Emin
         self.xyz    = position
@@ -20,8 +20,8 @@ class electron:
         self.y_local = np.array([0., 1., 0.]) # local coordinate system
 
         # object of list of parameters to save
-        self.el_output = thingsToSave['el_output']
-        self.scat_output = thingsToSave['scat_output']
+        self.el_output = thingsToSave(outputList['el_output'])
+        self.scat_output = thingsToSave(outputList['scat_output'])
 
     def update_energy(self, energyLoss):
         ''' update electron after every scattering
@@ -32,7 +32,7 @@ class electron:
 
         # check if absorbed
         if (energy <= self.Emin):
-            self.outcome = 'absorbed'
+            self.outcome = 'abs'
             self.saveOutcomes()
 
         self.energy = energy
@@ -45,7 +45,7 @@ class electron:
 
         # check if backscattered
         if (newPosition[2] <= 0.):
-            self.outcome = 'backscattered'
+            self.outcome = 'bks'
             self.saveOutcomes()
 
         self.xyz = newPosition
@@ -68,15 +68,6 @@ class electron:
         # save direction if we want it
         self.scat_output.addToList('direction', self.dir)
 
-        # TODO: test
-        # c_Theta = 2.*c2_halfTheta - 1.
-        # s_Theta = (1. - c_Theta**2)**0.5
-        # s_Phi = sin(2.*halfPhi)
-        # c_Phi = (1. - s_Phi**2)**0.5
-        #
-        # newDir = newdircos_oldMC(s_Theta, c_Theta, s_Phi, c_Phi, self.dir)
-        # self.dir = newDir/np.linalg.norm(newDir)
-
 
     def totalPathLenght(self):
         return sum(self.xyz)
@@ -88,6 +79,7 @@ class electron:
         self.el_output.addToList('final_E', self.energy)
 
         self.el_output.addToList('final_dir', self.dir)
+
 
 
 ###############################################################################

@@ -195,7 +195,7 @@ class scatter_discrete:
 
         # scattering params
         self.pathl = None
-        self.type = 'Rutherford' # first entry is elastic
+        self.type = 'Ruth' # first entry is elastic
         self.E_loss = None
         self.c2_halfTheta = None
         self.halfPhi = None
@@ -203,13 +203,13 @@ class scatter_discrete:
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
 
-        self.sigma['Rutherford'] = ruther_N_sigma(self.i_energy, self.m_Z)
+        self.sigma['Ruth'] = ruther_N_sigma(self.i_energy, self.m_Z)
 
         # if the energy is larger than the valence energy consider Moller scattering
         self.sigma['Moller'] = moller_sigma(self.i_energy, self.free_param, self.m_nval)
 
         for shell in self.m_names:
-            self.sigma['Gryzinski' + shell] = gryz_sigma(self.i_energy, self.m_Es[shell], self.m_ns[shell])
+            self.sigma['Gryz' + shell] = gryz_sigma(self.i_energy, self.m_Es[shell], self.m_ns[shell])
 
         self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd)
 
@@ -254,7 +254,7 @@ class scatter_discrete:
         Energy loss is calculated from tables for the Moller and Gryz type
         '''
         ######## Rutherford ########
-        if(self.type == 'Rutherford'):
+        if(self.type == 'Ruth'):
             self.E_loss = 0.
             self.c2_halfTheta = Rutherford_halfPol(self.i_energy, self.m_Z)
 
@@ -287,9 +287,9 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Gryzinski ###########
-        elif('Gryzinski' in self.type):
+        elif('Gryz' in self.type):
             # the shell name is the lefover string after substracting Gryzinski
-            shell = self.type.replace('Gryzinski', '')
+            shell = self.type.replace('Gryz', '')
 
             E_loss, tables_e = pickTable(self.tables_EW_G[0], self.i_energy)
 
@@ -388,7 +388,7 @@ class scatter_discrete_wUnits(scatter_discrete):
         # else the probability of Moller scattering is zero
 
         for i in range(len(self.m_Es)):
-            self.sigma['Gryzinski' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], u_pi_efour)
+            self.sigma['Gryz' + self.m_names[i]] = gryz_sigma(self.i_energy, self.m_Es[i], self.m_ns[i], u_pi_efour)
 
         if (self.i_energy > self.m_pl_e):
             self.sigma['Quinn'] = quinn_sigma(self.i_energy, self.m_pl_e, self.m_f_e, self.m_atnd, u_bohr_r)
@@ -435,8 +435,8 @@ class scatter_continuous_classical:
 
         ## TODO: decide on sigma or mfp
         #self.sigma['Rutherford'] = ruther_sigma(self.i_energy, self.m_Z)
-        self.sigma['Rutherford'] = ruther_N_sigma_wDefl(self.i_energy, self.m_Z)
-        self.mfp['Rutherford'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
+        self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.i_energy, self.m_Z)
+        self.mfp['Ruth'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
 
         # scattering output object
         self.scat_output = electron.scat_output
@@ -446,7 +446,7 @@ class scatter_continuous_classical:
         Path length is calculated from the cross section
         path_length = - mean_free_path * log(rn)
         '''
-        pathl = -self.mfp['Rutherford'] * log(random.random())
+        pathl = -self.mfp['Ruth'] * log(random.random())
 
         assert (pathl < 1e4), "Path length larger than 10000A: %s > %s" %(pathl, 1e4)
         self.pathl = pathl
@@ -473,7 +473,7 @@ class scatter_continuous_classical:
         self.halfPhi = pi*random.random()
 
         # save scatter type Rutherford if we want it
-        self.scat_output.addToList('type', 'Rutherford')
+        self.scat_output.addToList('type', 'Ruth')
 
         # save polar angle if we want it
         self.scat_output.addToList('pol_angle', self.c2_halfTheta)

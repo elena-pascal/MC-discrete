@@ -165,7 +165,7 @@ def rndAnglesFromDF(scatter_data, scatter_type, angle_type, size, E = None):
     Parameters
     ----------
     scatter_type : str
-        'Rutherford', 'Moller', 'Gryzinski' or 'Quinn'
+        'Ruth', 'Moller', 'Gryz' or 'Quinn'
     angle_type : str
         'az_angle' or 'pol_angle'
     size : int
@@ -255,8 +255,8 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
          # pick only the first 100 points for each label; this is good enough for the test
          # sort angles in degrees into x and y lists
-         x = sorted(data[data.label=='theory'].iloc[0:100].angles_deg.values)
-         y = sorted(data[data.label=='MC'].iloc[0:100].angles_deg.values)
+         x = sorted(data[data.label=='theory'].iloc[0:200].angles_deg.values)
+         y = sorted(data[data.label=='MC'].iloc[0:200].angles_deg.values)
 
          # number of observations in each set
          nx, ny = len(x), len(y)
@@ -326,7 +326,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         sigmas['p_M'] = moller_sigma(E, self.inputPar['Wc'], self.material.params['n_val'])
 
         # Gryzinski labels
-        Gryzinski = [i+j for i,j in zip(['Gryzinski']*len(self.material.params['name_s']), self.material.params['name_s'])]
+        Gryzinski = [i+j for i,j in zip(['Gryz']*len(self.material.params['name_s']), self.material.params['name_s'])]
 
         # one Gryzinski CS for each inner shell
         for key in self.material.params['name_s']:
@@ -337,7 +337,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         normalisation = sum(sigmas.values())
         # sample n values from the theoretical cross sections
-        expected = np.random.choice(['Rutherford', 'Moller', *Gryzinski, 'Quinn'], n,
+        expected = np.random.choice(['Ruth', 'Moller', *Gryz, 'Quinn'], n,
                                     p=np.array(list(sigmas.values()))/normalisation)
 
         # make a dataframe with the counts; last bit removes redundant multilevel index
@@ -366,7 +366,8 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # reject null hypothesis that the two distributions are the same
         # if chi2stat > crit
-        self.assertTrue (chi2stat < crit), 'The observed scattering types probabilities do not match those expected'
+        print ('cih2stat:', chi2stat[0], 'crit:', crit)
+        self.assertTrue (chi2stat[0] < crit), 'The observed scattering types probabilities do not match those expected'
 
 
     #########################################################################
@@ -397,7 +398,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         E = np.array(self.inputPar['E0'])
 
         # choose n random values from the MC Rutherford polar scattering angles
-        MCAngles = rndAnglesFromDF(scatterings, 'Rutherford', 'pol_angle', n, E)
+        MCAngles = rndAnglesFromDF(scatterings, 'Ruth', 'pol_angle', n, E)
 
         # add these angles in degrees to a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
@@ -430,7 +431,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         scatterings = pd.read_hdf(self.file, 'scatterings')
 
         # choose a random sample from the MC Rutherford polar scattering angles
-        MCAngles =  rndAnglesFromDF(scatterings, 'Rutherford', 'pol_angle', n)
+        MCAngles =  rndAnglesFromDF(scatterings, 'Ruth', 'pol_angle', n)
 
         # make a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
@@ -484,7 +485,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         scatterings = pd.read_hdf(self.file, 'scatterings')
 
         # choose a random sample from the MC Rutherford polar scattering angles
-        MCAngles =  rndAnglesFromDF(scatterings, 'Rutherford', 'az_angle', n)
+        MCAngles =  rndAnglesFromDF(scatterings, 'Ruth', 'az_angle', n)
 
         # make a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })

@@ -1,6 +1,6 @@
 # input file for tests
 
-num_el   : 100  
+num_el   : 5
 E0       : 20000 # eV
 Emin     : 5000 # eV; cannot be smaller than Wc
 material : Al
@@ -8,6 +8,9 @@ s_tilt   : 0     # degrees
 mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe_model    : classical # classical, JL or explicit
+
+# generate new tables (or read from memory)?
+gen_tables : no
 
 # relative error tolerance for W and E integration tables
 # note the default values require at least 10G memory

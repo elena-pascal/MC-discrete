@@ -81,7 +81,7 @@ def zipDict(dictA, dictB):
 
 
 ######## write HDF5 file ##################
-def writeBSEtoHDF5(results, HDFstore):
+def writeBSEtoHDF5(results, input, filename):
     '''
     Save the results to structured data file.
     If parallel, the result dictionary arrives here from the multiprocessing Queue,
@@ -90,7 +90,7 @@ def writeBSEtoHDF5(results, HDFstore):
     ie. I made an overcomplicated results format and now I have to sort it
 
     input:
-        results  : {'electrons' : [list], 'scatterings' : [list]}
+        results  : {'el' : [list], 'scat' : [list]}
         HDFstore : existing hd5 store
     '''
 
@@ -122,7 +122,7 @@ def writeBSEtoHDF5(results, HDFstore):
     #BSE_dir_df = pd.DataFrame(BSE_dict['direction'], columns=BSEtable.keys())
 
     # make pandas dataframes from dataset dictionaries and put in store
-    with HDFstore as store:
+    with pd.HDFStore(filename) as store:
         for dataset_key in dataset.keys():
 
             # make a pandas dataframe
@@ -155,7 +155,7 @@ def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
     input_s = pd.Series(input.values(), index=input.keys(), dtype=str)
 
     # pandas is going to complain about performace for the input string table
-    # warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
     # HDFstore is a dict like object that reads and writes pandas with the PyTables library
     # pickled tables to be read with pandas:
@@ -171,7 +171,7 @@ def writeAllEtoHDF5(data, input, filename, alpha, xy_PC, L):
 
 #### output dictionary class
 class thingsToSave:
-    """Parameters to save from the simulation"""
+    """a dictionary of parameters to save from the simulation"""
 
     def __init__(self, args):
         ''' An unknown number of parameters are passed in here.

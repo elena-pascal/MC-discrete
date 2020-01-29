@@ -12,7 +12,7 @@ from MC.material import material
 from MC.electron import electron
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 
-def scatterMultiEl_DS(inputPar, tables, whatToSave, output, num, count):
+def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
     '''
     Does num electron scatterings. This can then be the target called by multiprocessing.
     '''
@@ -38,9 +38,9 @@ def scatterMultiEl_DS(inputPar, tables, whatToSave, output, num, count):
     # define material
     targetMaterial = material(inputPar['material'])
 
-    for _ in iterator(num):
+    for _ in iterator(inputPar['num_el']):
         # start this electron
-        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, whatToSave)
+        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 
         # profiler
         #cProfile.runctx('scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz)', globals(), locals(), 'prof%d_ds.prof' %count)
@@ -58,6 +58,63 @@ def scatterMultiEl_DS(inputPar, tables, whatToSave, output, num, count):
 
     # flush info to terminal
     sys.stdout.flush()
+
+
+
+
+def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
+    '''
+    Does numTraj full trajectory scatterings. This can then be the target
+    called by the multiprocessing pool.
+
+    Input
+        inputPar
+            a dictionary of user defined parameters
+
+        numTraj (per job)
+            largest number of trajectories per process safe to keep in memory
+
+        material
+            an instance of the Material class defining the target material
+
+        tables
+            dictionary containing the integration tables
+
+        thingsToSave
+            dictionary containing the list of parameters to save
+            This will be populated with the results
+
+    Returns
+        results
+            a list of thingsToSave dictionaries populated with results
+    '''
+    # For parallel processes we need to make sure the random number seeds are different
+    # Use, for instance, the process id multiplied by the current time
+    random.seed(os.getpid()) # getip only works on Unix
+
+    # initialise new electron position and direction
+    pos0 = np.array([0., 0., 0.,])
+    dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])),
+                    0.,
+                    np.cos(np.radians(inputPar['s_tilt']))])
+
+    # make an iterator along the number of scattering events per process
+    def iterator(num):
+        return range(num)
+
+    results = []
+    for _ in iterator(numTraj):
+        # start this electron
+        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
+
+        # scatter a full trajectory
+        trajectory_DS(el, material, inputPar['Wc'], inputPar['maxScatt'], tables)
+
+        results.append({'els':el.el_output.dict, 'scats':el.scat_output.dict})
+
+        del el # not sure if this is necessary
+
+    return results
 
 def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
     # for parallel processes we need to make sure the random number seeds are different
@@ -105,9 +162,9 @@ def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
         trajectory_cont(el, material(inputPar['material']), inputPar['maxScatt'])
 
     try:
-                # make tuples out of dictionaries and pickle them
-                output['electrons'].put(pickle.dumps(thingsToSave['el_output'].dict , protocol=2 ) )
-                output['scatterings'].put(pickle.dumps(thingsToSave['scat_output'].dict , protocol=2 ) )
+        # make tuples out of dictionaries and pickle them
+        output['electrons'].put(pickle.dumps(thingsToSave['el_output'].dict , protocol=2 ) )
+        output['scatterings'].put(pickle.dumps(thingsToSave['scat_output'].dict , protocol=2 ) )
     except:
         print (" Unexpected error when pickling results:", sys.exc_info()[0])
         raise
