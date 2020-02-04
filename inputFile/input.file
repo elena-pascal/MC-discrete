@@ -1,6 +1,6 @@
 # input file
 
-num_el   : 10000
+num_el   : 20000
 E0       : 20000 # eV
 Emin     : 15000 # eV; cannot be smaller than Wc
 material : Al

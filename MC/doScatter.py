@@ -14,7 +14,6 @@ from tqdm import tqdm
 #from scimath.units.api import UnitScalar, UnitArray
 
 from MC.material import material
-#from MC.electron import electron
 from MC.probTables import genTables
 from MC.singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
@@ -208,10 +207,10 @@ def main():
                  'scat_output': inputPar['scatter_output'] }
 
     # instace of scatter mapper
-    scatter = MapScatterer(inputPar, multiTraj_DS, listener, num_workers=10)
+    scatter = MapScatterer(inputPar, multiTraj_DS, listener, num_workers=11)
 
     # scatter object sent to multithreading
-    scatter(200, my_tables, whatToSave, storeFile)
+    scatter(500, my_tables, whatToSave, storeFile)
 
 
 if __name__ == '__main__': #this is necessary on Windows

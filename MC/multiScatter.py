@@ -5,10 +5,8 @@ import logging
 import random
 
 import pickle
-from tqdm import tqdm
 import cProfile
 
-from MC.material import material
 from MC.electron import electron
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 

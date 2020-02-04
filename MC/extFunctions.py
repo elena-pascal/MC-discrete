@@ -3,6 +3,7 @@ import numpy as np
 import numpy.ma as ma
 from scipy import stats, integrate
 import sys
+import os.path as path
 
 from MC.errors import E_lossTooLarge
 from MC.parameters import pi_efour
@@ -17,6 +18,131 @@ from MC.parameters import pi_efour
 # Since these functions are only used for determining the energy loss
 # in the numerical integration, I disabled the units for now
 # TODO: do this nicer though
+
+# 1b) Mott numerical differential cross sections
+class mottTable:
+    '''
+    Mott cross section table from ioffe.ru/ES/Elastic
+
+    sigma (cm^2) is a function of (E, Z)
+
+    dSigma/dOmega (cm^2/str) is a function (E, Z, theta)
+
+    E = [5 eV, 30 keV]
+
+    theta = [0, 180]
+
+    Functions:
+        readIoffe: read the information from the database
+
+        toProbTable : calculate CDF table from dCS
+
+        mapToMemory: save the CDF table to a memory map
+
+
+    '''
+    def __init__(self, Z, name):
+        self.Z = Z
+        self.path = '../tables/mott/'
+        self.target = path.join(self.path, name + '.table')
+        self.name = name
+
+        self.probTable = None
+
+        ioffeFile = path.join(self.path+ 'ioffe/' + name + '.ioffe')
+
+        # check existence
+        if (ioffeFile):
+            self.ioffeFile = ioffeFile
+        else:
+            sys.exit('Data for %s was not found' %name)
+
+        with open(self.ioffeFile, 'r') as file:
+            lines = file.readlines()
+            # check if this is what we expect
+            if (int(lines[2].split()[-1]) is not self.Z):
+                sys.exit('Trying to read file %s but expecting Z:%s' %(self.ioffeFile, self.Z))
+
+            self.sizeTheta = int(lines[5].split()[0])
+            self.sizeE = int(lines[6].split()[0])
+
+        self.Es = np.empty(self.sizeE)
+
+        # initialise the sigma(E) array
+        self.sigma = np.empty(self.sizeE)
+
+        # initialise the dCS(E, theta) array
+        self.dCS = np.empty([self.sizeE, self.sizeTheta])
+
+    def readIoffe(self):
+        '''
+        read the Ioffe file and populate the sigma and dCS arrays
+        '''
+        with open(self.ioffeFile, 'r') as file:
+            lines = file.readlines()
+
+            self.thetas = lines[12].strip('theta [grad]=').split()
+
+            for index, line in enumerate(lines[14:-1]):
+                items = line.replace('|', '').split()
+                self.Es[index] = float(items[0])
+                self.sigma[index] = float(items[-1])
+
+                self.dCS[index] = np.array([float(item) for item in items[1:-1]])
+
+
+    def toProbTable(self):
+        '''
+        Transform the dCS table to a probability (CDF) table
+
+        i.e. integrate (sum) over theta
+        '''
+        # cumulative sum on the stepwise integral
+        cumInt = np.cumsum(self.dCS, axis=1)
+
+        # divide by total sum and populate probTable
+        self.probTable = cumInt/np.broadcast_to(np.sum(self.dCS, axis=1), cumInt.T.shape).T
+
+
+    def mapToMemory(self):
+        '''
+        Put the dCS values in a memory map
+        '''
+        # create a memory map with defined dtype and shape
+        storedMap = np.memmap(filename = self.target,
+                       dtype    = 'float32',
+                       mode     = 'w+',
+                       shape    = (self.sizeE, self.sizeTheta)   )
+
+        # fill allocated memory with table
+        storedMap[:] = self.probTable[:]
+
+        # flush to memory
+        del storedMap
+
+        print ('Table written to target:', self.target)
+
+
+    def readFromMemory(self):
+        '''
+        Load the dCS table from memory map
+        '''
+        # read the table from memory
+        self.probTable =  np.memmap(filename = self.target,
+                       dtype    = 'float32',
+                       mode     = 'r',
+                       shape    = (self.sizeE, self.sizeTheta)   )
+
+
+Almott = mottTable(13, 'Al')
+Almott.readIoffe()
+Almott.toProbTable()
+Almott.mapToMemory()
+
+readAl = mottTable(13, 'Al')
+readAl.readFromMemory()
+print (readAl.probTable)
+
 
 # 2b) Moller free electron discrete cross section
 #@has_units

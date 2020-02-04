@@ -99,9 +99,9 @@ class probTable:
 
         The two tolerances are not independent of each other.
         '''
-        self.type = type
+        self.type  = type
 
-        self.Ef   = mat.fermi_e
+        self.Ef    = mat.fermi_e
 
         self.shell = shell
 
