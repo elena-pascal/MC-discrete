@@ -69,7 +69,7 @@ class mottTable:
         self.Es = np.empty(self.sizeE)
 
         # initialise the sigma(E) array
-        self.sigma = np.empty(self.sizeE)
+        self.sigmas = np.empty(self.sizeE)
 
         # initialise the dCS(E, theta) array
         self.dCS = np.empty([self.sizeE, self.sizeTheta])
@@ -81,15 +81,22 @@ class mottTable:
         with open(self.ioffeFile, 'r') as file:
             lines = file.readlines()
 
-            self.thetas = lines[12].strip('theta [grad]=').split()
+            self.thetas = np.array([float(item) for item in lines[12].strip('theta [grad]=').split()])
 
             for index, line in enumerate(lines[14:-1]):
                 items = line.replace('|', '').split()
                 self.Es[index] = float(items[0])
-                self.sigma[index] = float(items[-1])
+
+                self.sigmas[index] = float(items[-1])
 
                 self.dCS[index] = np.array([float(item) for item in items[1:-1]])
 
+        # The data in the ioffe table is descending in energy
+        # Since we use bisect it's useful to keep all the values in
+        # ascending order. So we flip along E all arrays
+        self.Es     = np.flip(self.Es)
+        self.sigmas = np.flip(self.sigmas)
+        self.dCS    = np.flip(self.dCS, axis=0)
 
     def toProbTable(self):
         '''
@@ -127,21 +134,26 @@ class mottTable:
         '''
         Load the dCS table from memory map
         '''
-        # read the table from memory
-        self.probTable =  np.memmap(filename = self.target,
-                       dtype    = 'float32',
-                       mode     = 'r',
-                       shape    = (self.sizeE, self.sizeTheta)   )
+        if self.target:
+            # read the table from memory
+            self.probTable =  np.memmap(filename = self.target,
+                           dtype    = 'float32',
+                           mode     = 'r',
+                           shape    = (self.sizeE, self.sizeTheta)   )
+            print ('read Mott table from memory for %s\n' %self.name)
+        else:
+            # generate this table
+            self.generate()
 
 
-Almott = mottTable(13, 'Al')
-Almott.readIoffe()
-Almott.toProbTable()
-Almott.mapToMemory()
+    def generate(self):
+        '''
+        generate the memory map for this material
+        '''
+        self.readIoffe()
+        self.toProbTable()
+        self.mapToMemory()
 
-readAl = mottTable(13, 'Al')
-readAl.readFromMemory()
-print (readAl.probTable)
 
 
 # 2b) Moller free electron discrete cross section

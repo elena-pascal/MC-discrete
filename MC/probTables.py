@@ -11,7 +11,7 @@ from dask import array as da
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 
-from MC.extFunctions import gryz_dCS, moller_dCS
+from MC.extFunctions import gryz_dCS, moller_dCS, mottTable
 from MC.material import material
 
 
@@ -558,8 +558,8 @@ def genTables(inputPar):
     mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='../tables', chunk_size=csize,
-                            Wc=inputPar['Wc'])
+                            mat=materialInst, mapTarget='../tables/integration',
+                            chunk_size=csize, Wc=inputPar['Wc'])
 
     if (inputPar['gen_tables']):
         # generate Moller table
@@ -581,7 +581,8 @@ def genTables(inputPar):
         gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
                             E_range=Erange,
                             tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='../tables', chunk_size=csize)
+                            mat=materialInst, mapTarget='../tables/integration',
+                            chunk_size=csize)
 
         if (inputPar['gen_tables']):
             # generate Gryzinski table for shell Gshell
@@ -597,7 +598,19 @@ def genTables(inputPar):
 
     tables['Gryz'] = gTables_list
 
+    if 'Mott' in inputPar['elastic']:
+        mottTableInst = mottTable(materialInst.params['Z'], materialInst.species)
 
+        # read from ioffee table
+        mottTableInst.readIoffe()
+
+        # to prob table
+        mottTableInst.toProbTable()
+
+        # add Mott table
+        tables['Mott'] = mottTableInst
+
+        print ('assigned Mott table')
     return tables
 
 

@@ -175,6 +175,8 @@ def main():
         # generate integration tables instances
         my_tables = genTables(inputPar)
 
+
+
     # name the hdf file that stores the results
     storeFile = '../data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
                                 '_tilt:' + str(inputPar['s_tilt'])+\
@@ -210,7 +212,7 @@ def main():
     scatter = MapScatterer(inputPar, multiTraj_DS, listener, num_workers=11)
 
     # scatter object sent to multithreading
-    scatter(500, my_tables, whatToSave, storeFile)
+    scatter(numTrajPerJob = 200, tables=my_tables, resultsList=whatToSave, storeName=storeFile)
 
 
 if __name__ == '__main__': #this is necessary on Windows

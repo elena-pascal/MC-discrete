@@ -44,7 +44,7 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
         #cProfile.runctx('scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz)', globals(), locals(), 'prof%d_ds.prof' %count)
 
         # scatter a full trajectory
-        trajectory_DS(el, targetMaterial, inputPar['Wc'], inputPar['maxScatt'], tables)
+        trajectory_DS(el, targetMaterial, inputPar['Wc'], inputPar['maxScatt'], inputPar['elastic'], tables)
 
     try:
         # make tuples out of dictionaries and pickle them and them add to the queue
@@ -106,7 +106,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 
         # scatter a full trajectory
-        trajectory_DS(el, material, inputPar['Wc'], inputPar['maxScatt'], tables)
+        trajectory_DS(el, material, inputPar['Wc'], inputPar['maxScatt'], inputPar['elastic'], tables)
 
         results.append({'els':el.el_output.dict, 'scats':el.scat_output.dict})
 

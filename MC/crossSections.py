@@ -54,18 +54,16 @@ def ruther_sigma(E, Z):
     # E must be in keV in Joy's formula
     E = E * eV/KeV
 
-    # correction factor for angular deflection of inelastic scattering
-    # Z**2 - > Z*(Z + 1)
-
     s_R = 5.21e-21 * (Z*Z/(E*E))  * ((E + 511.)/(E + 1024.))**2 * (4.*pi)/(alphaR*(1. + alphaR))
     return s_R
 
 
 #### 1a') Elastic Rutherford scattering cross section but corrected for inelastic deflections
-@has_units
+#@has_units
 def ruther_sigma_wDefl(E, Z):
     """ Calculate the Rutherford elastic cross section
-        per atom
+        per atom but with correction factor for angular deflection
+        of inelastic scattering: Z**2 - > Z*(Z + 1)
 
         Parameters
         ----------
@@ -77,24 +75,22 @@ def ruther_sigma_wDefl(E, Z):
         -------
         s_R    : array : units = cm**2
     """
-    E = E * eV/KeV
-
-    # correction factor for angular deflection of inelastic scattering
-    # Z**2 - > Z*(Z + 1)
-
     # compute the screening factor
     alphaR = alpha(E, Z)
 
-    s_R = 5.21e-21 * (Z*(Z+1)/(E**2)) * (4.*pi)/(alpha*(1. + alpha)) * ((E + 511.)/(E + 1024.))**2
+    # E must be in keV in Joy's formula
+    E = E * eV/KeV
+
+    s_R = 5.21e-21 * (Z*(Z+1)/(E*E)) * ((E + 511.)/(E + 1024.))**2 * (4.*pi)/(alphaR*(1. + alphaR))
     return s_R
 
 
 #### 1a") Elastic Rutherford scattering cross section with Nigraru screening parameter
-@has_units
+#@has_units
 def ruther_N_sigma(E, Z, c_pi_efour=pi_efour):
     """ Calculate the Rutherford elastic cross section
-        with Nigram parameter
         per atom
+        Using Nigram parameter
 
         Parameters
         ----------
@@ -117,16 +113,14 @@ def ruther_N_sigma(E, Z, c_pi_efour=pi_efour):
 
     s_R = c_pi_efour * Z**2/ (4*beta_N_star*(1+beta_N_star)*E**2)
 
-    # correction factor for angular deflection of inelastic scattering
-    # Z**2 - > Z*(Z + 1)
-    # s_R = c_pi_efour * (Z+1)*Z/ (4*beta_N_star*(1+beta_N_star)*E**2)
     return s_R
 
 ### 1a"') Elastic Rutherford scattering cross section with Nigraru screening parameter and Z+1
-@has_units
+#@has_units
 def ruther_N_sigma_wDefl(E, Z, c_pi_efour=pi_efour):
     """ Calculate the Rutherford elastic cross section
         per atom
+        Using Nigram parameter and inelastic deflection
 
         Parameters
         ----------
@@ -153,7 +147,7 @@ def ruther_N_sigma_wDefl(E, Z, c_pi_efour=pi_efour):
     return s_R
 
 ### 1b) Browning
-@has_units
+#@has_units
 def browning_sigma(E, Z, c_pi_efour=pi_efour):
     """ Calculate the Browning (1992) elastic cross section
         per atom

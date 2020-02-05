@@ -1,13 +1,17 @@
 # input file
 
-num_el   : 20000
+num_el   : 100000
 E0       : 20000 # eV
 Emin     : 15000 # eV; cannot be smaller than Wc
 material : Al
 s_tilt   : 70     # degrees
+
+elastic  : Mott # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
+
 mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 # if continuous choose Bethe model
 Bethe_model : classical # classical, JL or explicit
+
 
 # generate new tables (or read from memory)?
 gen_tables : no

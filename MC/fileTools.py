@@ -24,7 +24,7 @@ def readInput(fileName='input.file'):
                 # trim whitespaces
                 param = [p.strip() for p in parameter]
 
-                if (param[0] in ['mode', 'material', 'Bethe_model']):
+                if (param[0] in ['mode', 'material', 'elastic', 'Bethe_model']):
                     # assign string to dictionary
                     data[param[0]] = param[1]
 

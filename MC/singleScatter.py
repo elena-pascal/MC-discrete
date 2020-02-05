@@ -7,14 +7,14 @@ from MC.scattering import scatter_continuous_classical_wUnits, scatter_continuou
 from MC.scattering import scatter_discrete
 
 
-def trajectory_DS(electron, material, Wc, maxScatt, tables):
+def trajectory_DS(electron, material, Wc, maxScatt, elastic_model, tables):
     ''' follow a full electron trajectory'''
 
     num_scatt = 0
 
     while ((electron.outcome is not 'abs') and (electron.outcome is not 'bks')): # not backscattered nor absorbed nor scattered too long
         # new instance of scatter
-        scatter = scatter_discrete(electron, material, Wc, tables)
+        scatter = scatter_discrete(electron, material, Wc, elastic_model, tables)
 
         num_scatt += 1
         if (num_scatt > maxScatt):
