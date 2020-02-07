@@ -13,7 +13,7 @@ from scimath.units.length import angstrom, cm,  m
 from MC.electron import electron
 from MC.crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
 from MC.stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
-from MC.errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
+#from MC.errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 from MC.probTables import maxW_moller
 
 @has_units
@@ -215,7 +215,8 @@ class scatter_discrete:
         self.table_EW_M = tables['Moller']
         self.tables_EW_G = tables['Gryz']
 
-        self.tableMott = tables['Mott']
+        if elastic is 'Mott':
+            self.tableMott = tables['Mott']
 
         # scattering params
         self.pathl        = None
@@ -251,6 +252,7 @@ class scatter_discrete:
 
         self.sigma['Quinn'] = quinn_sigma(self.Ei, self.m_pl_e, self.m_f_e, self.m_atnd)
 
+        # compute mean free path
         self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.m_atnd)
 
         # output lists object
@@ -277,7 +279,7 @@ class scatter_discrete:
         '''
         Set the type of scattering after determining type
         '''
-
+        if 'Mott' in self.sigma.keys(): print('sigmas', self.sigma)
         self.type = pickFromSigmas(self.sigma)
         # NOTE: Moller becomes more unprobable with increase value of Wc
 
@@ -291,7 +293,7 @@ class scatter_discrete:
         Energy loss is calculated from tables for the Moller and Gryz type
         '''
         ######## Rutherford ########
-        if('Ruth' in self.type):
+        if 'Ruth' in self.type:
             self.E_loss = 0.
             self.c2_halfTheta = Rutherford_halfPol(self.Ei, self.m_Z)
 
@@ -305,7 +307,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ######## Mott ##############
-        if(self.type == 'Mott'):
+        elif self.type is 'Mott':
             self.E_loss = 0.
             self.c2_halfTheta = pickMottTable(self.tableMott, self.Ei)
 
@@ -318,7 +320,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Moller ###############
-        elif(self.type == 'Moller'):
+        elif self.type is 'Moller':
             E_loss, tables_e = pickTable(self.table_EW_M, self.Ei)
 
             assert E_loss < self.Ei, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.Ei)
@@ -334,10 +336,10 @@ class scatter_discrete:
             self.scat_output.addToList('E_loss', self.E_loss)
 
             # save apolar angle if we want it
-            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+            self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
 
         ##### Gryzinski ###########
-        elif('Gryz' in self.type):
+        elif 'Gryz' in self.type:
             # the shell name is the lefover string after substracting Gryzinski
             shell = self.type.replace('Gryz', '')
 
@@ -356,10 +358,10 @@ class scatter_discrete:
             self.scat_output.addToList('E_loss', self.E_loss)
 
             # save pol angle if we want it
-            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+            self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
 
         ##### Quinn ###########
-        elif(self.type == 'Quinn'):
+        elif self.type is 'Quinn':
             self.E_loss = self.m_pl_e
 
             # for plasmon scattering assume no change in direction
@@ -375,7 +377,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         else:
-            print (' I did not understand the type of scattering in scatter.calculate_Eloss')
+            print (' I did not understand the type of scattering: %s in scatter.calculate_Eloss' %self.type)
 
         # polar angle is the same for all scatterings
         self.halfPhi = pi*random.random()

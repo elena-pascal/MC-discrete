@@ -12,7 +12,6 @@ mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scatte
 # if continuous choose Bethe model
 Bethe_model : classical # classical, JL or explicit
 
-
 # generate new tables (or read from memory)?
 gen_tables : no
 

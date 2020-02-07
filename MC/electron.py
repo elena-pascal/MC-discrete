@@ -9,7 +9,19 @@ class electron:
         direction in the sample frame.
         Input can have units.
     '''
-    def __init__(self, energy, Emin, position, direction, outputList):
+    def __init__(self, energy, Emin, position, direction, outList):
+        '''
+        energy   : energy of incident electron in eV
+
+        Emin     : minimum energy untill for which the electron is tracked, in eV
+
+        position : entry location in sample ref frame
+
+        direction: direction of incidence in sample ref frame
+
+        outList  : {'el_output'  : [list of electron parameters to save],
+                    'scat_output': [list of scattering parameter to save]}
+        '''
         self.energy = energy
         self.Emin   = Emin
         self.xyz    = position
@@ -20,8 +32,8 @@ class electron:
         self.y_local = np.array([0., 1., 0.]) # local coordinate system
 
         # object of list of parameters to save
-        self.el_output = thingsToSave(outputList['el_output'])
-        self.scat_output = thingsToSave(outputList['scat_output'])
+        self.el_output = thingsToSave(outList['el_output'])
+        self.scat_output = thingsToSave(outList['scat_output'])
 
     def update_energy(self, energyLoss):
         ''' update electron after every scattering

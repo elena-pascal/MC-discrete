@@ -6,11 +6,13 @@ import random
 
 import pickle
 import cProfile
+from tqdm import tqdm
 
 from MC.electron import electron
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
+from MC.material import material
 
-def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
+def scatterMultiEl_DS(inputPar, tables, listParToSave, outputQ, count):
     '''
     Does num electron scatterings. This can then be the target called by multiprocessing.
     '''
@@ -20,7 +22,9 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
 
     # initialise new electron
     pos0 = np.array([0., 0., 0.,])
-    dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])), 0., np.cos(np.radians(inputPar['s_tilt']))])
+    dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])),
+                    0.,
+                    np.cos(np.radians(inputPar['s_tilt']))])
     # patricks coordinates definition:
     #dir0 = np.array([np.cos(np.radians(90.0-tilt)), 0., -np.sin(np.radians(90.-tilt))])
 
@@ -38,21 +42,20 @@ def scatterMultiEl_DS(inputPar, tables, thingsToSave, output, count):
 
     for _ in iterator(inputPar['num_el']):
         # start this electron
-        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
-
-        # profiler
-        #cProfile.runctx('scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz)', globals(), locals(), 'prof%d_ds.prof' %count)
+        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, listParToSave)
 
         # scatter a full trajectory
         trajectory_DS(el, targetMaterial, inputPar['Wc'], inputPar['maxScatt'], inputPar['elastic'], tables)
 
-    try:
-        # make tuples out of dictionaries and pickle them and them add to the queue
-        output['electrons'].put(pickle.dumps(thingsToSave['el_output'].dict , protocol=2 ) )
-        output['scatterings'].put(pickle.dumps(thingsToSave['scat_output'].dict , protocol=2 ) )
-    except :
-        print ( "Unexpected error when pickling results:", sys.exc_info()[0])
-        raise
+        try:
+            # make tuples out of dictionaries and pickle them and them add to the queue
+            #outputQ['els'].put(el.el_output.dict )
+            #outputQ['scats'].put(el.scat_output.dict)
+            outputQ['els']=el.el_output.dict
+            outputQ['scats']=el.scat_output.dict
+        except :
+            print ( "Unexpected error when pickling results:", sys.exc_info()[0])
+            raise
 
     # flush info to terminal
     sys.stdout.flush()
@@ -110,7 +113,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
 
         results.append({'els':el.el_output.dict, 'scats':el.scat_output.dict})
 
-        del el # not sure if this is necessary
+        del el # not sure if this helps memory clean up in any way
 
     return results
 
@@ -187,6 +190,6 @@ def retrieve(jobs, output):
 
     for p in jobs:
         for key in output.keys():
-            results[key].append(pickle.loads(output[key].get()))
+            results[key].append(output[key].get())
 
     return results

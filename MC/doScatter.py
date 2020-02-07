@@ -45,7 +45,7 @@ class MapScatterer(object):
         self.inputPar     = inputPar
         self.worker       = scatter_func
         self.listener     = listen_func
-        self.pool         = mp.Pool(num_workers, maxtasksperchild=100)
+        self.pool         = mp.Pool(num_workers, maxtasksperchild=200)
         self.targetMat    = material(inputPar['material'])
 
     def error_call(self, result):
@@ -75,6 +75,7 @@ class MapScatterer(object):
         # we need to spawn jobs = total number of electron trajctories/
         #                          num of trajectories per worker
         numJobs = int(self.inputPar['num_el']/numTrajPerJob)
+        print ('There are %s jobs to be distributed' %numJobs)
 
         # simplify worker function
         specifiedWorker = partial(self.worker, inputPar = self.inputPar,
@@ -90,8 +91,7 @@ class MapScatterer(object):
         listenerWithStore = partial(self.listener, storeName=storeName,
                                                     pbar=pbar)
 
-        logger.info('Starting multithreading')
-
+        #logger.info('Starting multithreading')
         for _ in range(numJobs):
             self.pool.apply_async(specifiedWorker,
                             callback = listenerWithStore,
@@ -179,9 +179,10 @@ def main():
 
     # name the hdf file that stores the results
     storeFile = '../data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
-                                '_tilt:' + str(inputPar['s_tilt'])+\
-                                '_Emin:' + str(inputPar['Emin'])  +\
-                                '_E0:'   + str(inputPar['E0'])    +\
+                                '_elastic:' + str(inputPar['elastic']) +\
+                                '_tilt:' + str(inputPar['s_tilt'])     +\
+                                '_Emin:' + str(inputPar['Emin'])       +\
+                                '_E0:'   + str(inputPar['E0'])         +\
                                 '_tolE:' + str(inputPar['tol_E'])      +\
                                 '_tolW:' + str(inputPar['tol_W'])      +\
                                 '.h5'

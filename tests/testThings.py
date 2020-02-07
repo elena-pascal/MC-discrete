@@ -3,10 +3,12 @@ import random
 import warnings
 import os
 
-from multiprocessing import Process, cpu_count, Queue
+import multiprocessing as mp
 import pandas as pd
 import numpy as np
 from scipy import integrate, stats
+from functools import partial
+from tqdm import tqdm
 
 #import matplotlib.pyplot as plt
 import plotly.express as px
@@ -18,11 +20,13 @@ from MC.crossSections import Ruth_diffCS, Ruth_diffCS_E
 from MC.distributions import Moller_W_E, Moller_W, Gryz_Last_W_E, Gryz_Last_W
 
 from MC.scattering import alpha, binaryCollModel, Rutherford_halfPol
-from MC.multiScatter import scatterMultiEl_cont, scatterMultiEl_DS, retrieve
+from MC.multiScatter import multiTraj_DS, scatterMultiEl_DS, retrieve
 from MC.material import material
 
 from MC.fileTools import readInput, thingsToSave, writeBSEtoHDF5
 from MC.probTables import genTables, maxW_moller, maxW_gryz
+from MC.doScatter import MapScatterer
+
 
 
 def unique(inputList):
@@ -191,8 +195,6 @@ def rndAnglesFromDF(scatter_data, scatter_type, angle_type, size, E = None):
         # azimuthal angles are saved as (phi/2)
         return np.degrees(np.array(angles)*2)
 
-
-
 ##############################################################################
 ######          Scatter angles                                          ######
 ##############################################################################
@@ -204,37 +206,54 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print ('Setting up...', '\n')
-
         cls.inputPar = readInput('testInput.file')
         cls.material = material(cls.inputPar['material'])
         cls.tables  = genTables(cls.inputPar)
-        cls.whatToSave = {'el_output':thingsToSave(cls.inputPar['electron_output']),
-                         'scat_output': thingsToSave(cls.inputPar['scatter_output']) }
+        cls.whatToSave = {'el_output':cls.inputPar['electron_output'],
+                         'scat_output': cls.inputPar['scatter_output'] }
         cls.file = 'testData/testAngles_DS.temp'
 
-        cls.num_proc = cpu_count()-1
+        # if it already exists remove it
+        if os.path.exists(cls.file):
+            os.remove(cls.file)
 
-        output = {'electrons': Queue(), 'scatterings': Queue()}
+        # run in series
+        numTraj= 100
+        numJobs = int(cls.inputPar['num_el']/numTraj)
+        pbar = tqdm(total=cls.inputPar['num_el'], desc='Trajectories finished:')
 
-        processes = [Process(target=scatterMultiEl_DS, args=(cls.inputPar, cls.tables,
-                                            cls.whatToSave, output, count)) for count in range(cls.num_proc)]
-        # start threads
-        for p in processes:
-            p.start()
+        with pd.HDFStore(cls.file) as store:
+            for job in range(numJobs):
+                results = multiTraj_DS(cls.inputPar, numTraj, cls.material, cls.tables, cls.whatToSave)
+                for result in results:
+                    for key in result.keys():
+                        # append the results to the store
+                        df = pd.DataFrame.from_dict(result[key])
+                        store.put(key, df, format='table', data_column=True, append=True)
+                # update progress bar
+                pbar.update(n=len(results))
 
-        # get results from queue
-        results = retrieve(processes, output)
+        # cls.manager = mp.Manager()
+        #
+        # cls.num_proc = mp.cpu_count()-1
+        #
+        # d = cls.manager.dict()
+        #
+        # processes = [mp.Process(target=scatterMultiEl_DS, args=(cls.inputPar,
+        #             cls.tables, cls.whatToSave, d, count)) for count in range(cls.num_proc)]
+        #
+        # # start processes
+        # for p in processes:
+        #     p.start()
+        # # wait for processes to end
+        # for p in processes:
+        #     # wait until all processes have finished
+        #     p.join()
+        #     p.terminate()
 
-        # wait for processes to end
-        for p in processes:
-            # wait until all processes have finished
-            p.join()
-            p.terminate()
 
-        # save to file
-        warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-        writeBSEtoHDF5(results, cls.inputPar, cls.file)
+
+
 
     def watson_two_test(self, data, angle_type, plot=False, numBins=30):
          '''
@@ -326,9 +345,9 @@ class TestScatterAnglesforDS(unittest.TestCase):
         sigmas['p_M'] = moller_sigma(E, self.inputPar['Wc'], self.material.params['n_val'])
 
         # Gryzinski labels
-        Gryzinski = [i+j for i,j in zip(['Gryz']*len(self.material.params['name_s']), self.material.params['name_s'])]
+        Gryz = [i+j for i,j in zip(['Gryz']*len(self.material.params['name_s']), self.material.params['name_s'])]
 
-        # one Gryzinski CS for each inner shell
+        # one Gryzinski CS for each inner shell at E0
         for key in self.material.params['name_s']:
             sigmas['p_G'+key] = gryz_sigma(E, self.material.params['Es'][key], self.material.params['ns'][key])
 
@@ -336,16 +355,17 @@ class TestScatterAnglesforDS(unittest.TestCase):
         sigmas['p_Q'] = quinn_sigma(E, self.material.plasmon_e, self.material.fermi_e, self.material.atnd)
 
         normalisation = sum(sigmas.values())
+
         # sample n values from the theoretical cross sections
         expected = np.random.choice(['Ruth', 'Moller', *Gryz, 'Quinn'], n,
                                     p=np.array(list(sigmas.values()))/normalisation)
 
         # make a dataframe with the counts; last bit removes redundant multilevel index
         exp_df = pd.crosstab(index=expected, columns=['count'], colnames=['type']).rename_axis(None)
-
+        print ('exp', exp_df)
         ################### observed ##########################################
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose n random scattering types from the MC results
         observed = np.random.choice(scatterings[scatterings.E==E]['type'].values, n)
@@ -359,14 +379,14 @@ class TestScatterAnglesforDS(unittest.TestCase):
 
         # chi square statistic for observed data is the same as the expected distribution
         chi2stat, _ = stats.chisquare(f_obs=obs_df, f_exp=exp_df)
-
+        print ('observed', obs_df)
         # critical chi square statistics value
-        crit = stats.chi2.ppf(q=0.95,              # at 95% confidence
+        crit = stats.chi2.ppf(q=0.90,              # at 95% confidence
                             df= len(exp_df)-1  ) # degrees of freedom
 
         # reject null hypothesis that the two distributions are the same
         # if chi2stat > crit
-        print ('cih2stat:', chi2stat[0], 'crit:', crit)
+        print ('chi2stat:', chi2stat[0], 'crit:', crit)
         self.assertTrue (chi2stat[0] < crit), 'The observed scattering types probabilities do not match those expected'
 
 
@@ -392,7 +412,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # select only incident energy data
         E = np.array(self.inputPar['E0'])
@@ -428,7 +448,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Rutherford polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Ruth', 'pol_angle', n)
@@ -482,7 +502,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Rutherford polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Ruth', 'az_angle', n)
@@ -521,7 +541,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = int(self.inputPar['num_el']*0.5)
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # select only incident energy data
         E = np.array(self.inputPar['E0'])
@@ -565,7 +585,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Moller polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Moller', 'pol_angle', n)
@@ -634,7 +654,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Moller polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Moller', 'az_angle', n)
@@ -673,13 +693,13 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # select only incident energy data
         E = np.array(self.inputPar['E0'])
 
         # choose n random values from the MC Gryzinski polar scattering angles
-        MCAngles = rndAnglesFromDF(scatterings, 'Gryzinski', 'pol_angle', n, E)
+        MCAngles = rndAnglesFromDF(scatterings, 'Gryz', 'pol_angle', n, E)
 
         # add these angles in degrees to a pandas dataframe
         pdData = pd.DataFrame(data={'label':'MC', 'angles_deg':MCAngles })
@@ -726,7 +746,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Gryzinski polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Gryz', 'pol_angle', n)
@@ -805,7 +825,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         n = self.inputPar['num_el']*self.num_proc
 
         # read dataframe into pandas
-        scatterings = pd.read_hdf(self.file, 'scatterings')
+        scatterings = pd.read_hdf(self.file, 'scats')
 
         # choose a random sample from the MC Rutherford polar scattering angles
         MCAngles =  rndAnglesFromDF(scatterings, 'Gryz', 'az_angle', n)
@@ -842,19 +862,19 @@ def suite():
     suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
 
     # add Rutherford angle tests
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
-    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
+    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
 
     # add Moller angle tests
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
-    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
+    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
 
     # add Gryz angle tests
-    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
+    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz_E0'))
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Gryz'))
-    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
+    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Gryz'))
     return suite
 
 if __name__ == '__main__':

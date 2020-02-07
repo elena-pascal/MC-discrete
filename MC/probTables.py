@@ -610,7 +610,7 @@ def genTables(inputPar):
         # add Mott table
         tables['Mott'] = mottTableInst
 
-        print ('assigned Mott table')
+        print ('assigned Mott table \n')
     return tables
 
 
