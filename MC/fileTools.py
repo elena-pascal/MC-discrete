@@ -27,7 +27,6 @@ def readInput(fileName='input.file'):
                 if (param[0] in ['mode', 'material', 'elastic', 'Bethe_model']):
                     # assign string to dictionary
                     data[param[0]] = param[1]
-
                 elif (param[0] in ['num_el', 'maxScatt']):
                     # assign int to dictionary
                     data[param[0]] = int(param[1])
@@ -70,6 +69,13 @@ def zipDict(dictA, dictB):
     For multiple dictionaries with same keys and of the form
     {'key' : [list]} merge the values in the same list
     '''
+    if 'final_dir' in dictB.keys():
+        # from {'final_dict':{'dx':[], 'dy':[], 'dz':[]}
+        # to 'dx':[], 'dy':[], 'dz':[]
+        for dirKey in dictB['final_dir']:
+            dictB[dirKey] = dictB['final_dir'][dirKey]
+        del dictB['final_dir']
+
     for k in dictB.keys():
         if k in dictA:
             dictA[k] += dictB[k]
@@ -179,7 +185,10 @@ class thingsToSave:
             for every argument we want to track'''
         self.dict = {}
         for arg in args:
-            self.dict[arg] = []
+            if (arg == 'final_dir'):
+                self.dict.update({'final_dir':{'dx':[], 'dy':[], 'dz':[]}})
+            else:
+                self.dict[arg] = []
 
     def addToList(self, par, value):
         '''
@@ -187,4 +196,11 @@ class thingsToSave:
         is in the list of parameters we want to save
         '''
         if (par in self.dict.keys()):
-            self.dict[par].append(value)
+            if (par == 'final_dir'):
+                # three separate columns for dx, dy, dz
+                [dx, dy, dz] = value
+                self.dict['final_dir']['dx'].append(dx)
+                self.dict['final_dir']['dy'].append(dy)
+                self.dict['final_dir']['dz'].append(dz)
+            else:
+                self.dict[par].append(value)

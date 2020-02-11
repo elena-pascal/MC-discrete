@@ -166,10 +166,10 @@ def main():
     inputPar = readInput(inputFile)
 
     # return some info about this run
-    print(' \n - Number of incident electrons per processor: %s' %inputPar['num_el'])
+    print(' \n - Number of incident electrons: %s' %inputPar['num_el'])
     print(' \n - Material is: %s' %inputPar['material'])
-    print(' \n - Scattering mode is: %s \n' %inputPar['mode'])
-
+    print(' \n - Scattering mode is: %s ' %inputPar['mode'])
+    print(' \n - Elastic scattering mode is: %s \n' % inputPar['elastic'])
     # for direct model we need integration tables
     if (inputPar['mode'] == 'DS'):
         # generate integration tables instances

@@ -215,7 +215,7 @@ class scatter_discrete:
         self.table_EW_M = tables['Moller']
         self.tables_EW_G = tables['Gryz']
 
-        if elastic is 'Mott':
+        if (elastic == 'Mott'):
             self.tableMott = tables['Mott']
 
         # scattering params
@@ -279,7 +279,6 @@ class scatter_discrete:
         '''
         Set the type of scattering after determining type
         '''
-        if 'Mott' in self.sigma.keys(): print('sigmas', self.sigma)
         self.type = pickFromSigmas(self.sigma)
         # NOTE: Moller becomes more unprobable with increase value of Wc
 
@@ -320,7 +319,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ##### Moller ###############
-        elif self.type is 'Moller':
+        elif (self.type == 'Moller'):
             E_loss, tables_e = pickTable(self.table_EW_M, self.Ei)
 
             assert E_loss < self.Ei, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.Ei)
@@ -361,7 +360,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
 
         ##### Quinn ###########
-        elif self.type is 'Quinn':
+        elif (self.type == 'Quinn'):
             self.E_loss = self.m_pl_e
 
             # for plasmon scattering assume no change in direction

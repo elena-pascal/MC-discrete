@@ -194,14 +194,17 @@ def scatter_params(species):
         # energy of valence shell
         material['E_val'] = 99.42
 
+        # name of valence shells
+        material['name_val'] = '3s2-3p2'
+
         # energy levels for core electrons
         material['name_s'] = ['1s', '2s', '2p']
 
         # binding energies
-        material['Es'] = np.array([1189, 149, 100])
+        material['Es'] = {'1s':1189, '2s':149, '2p':100}
 
         # number of electrons per shell
-        material['ns'] = np.array([2, 2, 6])
+        material['ns'] = {'1s':2, '2s':2, '2p':6}
 
         # atomic  number
         material['Z'] = 14
@@ -228,14 +231,17 @@ def scatter_params(species):
         # energy of valence shell
         material['E_val'] = 75.1
 
+        # name of valence shells
+        material['name_val'] = '3d10-4s2'
+
         # energy levels for core electrons
-        material['name_s'] = ['1s', '2s2p', '3p', '3p']
+        material['name_s'] = ['1s', '2s2p', '3s', '3p']
 
         # binding energies
-        material['Es'] = np.array([8980, 977, 120, 74])
+        material['Es'] = {'1s':8980, '2s2p':977, '3s':120, '3p':74}
 
         # number of electrons per shell
-        material['ns'] = np.array([2, 8, 2, 6])
+        material['ns'] = {'1s':2, '2s2p':8, '3s':2, '3p':6}
 
         # atomic  number
         material['Z'] = 29
@@ -262,14 +268,17 @@ def scatter_params(species):
         # energy of valence shell
         material['E_val'] = 75.1
 
+        # name of valence shells
+        material['name_val'] = '5d10-6s1'
+
         # energy levels for core electrons
         material['name_s'] = ['2s2p', '3s3p3d', '4s4p', '4d', '5s', '4f', '5p2', '5p4']
 
         # binding energies
-        material['Es'] = np.array([12980, 2584, 624, 341, 178, 85, 72, 54])
+        material['Es'] = {'2s2p':12980, '3s3p3d':2584, '4s4p':624, '4d':341, '5s':178, '4f':85, '5p2':72, '5p4':54}
 
         # number of electrons per shell
-        material['ns'] = np.array([8, 18, 8, 10, 2, 14, 2, 4])
+        material['ns'] = {'2s2p':8, '3s3p3d':18, '4s4p':8, '4d':10, '5s':2, '4f':14, '5p2':2, '5p4':4}
 
         # atomic  number
         material['Z'] = 79

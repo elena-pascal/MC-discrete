@@ -252,9 +252,6 @@ class TestScatterAnglesforDS(unittest.TestCase):
         #     p.terminate()
 
 
-
-
-
     def watson_two_test(self, data, angle_type, plot=False, numBins=30):
          '''
          Apply the Watson two test for two samples and check
@@ -381,7 +378,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         chi2stat, _ = stats.chisquare(f_obs=obs_df, f_exp=exp_df)
         print ('observed', obs_df)
         # critical chi square statistics value
-        crit = stats.chi2.ppf(q=0.90,              # at 95% confidence
+        crit = stats.chi2.ppf(q=0.90,              # at 90% confidence
                             df= len(exp_df)-1  ) # degrees of freedom
 
         # reject null hypothesis that the two distributions are the same
@@ -445,7 +442,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n',  '------------------------------------------')
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -499,7 +496,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n', '-----------------------------------------------' )
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -582,7 +579,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n', '----------------------------------')
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -651,7 +648,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n', '-----------------------------------------------' )
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -743,7 +740,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         print ('\n', 'Gryzinski polar angle scattering at all energies')
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -822,7 +819,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n', '-----------------------------------------------' )
 
         # size of sample
-        n = self.inputPar['num_el']*self.num_proc
+        n = self.inputPar['num_el']
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -862,9 +859,9 @@ def suite():
     suite.addTest(TestScatterAnglesforDS('Test_crossSection'))
 
     # add Rutherford angle tests
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
-    #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Ruth'))
+    suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
 
     # add Moller angle tests
     #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
