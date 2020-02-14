@@ -1,4 +1,4 @@
-# MC-discrete
+# MC-discrete (very alpha)
 
 Discrete inelastic electron scattering Monte Carlo python implementation
 
@@ -50,5 +50,4 @@ At every scattering the parameters set in `scatter_output` as saved to a queue a
 For every electron the parameters set i `electron_output` are similarly saved to a queue and then to a output dataset. 
 
 ## Current issues
-
-There are memory leaks for larger number of electrons and running out of memeory when the number of electrons is larger than 50000 per process, I suppose I'll have to write out more often than once per thread. 
+hdf5 locks for largish data (electrons>500000).  
