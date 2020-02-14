@@ -170,6 +170,7 @@ def main():
     print(' \n - Material is: %s' %inputPar['material'])
     print(' \n - Scattering mode is: %s ' %inputPar['mode'])
     print(' \n - Elastic scattering mode is: %s \n' % inputPar['elastic'])
+
     # for direct model we need integration tables
     if (inputPar['mode'] == 'DS'):
         # generate integration tables instances
@@ -178,7 +179,8 @@ def main():
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/Al_BSE' +   '_mode:' + str(inputPar['mode'])  +\
+    storeFile = '../data/4BSE' + '_'   + str(inputPar['material'])   +\
+                                '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\
                                 '_Emin:' + str(inputPar['Emin'])       +\
@@ -205,7 +207,7 @@ def main():
     # set the material
     target_material = material(inputPar['material'])
 
-    # make a disctionary with objects to save
+    # make a dictionary with objects to save
     whatToSave = {'el_output': inputPar['electron_output'],
                  'scat_output': inputPar['scatter_output'] }
 

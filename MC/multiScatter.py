@@ -3,7 +3,7 @@ import os
 import sys
 import logging
 import random
-
+import time
 import pickle
 import cProfile
 from tqdm import tqdm
@@ -18,7 +18,7 @@ def scatterMultiEl_DS(inputPar, tables, listParToSave, outputQ, count):
     '''
     # For parallel processes we need to make sure the random number seeds are different
     # Use, for instance, the process id multiplied by the current time
-    random.seed(os.getpid()) # getip only works on Unix
+    random.seed(os.getpid()*int(time.time())) # getip only works on Unix
 
     # initialise new electron
     pos0 = np.array([0., 0., 0.,])
@@ -91,7 +91,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
     '''
     # For parallel processes we need to make sure the random number seeds are different
     # Use, for instance, the process id multiplied by the current time
-    random.seed(os.getpid()) # getip only works on Unix
+    random.seed(os.getpid()*int(time.time())) # getip only works on Unix
 
     # initialise new electron position and direction
     pos0 = np.array([0., 0., 0.,])
@@ -121,7 +121,7 @@ def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
     # for parallel processes we need to make sure the random number seeds are different
     # use for instance the process id multiplied by the current time
     #if parallel:
-    random.seed(os.getpid()) # getip only on Unix
+    random.seed(os.getpid()*int(time.time())) # getip only on Unix
 
     pos0 = np.array([0., 0., 0.,])
     dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])), 0., np.cos(np.radians(inputPar['s_tilt']))])
