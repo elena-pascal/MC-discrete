@@ -12,6 +12,8 @@ CASINO/
 testData/
 tables/
 silly_tests/
+notebooks/
+notUsed
 
 # profiling files
 *.prof

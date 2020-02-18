@@ -6,9 +6,10 @@ Emin     : 16000 # eV; cannot be smaller than Wc
 material : Si
 s_tilt   : 70    # degrees
 
-elastic  : Mott # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
+elastic  : Ruth_vanilla # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
 
-mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+mode     : cont   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+
 # if continuous choose Bethe model
 Bethe_model : classical # classical, JL or explicit
 

@@ -554,49 +554,50 @@ def genTables(inputPar):
 
     materialInst = material(inputPar['material'])
 
-    # instance for Moller table
-    mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
-                            E_range=Erange,
-                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='../tables/integration',
-                            chunk_size=csize, Wc=inputPar['Wc'])
-
-    if (inputPar['gen_tables']):
-        # generate Moller table
-        mollerTable.generate()
-
-        # map to memory
-        mollerTable.mapToMemory()
-
-
-    # read from disk
-    mollerTable.readFromMemory()
-
-    tables['Moller'] = mollerTable
-
-    gTables_list = []
-    # one Gryzinki table for each shell
-    for Gshell in materialInst.params['name_s'][::-1]:
-        # instance for Gryzinski table
-        gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
-                            E_range=Erange,
-                            tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
-                            mat=materialInst, mapTarget='../tables/integration',
-                            chunk_size=csize)
+    if 'DS' in inputPar['elastic']:
+        # instance for Moller table
+        mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
+                                E_range=Erange,
+                                tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
+                                mat=materialInst, mapTarget='../tables/integration',
+                                chunk_size=csize, Wc=inputPar['Wc'])
 
         if (inputPar['gen_tables']):
-            # generate Gryzinski table for shell Gshell
-            gryzTable.generate()
+            # generate Moller table
+            mollerTable.generate()
 
             # map to memory
-            gryzTable.mapToMemory()
+            mollerTable.mapToMemory()
+
 
         # read from disk
-        gryzTable.readFromMemory()
+        mollerTable.readFromMemory()
 
-        gTables_list.append(gryzTable)
+        tables['Moller'] = mollerTable
 
-    tables['Gryz'] = gTables_list
+        gTables_list = []
+        # one Gryzinki table for each shell
+        for Gshell in materialInst.params['name_s'][::-1]:
+            # instance for Gryzinski table
+            gryzTable = probTable(type='Gryzinski', shell=Gshell, func=gryz_dCS,
+                                E_range=Erange,
+                                tol_E=inputPar['tol_E'], tol_W=inputPar['tol_W'],
+                                mat=materialInst, mapTarget='../tables/integration',
+                                chunk_size=csize)
+
+            if (inputPar['gen_tables']):
+                # generate Gryzinski table for shell Gshell
+                gryzTable.generate()
+
+                # map to memory
+                gryzTable.mapToMemory()
+
+            # read from disk
+            gryzTable.readFromMemory()
+
+            gTables_list.append(gryzTable)
+
+        tables['Gryz'] = gTables_list
 
     if 'Mott' in inputPar['elastic']:
         mottTableInst = mottTable(materialInst.params['Z'], materialInst.species)

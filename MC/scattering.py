@@ -463,9 +463,11 @@ class scatter_continuous_classical:
     and classical Bethe is the continuous energy loss
     '''
 
-    def __init__(self, electron, material):
+    def __init__(self, electron, material, elastic, tables):
         # incident particle params
         self.Ei = electron.energy  # incident particle energy
+
+        self.elastic = elastic
 
         # material params
         self.m_Z = material.params['Z']  # atomic number
@@ -480,12 +482,26 @@ class scatter_continuous_classical:
 
         # intitalise scattering probabilities dictionary
         self.sigma = {} # dictionary keeping all sigmas
-        self.mfp = {}   # dictionary keeping all mfp
+        self.mfp = {}
 
-        ## TODO: decide on sigma or mfp
-        #self.sigma['Rutherford'] = ruther_sigma(self.Ei, self.m_Z)
-        self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.m_Z)
-        self.mfp['Ruth'] = mfp_from_sigma(self.sigma['Rutherford'], self.m_atnd)
+        # set the elastic model used
+        if 'Ruth' in elastic:
+            if 'vanilla' in elastic:
+                self.sigma['Ruth'] = ruther_sigma(self.Ei, self.m_Z)
+            elif 'vanilla_wDefl' in elastic:
+                self.sigma['Ruth'] = ruther_sigma_wDefl(self.Ei, self.m_Z)
+            elif 'nigram' in elastic:
+                self.sigma['Ruth'] = ruther_N_sigma(self.Ei, self.m_Z)
+            elif 'nigram_wDefl' in elastic:
+                self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.m_Z)
+
+            # compute mean free path
+            self.mfp['Ruth'] = mfp_from_sigma(self.sigma['Ruth'], self.m_atnd)
+        else:
+            self.sigma['Mott'] = self.tableMott.sigmas[bisect.bisect_left(self.tableMott.Es, self.Ei)]
+
+            # compute mean free path
+            self.mfp['Mott'] = mfp_from_sigma(self.sigma['Mott'], self.m_atnd)
 
         # scattering output object
         self.scat_output = electron.scat_output
@@ -522,13 +538,14 @@ class scatter_continuous_classical:
         self.halfPhi = pi*random.random()
 
         # save scatter type Rutherford if we want it
-        self.scat_output.addToList('type', 'Ruth')
+        self.scat_output.addToList('type', self.elastic)
 
         # save polar angle if we want it
         self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         # save azimuthal angle if we want it
         self.scat_output.addToList('az_angle', self.halfPhi)
+
 
 # Joy and Luo Bethe as extended from the classical one
 class scatter_continuous_JL(scatter_continuous_classical):

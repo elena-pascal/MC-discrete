@@ -99,12 +99,9 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
                     0.,
                     np.cos(np.radians(inputPar['s_tilt']))])
 
-    # make an iterator along the number of scattering events per process
-    def iterator(num):
-        return range(num)
 
     results = []
-    for _ in iterator(numTraj):
+    for _ in range(numTraj):
         # start this electron
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 
@@ -171,6 +168,65 @@ def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
         raise
 
 
+def multiTraj_cont(inputPar, numTraj, material, thingsToSave, tables):
+    '''
+    Does numTraj full trajectory scatterings. This can then be the target
+    called by the multiprocessing pool.
+
+    Input
+        inputPar
+            a dictionary of user defined parameters
+
+        numTraj (per job)
+            largest number of trajectories per process safe to keep in memory
+
+        material
+            an instance of the Material class defining the target material
+
+        thingsToSave
+            dictionary containing the list of parameters to save
+            This will be populated with the results
+
+    Returns
+        results
+            a list of thingsToSave dictionaries populated with results
+    '''
+    # For parallel processes we need to make sure the random number seeds are different
+    # Use, for instance, the process id multiplied by the current time
+    random.seed(os.getpid()*int(time.time())) # getip only works on Unix
+
+    # initialise new electron position and direction
+    pos0 = np.array([0., 0., 0.,])
+    dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])),
+                    0.,
+                    np.cos(np.radians(inputPar['s_tilt']))])
+
+    # set the scattering function according to the choice of Bethe model
+    if (inputPar['Bethe_model'] == 'classical'):
+        def trajectory_cont(e_i, material, maxScatt, elastic, tables):
+            return trajectory_cont_cl(e_i, material, maxScatt, elastic, tables)
+
+    elif (Bethe_model == 'JL'):
+        def scatterOneEl_cont(e_i, material, Emin):
+            return scatterOneEl_cont_JL(e_i, material, Emin)
+
+    elif (Bethe_model == 'explicit'):
+        def scatterOneEl_cont(e_i, material, Emin):
+            return scatterOneEl_cont_expl(e_i, material, Emin)
+
+    results = []
+    for _ in range(numTraj):
+        # start this electron
+        el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
+
+        # scatter a full trajectory
+        trajectory_cont(el, material, inputPar['maxScatt'], inputPar['elastic'], tables)
+
+        results.append({'els':el.el_output.dict, 'scats':el.scat_output.dict})
+
+        del el # not sure if this helps memory clean up in any way
+
+    return results
 
 def retrieve(jobs, output):
     ''' Retrieve results from Queue

@@ -206,18 +206,18 @@ def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
 ###############################################################################
 ################### continuous ################################################
 ###############################################################################
-def trajectory_cont_cl(electron, material, maxScatt):
+def trajectory_cont_cl(electron, material, maxScatt, elastic_model, tables):
     ''' follow a full electron trajectory'''
 
     num_scatt = 0
 
-    while ((electron.outcome is not 'absorbed') and (electron.outcome is not 'backscattered')): # not backscattered nor absorbed nor scattered too long
+    while ((electron.outcome is not 'abs') and (electron.outcome is not 'bks')): # not backscattered nor absorbed nor scattered too long
         # new instance of scatter
-        scatter = scatter_continuous_classical(electron, material)
+        scatter = scatter_continuous_classical(electron, material, elastic_model, tables)
 
         num_scatt += 1
         if (num_scatt > maxScatt):
-             electron.outcome = 'scatteredTooLong'
+             electron.outcome = 'long'
              electron.saveOutcomes()
              return # exit while loop
 

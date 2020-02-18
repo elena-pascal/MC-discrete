@@ -17,7 +17,7 @@ from MC.material import material
 from MC.probTables import genTables
 from MC.singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
-from MC.multiScatter import multiTraj_DS, scatterMultiEl_cont, retrieve
+from MC.multiScatter import multiTraj_DS,  multiTraj_cont, retrieve
 from MC.fileTools import readInput, writeBSEtoHDF5, zipDict
 
 
@@ -51,16 +51,10 @@ class MapScatterer(object):
     def error_call(self, result):
         print ('failed to callback %s' %result)
 
-    def __call__(self, numTrajPerJob, tables, resultsList, storeName):
+    def __call__(self, numJobs, storeName):
         '''
         numTrajPerJob
             number of trajectories per job
-
-        tables
-            dictionary of integration tables objects
-
-        resultsList
-            dictionary of results
 
         storeName
             HDF5 store name
@@ -72,18 +66,6 @@ class MapScatterer(object):
         store['input'] = pd.DataFrame(pd.Series(self.inputPar)).T
         store.close()
 
-        # we need to spawn jobs = total number of electron trajctories/
-        #                          num of trajectories per worker
-        numJobs = int(self.inputPar['num_el']/numTrajPerJob)
-        print ('There are %s jobs to be distributed' %numJobs)
-
-        # simplify worker function
-        specifiedWorker = partial(self.worker, inputPar = self.inputPar,
-                                               numTraj = numTrajPerJob,
-                                               material = self.targetMat,
-                                               tables = tables,
-                                               thingsToSave = resultsList)
-
         # progress bar
         pbar = tqdm(total=self.inputPar['num_el'], desc='Trajectories finished:')
 
@@ -93,7 +75,7 @@ class MapScatterer(object):
 
         #logger.info('Starting multithreading')
         for _ in range(numJobs):
-            self.pool.apply_async(specifiedWorker,
+            self.pool.apply_async(self.worker,
                             callback = listenerWithStore,
                             error_callback = self.error_call)
 
@@ -171,15 +153,13 @@ def main():
     print(' \n - Scattering mode is: %s ' %inputPar['mode'])
     print(' \n - Elastic scattering mode is: %s \n' % inputPar['elastic'])
 
-    # for direct model we need integration tables
-    if (inputPar['mode'] == 'DS'):
-        # generate integration tables instances
-        my_tables = genTables(inputPar)
+    # generate integration tables instances
+    my_tables = genTables(inputPar)
 
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/4BSE' + '_'   + str(inputPar['material'])   +\
+    storeFile = '../data/4BSE' + '_'   + str(inputPar['material'])     +\
                                 '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\
@@ -211,12 +191,44 @@ def main():
     whatToSave = {'el_output': inputPar['electron_output'],
                  'scat_output': inputPar['scatter_output'] }
 
-    # instace of scatter mapper
-    scatter = MapScatterer(inputPar, multiTraj_DS, listener, num_workers=11)
 
-    # scatter object sent to multithreading
-    scatter(numTrajPerJob = 200, tables=my_tables, resultsList=whatToSave, storeName=storeFile)
+    # define number of traj per job
+    numTrajPerJob = 200
 
+    # define number of workers
+    num_workers = 11
+
+    # we need to spawn jobs = total number of electron trajctories/
+    #                          num of trajectories per worker
+    numJobs = int(inputPar['num_el']/numTrajPerJob)
+    print ('There are %s jobs to be distributed' %numJobs)
+
+    if (inputPar['mode']=='DS'):
+        # simplify worker function
+        simplifiedWorker = partial(multiTraj_DS, inputPar = inputPar,
+                                               numTraj = numTrajPerJob,
+                                               material = target_material,
+                                               tables = my_tables,
+                                               thingsToSave = whatToSave)
+
+        # instace of scatter mapper
+        scatter = MapScatterer(inputPar, simplifiedWorker, listener, num_workers)
+
+        # scatter object sent to multithreading
+        scatter(numJobs, storeName=storeFile)
+
+    else:
+        # simplify worker function
+        simplifiedWorker = partial(multiTraj_cont, inputPar = inputPar,
+                                               numTraj = numTrajPerJob,
+                                               material = target_material,
+                                               tables = my_tables,
+                                               thingsToSave = whatToSave)
+        # instace of scatter mapper
+        scatter = MapScatterer(inputPar, simplifiedWorker, listener, num_workers)
+
+        # scatter object sent to multithreading
+        scatter(numJobs, storeName=storeFile)
 
 if __name__ == '__main__': #this is necessary on Windows
 
