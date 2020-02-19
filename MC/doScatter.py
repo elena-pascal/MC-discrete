@@ -159,7 +159,7 @@ def main():
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/4BSE' + '_'   + str(inputPar['material'])     +\
+    storeFile = '../data/4BSE_2' + '_'   + str(inputPar['material'])     +\
                                 '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\

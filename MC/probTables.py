@@ -554,7 +554,7 @@ def genTables(inputPar):
 
     materialInst = material(inputPar['material'])
 
-    if 'DS' in inputPar['elastic']:
+    if 'DS' in inputPar['mode']:
         # instance for Moller table
         mollerTable = probTable(type='Moller', shell=materialInst.params['name_val'], func=moller_dCS,
                                 E_range=Erange,

@@ -8,13 +8,13 @@ s_tilt   : 70    # degrees
 
 elastic  : Ruth_vanilla # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
 
-mode     : cont   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
+mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scattering = cont
 
 # if continuous choose Bethe model
 Bethe_model : classical # classical, JL or explicit
 
 # generate new tables (or read from memory)?
-gen_tables : no
+gen_tables : yes
 
 # relative error tolerance for W and E integration tables
 # note the default values require at least 10G memory
