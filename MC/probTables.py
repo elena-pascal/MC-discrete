@@ -6,6 +6,8 @@ import numpy.ma as ma
 import logging
 from functools import partial
 
+from dill import pickles
+
 from dask import dataframe as dd
 from dask import array as da
 from dask import delayed, compute
@@ -531,7 +533,8 @@ class probTable:
                        shape    = (self.Es.size, self.Ws.size-1)   )
 
         # mask zeros
-        self.table = ma.masked_array(readTable, readTable==0)
+        self.table = ma.masked_array(readTable, readTable==0)#.dumps()
+
         print ('read %s table for shell %s from memory \n' %(self.type, self.shell))
 
 

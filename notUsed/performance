@@ -1,2 +1,0 @@
-num threads            num scatt electrons per thread         iterations/sec    time spent in scattering (s)   comments
-11                     5000                                   11.9               421.9                         bins=6, python3

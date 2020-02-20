@@ -9,6 +9,7 @@ import warnings
 import getopt
 
 import multiprocessing as mp
+#import multiprocess as mp
 from functools import partial
 from tqdm import tqdm
 #from scimath.units.api import UnitScalar, UnitArray
@@ -18,7 +19,7 @@ from MC.probTables import genTables
 from MC.singleScatter import scatterOneEl_DS_wUnits, scatterOneEl_cont_cl_wUnits, scatterOneEl_cont_JL_wUnits, scatterOneEl_cont_expl_wUnits
 from MC.singleScatter import trajectory_DS, trajectory_cont_cl
 from MC.multiScatter import multiTraj_DS,  multiTraj_cont, retrieve
-from MC.fileTools import readInput, writeBSEtoHDF5, zipDict
+from MC.fileTools import readInput, zipDict
 
 
 class MapScatterer(object):
@@ -75,7 +76,7 @@ class MapScatterer(object):
 
         #logger.info('Starting multithreading')
         for _ in range(numJobs):
-            self.pool.apply_async(self.worker,
+            foo=self.pool.apply_async(self.worker,
                             callback = listenerWithStore,
                             error_callback = self.error_call)
 
@@ -159,7 +160,7 @@ def main():
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/4BSE_2' + '_'   + str(inputPar['material'])     +\
+    storeFile = '../data/BSE' + '_'   + str(inputPar['material'])     +\
                                 '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\
@@ -193,7 +194,7 @@ def main():
 
 
     # define number of traj per job
-    numTrajPerJob = 200
+    numTrajPerJob = 100
 
     # define number of workers
     num_workers = 11
@@ -204,6 +205,7 @@ def main():
     print ('There are %s jobs to be distributed' %numJobs)
 
     if (inputPar['mode']=='DS'):
+        print('DS it is')
         # simplify worker function
         simplifiedWorker = partial(multiTraj_DS, inputPar = inputPar,
                                                numTraj = numTrajPerJob,

@@ -101,6 +101,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
 
 
     results = []
+
     for _ in range(numTraj):
         # start this electron
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
