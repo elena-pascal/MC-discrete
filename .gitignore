@@ -7,10 +7,11 @@ __pycache__/
 *.so
 
 # data files
-data/
+data/*
 CASINO/
 testData/
-tables/
+tables/integration/*
+tables/mott
 silly_tests/
 notebooks/
 notUsed

@@ -70,8 +70,18 @@ class MapScatterer(object):
         # progress bar
         pbar = tqdm(total=self.inputPar['num_el'], desc='Trajectories finished:')
 
+        # define the size of string columns in pandas hdf5 store
+        strSize_dict = {'els':{}, 'scats':{}}
+
+        if 'outcome' in self.inputPar['electron_output']:
+            strSize_dict['els']['outcome'] = 6
+
+        if 'type' in self.inputPar['scatter_output']:
+            strSize_dict['scats']['type'] = 6
+
         # simplify the listener function to only depend on returned results from worker
         listenerWithStore = partial(self.listener, storeName=storeName,
+                                                    strSize_dict=strSize_dict,
                                                     pbar=pbar)
 
         #logger.info('Starting multithreading')
@@ -86,7 +96,7 @@ class MapScatterer(object):
         print (' BSE data had been written to ', storeName)
 
 
-def listener(results, storeName, pbar):
+def listener(results, storeName, strSize_dict, pbar):
     '''
     Listens for results and appending them to the hdf5 store
     '''
@@ -94,7 +104,7 @@ def listener(results, storeName, pbar):
     results_d = {'els':{}, 'scats':{}}
 
     # results arrives as a list of dictionaries,
-    # make a simple dicitonary with zipped lists
+    # make a simple dictionary with zipped lists
     for result in results:
         for key in results_d.keys():
             results_d[key] = zipDict(results_d[key], result[key])
@@ -103,7 +113,8 @@ def listener(results, storeName, pbar):
         for key in results_d.keys():
             # append the results to the store
             df = pd.DataFrame.from_dict(results_d[key])
-            store.put(key, df, format='table', data_column=True, append=True)
+            store.put(key, df, format='table', data_columns=True, append=True,
+                        min_itemsize=strSize_dict[key])
 
     pbar.update(n=len(results))
 
@@ -160,7 +171,7 @@ def main():
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/BSE' + '_'   + str(inputPar['material'])     +\
+    storeFile = '../data/TRSM_diff_800' + '_'   + str(inputPar['material'])     +\
                                 '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\
@@ -194,10 +205,12 @@ def main():
 
 
     # define number of traj per job
-    numTrajPerJob = 100
+    #numTrajPerJob = 1000
+    numTrajPerJob = 1
 
     # define number of workers
-    num_workers = 11
+    #num_workers = 11
+    num_workers = 1
 
     # we need to spawn jobs = total number of electron trajctories/
     #                          num of trajectories per worker
@@ -205,7 +218,6 @@ def main():
     print ('There are %s jobs to be distributed' %numJobs)
 
     if (inputPar['mode']=='DS'):
-        print('DS it is')
         # simplify worker function
         simplifiedWorker = partial(multiTraj_DS, inputPar = inputPar,
                                                numTraj = numTrajPerJob,

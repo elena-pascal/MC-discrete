@@ -11,7 +11,7 @@ from scimath.units.api import has_units
 from scimath.units.length import angstrom, cm,  m
 
 from MC.electron import electron
-from MC.crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma
+from MC.crossSections import alpha, ruther_sigma, ruther_N_sigma, ruther_N_sigma_wDefl,  moller_sigma, gryz_sigma, quinn_sigma, diffr_sigma
 from MC.stoppingPowers import bethe_cl_sp, bethe_mod_sp, bethe_mod_sp_k, moller_sp
 #from MC.errors import lTooLarge, lTooSmall, E_lossTooSmall, E_lossTooLarge, wrongUpdateOrder, ElossGTEnergy
 from MC.probTables import maxW_moller
@@ -46,7 +46,6 @@ def pickFromSigmas(sigma_dict):
     '''
     # ordered dictionary of sigmas in reverse order
     sorted_sigmas = OrderedDict(sorted(sigma_dict.items(), key=operator.itemgetter(1), reverse=True))
-    #sorted_sigmas['Quinn'] = sigma_dict['Quinn']
 
     # probabilities to compare the random number against are cumulative sums of this dictionary
     # [pR = sigmaR/sigmaT, pQ = (sigmaR+sigmaQ)/sigmaT, ... ]
@@ -192,7 +191,7 @@ class scatter_discrete:
             - scattering parameters to be update by the functions in the class
     '''
 
-    def __init__(self, electron, material, free_param, elastic, tables):
+    def __init__(self, electron, material, free_param, elastic, tables, diffMFP):
         # incident particle params
         self.Ei  = electron.energy  # incident particle energy
 
@@ -209,6 +208,8 @@ class scatter_discrete:
         self.m_atnd = material.atnd              # atomic number density
         self.m_pl_e = material.plasmon_e         # plasmon energy
         self.m_f_e  = material.fermi_e           # Fermi energy
+
+        self.xi_g = material.params['xi_g']      # extinction distance for 1,1,1
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -233,11 +234,11 @@ class scatter_discrete:
 
         # set the elastic model used
         if 'Ruth' in elastic:
-            if 'vanilla' in elastic:
+            if elastic == 'Ruth_vanilla':
                 self.sigma['Ruth'] = ruther_sigma(self.Ei, self.m_Z)
             elif 'vanilla_wDefl' in elastic:
                 self.sigma['Ruth'] = ruther_sigma_wDefl(self.Ei, self.m_Z)
-            elif 'nigram' in elastic:
+            elif elastic == 'Ruth_nigram':
                 self.sigma['Ruth'] = ruther_N_sigma(self.Ei, self.m_Z)
             elif 'nigram_wDefl' in elastic:
                 self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.m_Z)
@@ -252,11 +253,17 @@ class scatter_discrete:
 
         self.sigma['Quinn'] = quinn_sigma(self.Ei, self.m_pl_e, self.m_f_e, self.m_atnd)
 
+        # if accounting for diff mfp
+        if diffMFP:
+            self.sigma['diff'] = diffr_sigma(self.sigma['Ruth'])
+
         # compute mean free path
         self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.m_atnd)
 
         # output lists object
         self.scat_output = electron.scat_output
+
+        self.electron = electron
 
     def compute_pathl(self):
         '''
@@ -306,7 +313,7 @@ class scatter_discrete:
             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
 
         ######## Mott ##############
-        elif self.type is 'Mott':
+        elif (self.type == 'Mott'):
             self.E_loss = 0.
             self.c2_halfTheta = pickMottTable(self.tableMott, self.Ei)
 
@@ -365,6 +372,22 @@ class scatter_discrete:
 
             # for plasmon scattering assume no change in direction
             self.c2_halfTheta = 1.
+
+            # save energy if we want it
+            self.scat_output.addToList('E', self.Ei)
+
+            # save energy loss if we want it
+            self.scat_output.addToList('E_loss', self.E_loss)
+
+            # save polar angle if we want it
+            self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+
+        ##### diffraction ###########
+        elif (self.type == 'diff'):
+            self.E_loss = 0.       # no energy loss
+            self.c2_halfTheta = 1. # no scattering deviation
+
+            self.electron.changeDiffState(True)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.Ei)

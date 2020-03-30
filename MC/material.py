@@ -221,6 +221,9 @@ def scatter_params(species):
         # Penn's b value for IMFP from Penn, Journal of Electron Spectroscopy and Related Phenomena, 9, 1976
         material['penn_b'] = -2.19
 
+        # extinction distance from EMqg for h,k,l = 1,1,1 in nm
+        material['xi_g'] = 21.9
+
 
     elif species=='Cu':
         material = {'species': 'Cu'}

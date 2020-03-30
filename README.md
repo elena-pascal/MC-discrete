@@ -11,7 +11,7 @@ Probably the easiest thing to do is to add a new `Python3` environment to conda 
 * `pandas`
 
 `conda install -c conda forge`:
-* quaternions
+* `quaternions`
 
 
 ## Set up

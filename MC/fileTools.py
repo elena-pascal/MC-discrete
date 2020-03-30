@@ -35,7 +35,7 @@ def readInput(fileName='input.file'):
                     # make dictionary with output values
                     data[param[0]] = param[1].replace(" ", "").split(",")
 
-                elif ('gen_tables' in param[0]):
+                elif (param[0] in ['gen_tables', 'diffMFP']):
                     # set boolean parameter
                     data[param[0]] = True if 'es' in param[1] else False
 
@@ -75,6 +75,20 @@ def zipDict(dictA, dictB):
         for dirKey in dictB['final_dir']:
             dictB[dirKey] = dictB['final_dir'][dirKey]
         del dictB['final_dir']
+
+    if 'position' in dictB.keys():
+        # from {'position':{'x':[], 'y':[], 'z':[]}
+        # to 'x':[], 'y':[], 'z':[]
+        for dirKey in dictB['position']:
+            dictB[dirKey] = dictB['position'][dirKey]
+        del dictB['position']
+
+    if 'last_pos' in dictB.keys():
+        # from {'last_pos':{'x':[], 'y':[], 'z':[]}
+        # to 'x':[], 'y':[], 'z':[]
+        for dirKey in dictB['last_pos']:
+            dictB[dirKey] = dictB['last_pos'][dirKey]
+        del dictB['last_pos']
 
     for k in dictB.keys():
         if k in dictA:
@@ -187,6 +201,13 @@ class thingsToSave:
         for arg in args:
             if (arg == 'final_dir'):
                 self.dict.update({'final_dir':{'dx':[], 'dy':[], 'dz':[]}})
+
+            elif (arg == 'position'):
+                self.dict.update({'position':{'x':[], 'y':[], 'z':[]}})
+
+            elif (arg == 'last_pos'):
+                self.dict.update({'last_pos':{'lastx':[], 'lasty':[], 'lastz':[]}})
+
             else:
                 self.dict[arg] = []
 
@@ -202,5 +223,20 @@ class thingsToSave:
                 self.dict['final_dir']['dx'].append(dx)
                 self.dict['final_dir']['dy'].append(dy)
                 self.dict['final_dir']['dz'].append(dz)
+
+            elif (par == 'position'):
+                # three separate columns for x, y, z
+                [x, y, z] = value
+                self.dict['position']['x'].append(x)
+                self.dict['position']['y'].append(y)
+                self.dict['position']['z'].append(z)
+
+            elif (par == 'last_pos'):
+                # three separate columns for x, y, z
+                [x, y, z] = value
+                self.dict['last_pos']['lastx'].append(x)
+                self.dict['last_pos']['lasty'].append(y)
+                self.dict['last_pos']['lastz'].append(z)
+
             else:
                 self.dict[par].append(value)

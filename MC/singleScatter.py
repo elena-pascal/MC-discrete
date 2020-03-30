@@ -1,20 +1,20 @@
 import numpy as np
 
-
-from MC.electron import electron
 from MC.scattering import scatter_continuous_classical,scatter_continuous_JL, scatter_continuous_explicit
 from MC.scattering import scatter_continuous_classical_wUnits, scatter_continuous_JL_wUnits, scatter_continuous_explicit_wUnits
 from MC.scattering import scatter_discrete
 
 
-def trajectory_DS(electron, material, Wc, maxScatt, elastic_model, tables):
+
+
+def trajectory_DS(electron, material, Wc, maxScatt, maxz, elastic_model, tables, diffMFP):
     ''' follow a full electron trajectory'''
 
     num_scatt = 0
 
-    while ((electron.outcome is not 'abs') and (electron.outcome is not 'bks')): # not backscattered nor absorbed nor scattered too long
+    while (electron.outcome not in ['abs', 'bks', 'trsm', 'trdf', 'long']): # not backscattered nor transmitted nor absorbed #nor scattered too long
         # new instance of scatter
-        scatter = scatter_discrete(electron, material, Wc, elastic_model, tables)
+        scatter = scatter_discrete(electron, material, Wc, elastic_model, tables, diffMFP)
 
         num_scatt += 1
         if (num_scatt > maxScatt):
@@ -26,7 +26,7 @@ def trajectory_DS(electron, material, Wc, maxScatt, elastic_model, tables):
         scatter.compute_pathl()
 
         # update electron position
-        electron.update_xyz(scatter.pathl)
+        electron.update_xyz(scatter.pathl, maxz)
 
         # determine scattering type
         scatter.det_type()
@@ -86,8 +86,6 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
         # check if backscattered
         if (e_i.xyz[2]<= 0.):
             e_i.outcome = 'backscattered'
-            #return {'MFP' : np.mean(pathl_history), 'TP' : np.sum(pathl_history), 'num_scatt': num_scatt}
-            #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
             return
 
         # determine scattering type
@@ -206,12 +204,12 @@ def scatterOneEl_DS_wUnits(e_i, material, Emin, Wc, tables_moller, tables_gryz):
 ###############################################################################
 ################### continuous ################################################
 ###############################################################################
-def trajectory_cont_cl(electron, material, maxScatt, elastic_model, tables):
+def trajectory_cont_cl(electron, material, maxScatt, maxz, elastic_model, tables):
     ''' follow a full electron trajectory'''
 
     num_scatt = 0
 
-    while ((electron.outcome is not 'abs') and (electron.outcome is not 'bks')): # not backscattered nor absorbed nor scattered too long
+    while ((electron.outcome != 'abs') and (electron.outcome != 'bks') and (electron.outcome != 'trsm')): # not backscattered nor absorbed nor scattered too long
         # new instance of scatter
         scatter = scatter_continuous_classical(electron, material, elastic_model, tables)
 
@@ -225,7 +223,10 @@ def trajectory_cont_cl(electron, material, maxScatt, elastic_model, tables):
         scatter.compute_pathl()
 
         # update electron position
-        electron.update_xyz(scatter.pathl)
+        electron.update_xyz(scatter.pathl, maxz)
+
+        # check if diffMFP should apply and if in range
+
 
         # determine energy loss and scattering angle
         scatter.compute_Eloss()

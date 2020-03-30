@@ -107,7 +107,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
         el = electron(inputPar['E0'], inputPar['Emin'], pos0, dir0, thingsToSave)
 
         # scatter a full trajectory
-        trajectory_DS(el, material, inputPar['Wc'], inputPar['maxScatt'], inputPar['elastic'], tables)
+        trajectory_DS(el, material, inputPar['Wc'], inputPar['maxScatt'], inputPar['thickness'], inputPar['elastic'], tables, inputPar['diffMFP'])
 
         results.append({'els':el.el_output.dict, 'scats':el.scat_output.dict})
 
@@ -118,8 +118,7 @@ def multiTraj_DS(inputPar, numTraj, material, tables, thingsToSave):
 def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
     # for parallel processes we need to make sure the random number seeds are different
     # use for instance the process id multiplied by the current time
-    #if parallel:
-    random.seed(os.getpid()*int(time.time())) # getip only on Unix
+    random.seed(os.getpid()*int(time.time())) # getip only works on Unix
 
     pos0 = np.array([0., 0., 0.,])
     dir0 = np.array([-np.sin(np.radians(inputPar['s_tilt'])), 0., np.cos(np.radians(inputPar['s_tilt']))])
@@ -158,7 +157,7 @@ def scatterMultiEl_cont(inputPar, thingsToSave, output, num, count):
         #cProfile.runctx('scatterOneEl_cont(e_i, material, Emin)', globals(), locals(), 'prof%d_cont.prof' %count)
 
         # scatter a full trajectory
-        trajectory_cont(el, material(inputPar['material']), inputPar['maxScatt'])
+        trajectory_cont(el, material(inputPar['material']), inputPar['maxScatt'], inputPar['thickness'])
 
     try:
         # make tuples out of dictionaries and pickle them

@@ -92,9 +92,9 @@ def plotPolar_polar_px(pdData, numBins=100):
 
     fig.show()
 
-def plotPolar_pltly(pdData, numBins, angle_type='polar'):
+def plotPolar_pltly(pdData, numBins, label, angle_type='polar'):
     ''' plotly graph_objects polar plot'''
-    print('\n', 'plotting...', '\n')
+    print('\n', 'plotting' , label, '...', '\n')
 
     if (angle_type is 'polar'):
         # polar range is [0,180)
@@ -134,8 +134,8 @@ def plotPolar_pltly(pdData, numBins, angle_type='polar'):
         polar = dict(radialaxis = dict(tickangle = 45, type=scaleType),
                 sector = [range[0], range[1]]))
 
-    fig.show()
-
+    #fig.show()
+    fig.write_image(angle_type+label+".svg")
 
 def binOnCircle(angleList, nbins):
     ''' For a list of angles return a binned data in nbins
@@ -229,7 +229,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                     for key in result.keys():
                         # append the results to the store
                         df = pd.DataFrame.from_dict(result[key])
-                        store.put(key, df, format='table', data_column=True, append=True)
+                        store.put(key, df, format='table', data_columns=True, append=True)
                 # update progress bar
                 pbar.update(n=len(results))
 
@@ -252,7 +252,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
         #     p.terminate()
 
 
-    def watson_two_test(self, data, angle_type, plot=False, numBins=30):
+    def watson_two_test(self, data, angle_type, label, plot=False, numBins=30):
          '''
          Apply the Watson two test for two samples and check
          if the test statistics, U2, is larger than the critical value
@@ -267,7 +267,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
          '''
          if plot:
             # polar plot for polar angle
-            plotPolar_pltly(data, numBins, angle_type)
+            plotPolar_pltly(data, numBins, label, angle_type)
 
          # pick only the first 100 points for each label; this is good enough for the test
          # sort angles in degrees into x and y lists
@@ -431,7 +431,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True)
+        self.watson_two_test(pdData, 'polar', 'Ruth0', True)
 
 
     def TestPolarProb_Ruth(self):
@@ -485,7 +485,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True, 50)
+        self.watson_two_test(pdData, 'polar', 'Ruth', True,  50)
 
 
     def TestAzimProb_Ruth(self):
@@ -519,7 +519,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'azimuthal', True, 50)
+        self.watson_two_test(pdData, 'azimuthal','Ruth', True, 50)
 
 
     #########################################################################
@@ -535,7 +535,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                '\n', '----------------------------------')
 
         # size of sample is equal to number of electrons scattered
-        n = int(self.inputPar['num_el']*0.5)
+        n = int(self.inputPar['num_el']*0.1)
 
         # read dataframe into pandas
         scatterings = pd.read_hdf(self.file, 'scats')
@@ -568,7 +568,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True, 50)
+        self.watson_two_test(pdData, 'polar', 'Moller0',  True, 50)
 
 
     def TestPolarProb_Moller(self):
@@ -636,7 +636,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True, 50)
+        self.watson_two_test(pdData, 'polar','Moller', True, 50)
 
 
 
@@ -671,7 +671,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'azimuthal', True, 50)
+        self.watson_two_test(pdData, 'azimuthal', 'Moller',True, 50)
 
 
 
@@ -730,7 +730,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True, 50)
+        self.watson_two_test(pdData, 'polar', 'Gryz0', True, 50)
 
 
     def TestPolarProb_Gryz(self):
@@ -807,7 +807,7 @@ class TestScatterAnglesforDS(unittest.TestCase):
                             ignore_index=True)
 
         # are the two samples part of the same population?
-        self.watson_two_test(pdData, 'polar', True, 50)
+        self.watson_two_test(pdData, 'polar', 'Gryz',True, 50)
 
 
 
@@ -864,8 +864,8 @@ def suite():
     suite.addTest(TestScatterAnglesforDS('TestAzimProb_Ruth'))
 
     # add Moller angle tests
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
-    #suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller_E0'))
+    suite.addTest(TestScatterAnglesforDS('TestPolarProb_Moller'))
     #suite.addTest(TestScatterAnglesforDS('TestAzimProb_Moller'))
 
     # add Gryz angle tests

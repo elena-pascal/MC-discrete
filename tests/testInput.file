@@ -2,7 +2,7 @@
 
 num_el   : 500
 E0       : 20000 # eV
-Emin     : 500  # eV; cannot be smaller than Wc
+Emin     : 15000  # eV; cannot be smaller than Wc
 material : Al
 s_tilt   : 0    # degrees
 

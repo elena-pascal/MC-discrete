@@ -283,6 +283,11 @@ def quinn_sigma(E, Epl, Ef, n, c_bohr_r=bohr_r):
 
     return s_Q
 
+###################################################################
+#                                                                 #
+#                      Dielectric total cross section             #
+#                                                                 #
+###################################################################
 
 #### 2d) Inelastic cross section using the dielectric function
 @has_units
@@ -314,6 +319,32 @@ def diel_sigma(E, ELF, powell_c, n):
 
     return integral/(3.325*E*n)
 
+
+###################################################################
+#                                                                 #
+#                      Diffraction total cross section             #
+#                                                                 #
+###################################################################
+@has_units
+def diffr_sigma(el_sigma):
+    """ A diffraction cross section would depend on the crystal orientation
+        which is not accounted for in MC models.
+        Even then values for the total cross section are not known.
+
+        What I'll do for now is set it to half the elastic cross section.
+
+        Parameters
+        ----------
+        el_sigma  : array : units = cm**2
+                elastic cross section
+
+        Returns
+        -------
+        s_Diff    : array : units = cm**2
+    """
+    s_Diff = 0.5 * el_sigma
+
+    return s_Diff
 
 
 ###################################################################

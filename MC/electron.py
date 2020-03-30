@@ -29,6 +29,8 @@ class electron:
 
         self.outcome = None
 
+        self.diffracting = False
+
         self.y_local = np.array([0., 1., 0.]) # local coordinate system
 
         # object of list of parameters to save
@@ -52,7 +54,10 @@ class electron:
         # save energy if we want it
         self.scat_output.addToList('energy', self.energy)
 
-    def update_xyz(self, pathLength):
+    def changeDiffState(self, diff):
+        self.diffracting = diff
+
+    def update_xyz(self, pathLength, zmax):
         newPosition = self.xyz + pathLength*self.dir
 
         # check if backscattered
@@ -60,10 +65,20 @@ class electron:
             self.outcome = 'bks'
             self.saveOutcomes()
 
-        self.xyz = newPosition
+        # check if transmited thorough
+        elif (newPosition[2] >= zmax):
+            # if last scatter event was diffracting out then we have a TSE
+            if self.diffracting:
+                self.outcome = 'trdf'
+            else:
+                self.outcome = 'trsm'
 
-        # save position if we want it
-        self.scat_output.addToList('position', self.xyz)
+            self.saveOutcomes()
+
+        else:
+            self.xyz = newPosition
+            # save position if we want it
+            self.scat_output.addToList('position', self.xyz)
 
     def update_direction(self, c2_halfTheta, halfPhi):
         s_hTheta = (1. - c2_halfTheta)**0.5 # sin(halfTheta) is positive on [0, pi)
@@ -91,6 +106,12 @@ class electron:
         self.el_output.addToList('final_E', self.energy)
 
         self.el_output.addToList('final_dir', self.dir)
+
+        self.el_output.addToList('last_pos', self.xyz)
+
+        self.scat_output.addToList('position', self.xyz)
+
+
 
 
 
