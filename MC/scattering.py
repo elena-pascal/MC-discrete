@@ -209,7 +209,7 @@ class scatter_discrete:
         self.m_pl_e = material.plasmon_e         # plasmon energy
         self.m_f_e  = material.fermi_e           # Fermi energy
 
-        self.xi_g = material.params['xi_g']      # extinction distance for 1,1,1
+        self.xip_g = material.params['xip_g']    # absorbtion distance for 0,0,4
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -255,7 +255,9 @@ class scatter_discrete:
 
         # if accounting for diff mfp
         if diffMFP:
-            self.sigma['diff'] = diffr_sigma(self.sigma['Ruth'])
+            self.sigma['diff'] = diffr_sigma(self.xip_g, self.m_atnd,
+                                            sum([self.sigma['Moller'], self.sigma['Gryz2s'],
+                                              self.sigma['Gryz2p'], self.sigma['Gryz1s'], self.sigma['Quinn']]))
 
         # compute mean free path
         self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.m_atnd)
@@ -265,22 +267,6 @@ class scatter_discrete:
 
         self.electron = electron
 
-    def compute_pathl(self):
-        '''
-        Path length is calculated from the cross section
-        path_length = - mean_free_path * log(rn)
-        '''
-        pathl = -self.mfp_total * np.log(random.random())
-
-        # TODO: make test for this
-        # check if the value is not ridiculous
-        #assert pathl < 1e4, "Mean free path larger than 10000 A: %s > %s" %(pathl, 1e4)
-
-        # assign it
-        self.pathl = pathl
-
-        # save path length if we want it
-        self.scat_output.addToList('pathl', self.pathl)
 
     def det_type(self):
         '''
@@ -291,6 +277,34 @@ class scatter_discrete:
 
         # save scatter type if we want it
         self.scat_output.addToList('type', self.type)
+
+        # if this is a diffraction event change total MFP to absorption depth
+        if self.type == 'diff':
+            self.mfp_total = self.xip_g
+
+            # set diffraction state to false
+            self.electron.setDiffState(True)
+
+        else:
+            # set diffraction state to false
+            self.electron.setDiffState(False)
+
+    def compute_pathl(self):
+        '''
+        Path length is calculated from the cross section
+        path_length = - mean_free_path * log(rn)
+        '''
+        pathl = -self.mfp_total * np.log(random.random())
+        # TODO: make test for this
+        # check if the value is not ridiculous
+        #assert pathl < 1e4, "Mean free path larger than 10000 A: %s > %s" %(pathl, 1e4)
+
+        # assign it
+        self.pathl = pathl
+
+        # save path length if we want it
+        self.scat_output.addToList('pathl', self.pathl)
+
 
     def compute_Eloss_and_angles(self):
         '''
@@ -341,7 +355,7 @@ class scatter_discrete:
             # save energy loss if we want it
             self.scat_output.addToList('E_loss', self.E_loss)
 
-            # save apolar angle if we want it
+            # save polar angle if we want it
             self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
 
         ##### Gryzinski ###########
@@ -386,8 +400,6 @@ class scatter_discrete:
         elif (self.type == 'diff'):
             self.E_loss = 0.       # no energy loss
             self.c2_halfTheta = 1. # no scattering deviation
-
-            self.electron.changeDiffState(True)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.Ei)

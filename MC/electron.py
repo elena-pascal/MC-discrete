@@ -36,7 +36,7 @@ class electron:
         # object of list of parameters to save
         self.el_output = thingsToSave(outList['el_output'])
         self.scat_output = thingsToSave(outList['scat_output'])
-
+        
     def update_energy(self, energyLoss):
         ''' update electron after every scattering
             keep record of the history by appending new information to lists
@@ -54,7 +54,7 @@ class electron:
         # save energy if we want it
         self.scat_output.addToList('energy', self.energy)
 
-    def changeDiffState(self, diff):
+    def setDiffState(self, diff):
         self.diffracting = diff
 
     def update_xyz(self, pathLength, zmax):
@@ -70,10 +70,12 @@ class electron:
             # if last scatter event was diffracting out then we have a TSE
             if self.diffracting:
                 self.outcome = 'trdf'
+
+                self.saveOutcomes()
             else:
                 self.outcome = 'trsm'
-
-            self.saveOutcomes()
+                self.saveOutcomes()
+            #self.saveOutcomes()
 
         else:
             self.xyz = newPosition
@@ -90,7 +92,6 @@ class electron:
         # after many scattering events d will lose its normalisation due to precision limitations,
         # so it's good to renormalise
         (self.dir, self.y_local) = [(dir/ np.linalg.norm(dir)) for dir in newDirection_andy]
-
 
         # save direction if we want it
         self.scat_output.addToList('direction', self.dir)

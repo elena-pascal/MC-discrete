@@ -1,12 +1,12 @@
 # input file
 
-num_el   : 10 #multiples of 200
+num_el   : 10000 #multiples of 200
 E0       : 20000 # eV
-Emin     : 17000 # eV; cannot be smaller than Wc
+Emin     : 10000 # eV; cannot be smaller than Wc
 material : Si
 s_tilt   : 0    # degrees
 
-thickness :  800 # sample thickness in A
+thickness :  7000 # sample thickness in A
 
 elastic  : Ruth_vanilla # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
 
@@ -33,8 +33,10 @@ maxScatt: 1000000
 Wc       : 10     # eV; Wc = Ec*E0
 
 # list of desired outputs
-electron_output : outcome, final_E, final_dir# last_pos #,  outcome, final_E, final_dir
-scatter_output : type # type, E_loss, az_angle, pol_angle, pathl, position, energy
+# electron info can be:  outcome, final_E, final_dir, last_pos
+electron_output : outcome, final_E, final_dir, last_pos
+# scatter info can be:  type, E_loss, az_angle, pol_angle, pathl, position, energy
+scatter_output : type
 
 # detector information
 #L        :   0

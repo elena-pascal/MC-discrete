@@ -171,7 +171,9 @@ def main():
 
 
     # name the hdf file that stores the results
-    storeFile = '../data/TRSM_diff_800' + '_'   + str(inputPar['material'])     +\
+    storeFile = '../data/TRSM' +'_diff:'  + str(inputPar['diffMFP'])     +\
+                                '_thick:' + str(inputPar['thickness'])  +\
+                                '_mat:'   + str(inputPar['material'])   +\
                                 '_mode:' + str(inputPar['mode'])       +\
                                 '_elastic:' + str(inputPar['elastic']) +\
                                 '_tilt:' + str(inputPar['s_tilt'])     +\
@@ -205,17 +207,17 @@ def main():
 
 
     # define number of traj per job
-    #numTrajPerJob = 1000
-    numTrajPerJob = 1
+    numTrajPerJob = 10
+    #numTrajPerJob = 1
 
     # define number of workers
-    #num_workers = 11
-    num_workers = 1
+    num_workers = 11
+    #num_workers = 1
 
     # we need to spawn jobs = total number of electron trajctories/
     #                          num of trajectories per worker
     numJobs = int(inputPar['num_el']/numTrajPerJob)
-    print ('There are %s jobs to be distributed' %numJobs)
+    print ('There are %s jobs to be distributed across %s workers' %(numJobs, num_workers))
 
     if (inputPar['mode']=='DS'):
         # simplify worker function

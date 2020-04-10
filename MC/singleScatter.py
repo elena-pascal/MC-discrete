@@ -22,14 +22,14 @@ def trajectory_DS(electron, material, Wc, maxScatt, maxz, elastic_model, tables,
              electron.saveOutcomes()
              return # exit while loop
 
+        # determine scattering type
+        scatter.det_type()
+
         # let the electron travel depending on the model used
         scatter.compute_pathl()
 
         # update electron position
         electron.update_xyz(scatter.pathl, maxz)
-
-        # determine scattering type
-        scatter.det_type()
 
         # determine energy loss and scattering angle
         scatter.compute_Eloss_and_angles()
@@ -39,8 +39,6 @@ def trajectory_DS(electron, material, Wc, maxScatt, maxz, elastic_model, tables,
 
         # update electron new traveling direction
         electron.update_direction(scatter.c2_halfTheta, scatter.halfPhi)
-
-
 
 
 
@@ -102,7 +100,7 @@ def scatterOneEl_DS(e_i, material, Emin, Wc, table_moller, tables_gryz):
         if (e_i.energy <= Emin):
             absorbed = True
             e_i.outcome = 'absorbed'
-            #return {'num_scatt': num_scatt, 'az_angle': scattAngle_history, 'types': type_history}
+
             return # exit while loop
         # update electron new traveling direction
         e_i.update_direction(scatter_i.c2_halfTheta, scatter_i.halfPhi)

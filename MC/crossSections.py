@@ -3,7 +3,7 @@ from scipy.constants import pi
 from scipy import stats
 
 from scimath.units.api import has_units
-from scimath.units.length import cm, m
+from scimath.units.length import cm, m, nm
 from scimath.units.energy import eV, KeV
 
 from MC.parameters import pi_efour, bohr_r
@@ -326,23 +326,25 @@ def diel_sigma(E, ELF, powell_c, n):
 #                                                                 #
 ###################################################################
 @has_units
-def diffr_sigma(el_sigma):
+def diffr_sigma(xip_g, n, sum_sigma_in):
     """ A diffraction cross section would depend on the crystal orientation
         which is not accounted for in MC models.
         Even then values for the total cross section are not known.
 
-        What I'll do for now is set it to half the elastic cross section.
+        I'll use the absotbtion depth as the MFP for now.
 
         Parameters
         ----------
-        el_sigma  : array : units = cm**2
-                elastic cross section
+        xip_g  : array : units = nm
+                absorbtion distance as mfp
 
+        n        : array : units = m**-3
+                 number density
         Returns
         -------
         s_Diff    : array : units = cm**2
     """
-    s_Diff = 0.5 * el_sigma
+    s_Diff = 1./(n*xip_g) * m**3/nm/cm**2 #- sum_sigma_in
 
     return s_Diff
 

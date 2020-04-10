@@ -206,7 +206,7 @@ class thingsToSave:
                 self.dict.update({'position':{'x':[], 'y':[], 'z':[]}})
 
             elif (arg == 'last_pos'):
-                self.dict.update({'last_pos':{'lastx':[], 'lasty':[], 'lastz':[]}})
+                self.dict.update({'last_pos':{'last_x':[], 'last_y':[], 'last_z':[]}})
 
             else:
                 self.dict[arg] = []
@@ -234,9 +234,9 @@ class thingsToSave:
             elif (par == 'last_pos'):
                 # three separate columns for x, y, z
                 [x, y, z] = value
-                self.dict['last_pos']['lastx'].append(x)
-                self.dict['last_pos']['lasty'].append(y)
-                self.dict['last_pos']['lastz'].append(z)
+                self.dict['last_pos']['last_x'].append(x)
+                self.dict['last_pos']['last_y'].append(y)
+                self.dict['last_pos']['last_z'].append(z)
 
             else:
                 self.dict[par].append(value)
