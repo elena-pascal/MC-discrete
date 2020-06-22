@@ -6,11 +6,8 @@ import numpy.ma as ma
 import logging
 from functools import partial
 
-from dill import pickles
-
-from dask import dataframe as dd
 from dask import array as da
-from dask import delayed, compute
+from dask import compute
 from dask.diagnostics import ProgressBar
 
 from MC.extFunctions import gryz_dCS, moller_dCS, mottTable
@@ -483,11 +480,10 @@ class probTable:
         # chunk Es to a dask array
         Es_da = da.from_array(self.Es, chunks = self.chunk_size)
 
-        # actually compute table
+        # finally, actually compute table blockwise for each block in the array
         with ProgressBar():
             self.table = Es_da.map_blocks(func = self.computeBlock,
-                            #chunks = (self.chunk_size, self.Ws.size-1 ),
-                            dtype  = float ).compute()
+                            dtype = float ).compute()
 
 
 

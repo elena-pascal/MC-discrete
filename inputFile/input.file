@@ -1,12 +1,12 @@
 # input file
 
-num_el   : 10000 #multiples of 200
+num_el   : 1000 #multiples of 200
 E0       : 20000 # eV
-Emin     : 10000 # eV; cannot be smaller than Wc
+Emin     : 50 # eV; cannot be smaller than Wc
 material : Si
-s_tilt   : 0    # degrees
+s_tilt   : 40    # degrees
 
-thickness :  7000 # sample thickness in A
+thickness :  3000000 # sample thickness in A
 
 elastic  : Ruth_vanilla # Mott or Ruth_vanilla or Ruth_vanilla_wDefl or Ruth_nigram or Ruth_nigram_wDelf
 
@@ -16,10 +16,10 @@ mode     : DS   # dielectric funct = diel; discrete scattering = DS; cont scatte
 Bethe_model : classical # classical, JL or explicit
 
 # estimate diffraction mean free path to be extinction distance
-diffMFP    : yes
+diffMFP    : no
 
 # generate new tables (or read from memory)?
-gen_tables : no
+gen_tables : yes
 
 # relative error tolerance for W and E integration tables
 # note the default values require at least 10G memory
@@ -27,7 +27,7 @@ tol_E : 1e-4
 tol_W : 1e-7
 
 # maximum number of scattering events per electron to consider
-maxScatt: 1000000
+maxScatt: 100000000
 
 # minimum transfer energy only relevant for discrete scattering
 Wc       : 10     # eV; Wc = Ec*E0
@@ -36,7 +36,7 @@ Wc       : 10     # eV; Wc = Ec*E0
 # electron info can be:  outcome, final_E, final_dir, last_pos
 electron_output : outcome, final_E, final_dir, last_pos
 # scatter info can be:  type, E_loss, az_angle, pol_angle, pathl, position, energy
-scatter_output : type
+scatter_output : type, position, energy
 
 # detector information
 #L        :   0

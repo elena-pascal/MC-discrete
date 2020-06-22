@@ -52,48 +52,50 @@ class MapScatterer(object):
     def error_call(self, result):
         print ('failed to callback %s' %result)
 
-    def __call__(self, numJobs, storeName):
-        '''
-        numTrajPerJob
-            number of trajectories per job
+    # def __call__(self, numJobs, storeName):
+    #     '''
+    #     numTrajPerJob
+    #         number of trajectories per job
+    #
+    #     storeName
+    #         HDF5 store name
+    #     '''
+    #     # make a pandas store
+    #     store = pd.HDFStore(storeName)
+    #
+    #     # write input parameters to pandas series -> transposed dataframe
+    #     store['input'] = pd.DataFrame(pd.Series(self.inputPar)).T
+    #     store.close()
+    #
+    #     # progress bar
+    #     pbar = tqdm(total=self.inputPar['num_el'], desc='Trajectories finished:')
+    #
+    #     # define the size of string columns in pandas hdf5 store
+    #     strSize_dict = {'els':{}, 'scats':{}}
+    #
+    #     if 'outcome' in self.inputPar['electron_output']:
+    #         strSize_dict['els']['outcome'] = 6
+    #
+    #     if 'type' in self.inputPar['scatter_output']:
+    #         strSize_dict['scats']['type'] = 6
+    #
+    #     # simplify the listener function to only depend on returned results from worker
+    #     listenerWithStore = partial(self.listener, storeName=storeName,
+    #                                                 strSize_dict=strSize_dict,
+    #                                                 pbar=pbar)
+    #
+    #     #logger.info('Starting multithreading')
+    #     for _ in range(numJobs):
+    #         foo=self.pool.apply_async(self.worker,
+    #                         callback = listenerWithStore,
+    #                         error_callback = self.error_call)
+    #
+    #     # clean up
+    #     self.pool.close()
+    #     self.pool.join()
+    #     print (' BSE data had been written to ', storeName)
 
-        storeName
-            HDF5 store name
-        '''
-        # make a pandas store
-        store = pd.HDFStore(storeName)
-
-        # write input parameters to pandas series -> transposed dataframe
-        store['input'] = pd.DataFrame(pd.Series(self.inputPar)).T
-        store.close()
-
-        # progress bar
-        pbar = tqdm(total=self.inputPar['num_el'], desc='Trajectories finished:')
-
-        # define the size of string columns in pandas hdf5 store
-        strSize_dict = {'els':{}, 'scats':{}}
-
-        if 'outcome' in self.inputPar['electron_output']:
-            strSize_dict['els']['outcome'] = 6
-
-        if 'type' in self.inputPar['scatter_output']:
-            strSize_dict['scats']['type'] = 6
-
-        # simplify the listener function to only depend on returned results from worker
-        listenerWithStore = partial(self.listener, storeName=storeName,
-                                                    strSize_dict=strSize_dict,
-                                                    pbar=pbar)
-
-        #logger.info('Starting multithreading')
-        for _ in range(numJobs):
-            foo=self.pool.apply_async(self.worker,
-                            callback = listenerWithStore,
-                            error_callback = self.error_call)
-
-        # clean up
-        self.pool.close()
-        self.pool.join()
-        print (' BSE data had been written to ', storeName)
+    def __call__(self, , storeName):
 
 
 def listener(results, storeName, strSize_dict, pbar):
@@ -207,7 +209,7 @@ def main():
 
 
     # define number of traj per job
-    numTrajPerJob = 10
+    numTrajPerJob = 100
     #numTrajPerJob = 1
 
     # define number of workers

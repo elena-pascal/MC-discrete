@@ -22,7 +22,7 @@ def readInput(fileName='input.file'):
                 parameter = line.split(":")
 
                 # trim whitespaces
-                param = [p.strip() for p in parameter]
+                param = [p.strip(' ') for p in parameter]
 
                 if (param[0] in ['mode', 'material', 'elastic', 'Bethe_model']):
                     # assign string to dictionary
@@ -79,8 +79,8 @@ def zipDict(dictA, dictB):
     if 'position' in dictB.keys():
         # from {'position':{'x':[], 'y':[], 'z':[]}
         # to 'x':[], 'y':[], 'z':[]
-        for dirKey in dictB['position']:
-            dictB[dirKey] = dictB['position'][dirKey]
+        for posKey in dictB['position']:
+            dictB[posKey] = dictB['position'][posKey]
         del dictB['position']
 
     if 'last_pos' in dictB.keys():

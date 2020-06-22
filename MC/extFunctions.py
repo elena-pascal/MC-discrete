@@ -1,16 +1,14 @@
 #from scimath.units.api import has_units
 import numpy as np
 import numpy.ma as ma
-from scipy import stats, integrate
 import sys
 import os.path as path
 
-from MC.errors import E_lossTooLarge
 from MC.parameters import pi_efour
 
 
 ###################################################################
-#                       Excitation functions d_sigma/dW           #
+#             Excitation functions d_sigma/dW                     #
 ###################################################################
 # Probability that an electron of energy E will loose energy W
 # in a scattering event

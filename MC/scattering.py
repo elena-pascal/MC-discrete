@@ -267,6 +267,9 @@ class scatter_discrete:
 
         self.electron = electron
 
+        # save position if we want it
+        self.scat_output.addToList('position', electron.xyz)
+
 
     def det_type(self):
         '''

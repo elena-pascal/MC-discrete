@@ -36,7 +36,7 @@ class electron:
         # object of list of parameters to save
         self.el_output = thingsToSave(outList['el_output'])
         self.scat_output = thingsToSave(outList['scat_output'])
-        
+
     def update_energy(self, energyLoss):
         ''' update electron after every scattering
             keep record of the history by appending new information to lists
@@ -75,12 +75,10 @@ class electron:
             else:
                 self.outcome = 'trsm'
                 self.saveOutcomes()
-            #self.saveOutcomes()
 
         else:
             self.xyz = newPosition
-            # save position if we want it
-            self.scat_output.addToList('position', self.xyz)
+
 
     def update_direction(self, c2_halfTheta, halfPhi):
         s_hTheta = (1. - c2_halfTheta)**0.5 # sin(halfTheta) is positive on [0, pi)
@@ -110,7 +108,7 @@ class electron:
 
         self.el_output.addToList('last_pos', self.xyz)
 
-        self.scat_output.addToList('position', self.xyz)
+        #self.scat_output.addToList('position', self.xyz)
 
 
 
