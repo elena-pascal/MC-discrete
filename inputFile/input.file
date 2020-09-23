@@ -1,8 +1,8 @@
 # input file
 
-num_el   : 1000 #multiples of 200
+num_el   : 10 #multiples of 200
 E0       : 20000 # eV
-Emin     : 50 # eV; cannot be smaller than Wc
+Emin     : 10000 # eV; cannot be smaller than Wc
 material : Si
 s_tilt   : 40    # degrees
 
@@ -19,7 +19,7 @@ Bethe_model : classical # classical, JL or explicit
 diffMFP    : no
 
 # generate new tables (or read from memory)?
-gen_tables : yes
+gen_tables : no
 
 # relative error tolerance for W and E integration tables
 # note the default values require at least 10G memory

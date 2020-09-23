@@ -109,14 +109,12 @@ class probTable:
             self.Wmin = Wc
 
             # Wmax is a function of E
-            #self.Wmax = lambda E: maxW_moller(E, self.Ef)
             self.Wmax = partial(maxW_moller, Ef=self.Ef)
 
             # number of electrons in shell
             self.numEl = mat.params['n_val']
 
-            # assign excitation function
-            #self.func_EW = lambda E, W: func(E, W, self.numEl) #f(E, W)
+            # assign excitation function f(E, W)
             self.func_EW = partial(func, nfree=self.numEl)
 
             # assign energy range
@@ -127,14 +125,12 @@ class probTable:
             self.Wmin =  mat.params['Es'][shell]
 
             # Wmax is a function of E
-            #self.Wmax = lambda E: maxW_gryz(E, self.Ef)
             self.Wmax = partial(maxW_gryz, Ef=self.Ef)
 
             # number of electrons in shell
             self.numEl = mat.params['ns'][shell]
 
             # assign excitation function
-            #self.func_EW = lambda E, W: func(E, W, self.numEl, self.Wmin)
             self.func_EW = partial(func, nsi=self.numEl, Ebi=self.Wmin)
 
             # check if Emin in the energy range was chosen to be above the binding energy

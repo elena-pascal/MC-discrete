@@ -9,6 +9,10 @@ class electron:
         direction in the sample frame.
         Input can have units.
     '''
+
+    # slots magic ensure attributes are not stored in a dinamical dict but rather a list
+    __slots__ = ['energy', 'Emin', 'xyz', 'dir', 'outcome', 'diffracting', 'y_local', 'el_output', 'scat_output']
+
     def __init__(self, energy, Emin, position, direction, outList):
         '''
         energy   : energy of incident electron in eV

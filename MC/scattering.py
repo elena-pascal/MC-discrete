@@ -181,6 +181,250 @@ def binaryCollModel(energy, e_loss, Ef):
 #####################################################################
 ####################### Discrete inelastic scatter class ############
 #####################################################################
+# class scatter_discrete:
+#     ''' Scattering can be Rutherford or Mott, Moller, Gryzinski, Quinn
+#     Scattering is defined by
+#             - incident particle energy
+#             - material properties
+#             - the minimum energy for Moller scattering which I call a free parameter
+#             - tables values
+#             - scattering parameters to be update by the functions in the class
+#     '''
+#     # slots magic ensure attributes are not stored in a dinamical dict but rather a list
+#     __slots__ = ['Ei', 'm_Z', 'm_names', 'dir', 'outcome', 'diffracting', 'y_local', 'el_output', 'scat_output']
+#
+#     def __init__(self, electron, material, free_param, elastic, tables, diffMFP):
+#         # incident particle params
+#         self.Ei  = electron.energy  # incident particle energy
+#
+#         # material params
+#         # self.m_Z = material.params['Z']          # atomic number
+#         #
+#         # self.m_names = material.params['name_s'] # names of the inner shells
+#         # self.m_ns    = material.params['ns']     # number of electrons per inner shell
+#         # self.m_Es    = material.params['Es']     # inner shells energies
+#         #
+#         # self.m_nval = material.params['n_val']   # number of valence shell electrons
+#         # self.m_Eval = material.params['E_val']   # valence shell energy
+#         #
+#         # self.m_atnd = material.atnd              # atomic number density
+#         # self.m_pl_e = material.plasmon_e         # plasmon energy
+#         # self.m_f_e  = material.fermi_e           # Fermi energy
+#         #
+#         # self.xip_g = material.params['xip_g']    # absorbtion distance for 0,0,4
+#         self.mat = material
+#
+#         self.free_param = free_param     # the minimun energy for Moller scattering
+#
+#         self.table_EW_M = tables['Moller']
+#         self.tables_EW_G = tables['Gryz']
+#
+#         if (elastic == 'Mott'):
+#             self.tableMott = tables['Mott']
+#
+#         # scattering params
+#         self.pathl        = None
+#         self.type         = None
+#         self.E_loss       = None
+#         self.c2_halfTheta = None
+#         self.halfPhi      = None
+#
+#         # elastic model
+#         self.el_model = elastic
+#
+#         # intitalise scattering probabilities dictionary
+#         self.sigma = {} # dictionary keeping all sigmas
+#
+#         # set the elastic model used
+#         if 'Ruth' in elastic:
+#             if elastic == 'Ruth_vanilla':
+#                 self.sigma['Ruth'] = ruther_sigma(self.Ei, self.m_Z)
+#             elif 'vanilla_wDefl' in elastic:
+#                 self.sigma['Ruth'] = ruther_sigma_wDefl(self.Ei, self.m_Z)
+#             elif elastic == 'Ruth_nigram':
+#                 self.sigma['Ruth'] = ruther_N_sigma(self.Ei, self.m_Z)
+#             elif 'nigram_wDefl' in elastic:
+#                 self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.m_Z)
+#         else:
+#             self.sigma['Mott'] = self.tableMott.sigmas[bisect.bisect_left(self.tableMott.Es, self.Ei)]
+#
+#         # if the energy is larger than the valence energy consider Moller scattering
+#         self.sigma['Moller'] = moller_sigma(self.Ei, self.free_param, self.m_nval)
+#
+#         for shell in self.m_names:
+#             self.sigma['Gryz' + shell] = gryz_sigma(self.Ei, self.m_Es[shell], self.m_ns[shell])
+#
+#         self.sigma['Quinn'] = quinn_sigma(self.Ei, self.m_pl_e, self.m_f_e, self.m_atnd)
+#
+#         # if accounting for diff mfp
+#         if diffMFP:
+#             self.sigma['diff'] = diffr_sigma(self.xip_g, self.m_atnd,
+#                                             sum([self.sigma['Moller'], self.sigma['Gryz2s'],
+#                                               self.sigma['Gryz2p'], self.sigma['Gryz1s'], self.sigma['Quinn']]))
+#
+#         # compute mean free path
+#         self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.m_atnd)
+#
+#         # output lists object
+#         self.scat_output = electron.scat_output
+#
+#         self.electron = electron
+#
+#         # save position if we want it
+#         self.scat_output.addToList('position', electron.xyz)
+#
+#
+#     def det_type(self):
+#         '''
+#         Set the type of scattering after determining type
+#         '''
+#         self.type = pickFromSigmas(self.sigma)
+#         # NOTE: Moller becomes more unprobable with increase value of Wc
+#
+#         # save scatter type if we want it
+#         self.scat_output.addToList('type', self.type)
+#
+#         # if this is a diffraction event change total MFP to absorption depth
+#         if self.type == 'diff':
+#             self.mfp_total = self.xip_g
+#
+#             # set diffraction state to false
+#             self.electron.setDiffState(True)
+#
+#         else:
+#             # set diffraction state to false
+#             self.electron.setDiffState(False)
+#
+#     def compute_pathl(self):
+#         '''
+#         Path length is calculated from the cross section
+#         path_length = - mean_free_path * log(rn)
+#         '''
+#         pathl = -self.mfp_total * np.log(random.random())
+#         # TODO: make test for this
+#         # check if the value is not ridiculous
+#         #assert pathl < 1e4, "Mean free path larger than 10000 A: %s > %s" %(pathl, 1e4)
+#
+#         # assign it
+#         self.pathl = pathl
+#
+#         # save path length if we want it
+#         self.scat_output.addToList('pathl', self.pathl)
+#
+#
+#     def compute_Eloss_and_angles(self):
+#         '''
+#         Compute both the energy loss and the scattering angles.
+#
+#         Energy loss is calculated from tables for the Moller and Gryz type
+#         '''
+#         ######## Rutherford ########
+#         if 'Ruth' in self.type:
+#             self.E_loss = 0.
+#             self.c2_halfTheta = Rutherford_halfPol(self.Ei, self.m_Z)
+#
+#             # save energy if we want it
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save polar angle if we want it
+#             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+#
+#         ######## Mott ##############
+#         elif (self.type == 'Mott'):
+#             self.E_loss = 0.
+#             self.c2_halfTheta = pickMottTable(self.tableMott, self.Ei)
+#
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save polar angle if we want it
+#             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+#
+#         ##### Moller ###############
+#         elif (self.type == 'Moller'):
+#             E_loss, tables_e = pickTable(self.table_EW_M, self.Ei)
+#
+#             assert E_loss < self.Ei, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.Ei)
+#             self.E_loss = E_loss
+#
+#             # polar angle
+#             self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.m_f_e)
+#
+#             # save energy if we want it
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save polar angle if we want it
+#             self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
+#
+#         ##### Gryzinski ###########
+#         elif 'Gryz' in self.type:
+#             # the shell name is the lefover string after substracting Gryzinski
+#             shell = self.type.replace('Gryz', '')
+#
+#             E_loss, tables_e = pickTable(self.tables_EW_G[0], self.Ei)
+#
+#             assert E_loss < self.Ei, "Energy loss larger than electron energy: %s > %s" %(E_loss, self.Ei)
+#             self.E_loss = E_loss
+#
+#             # polar angle
+#             self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.m_f_e)
+#
+#             # save energy if we want it
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save pol angle if we want it
+#             self.scat_output.addToList('pol_angle', float(self.c2_halfTheta))
+#
+#         ##### Quinn ###########
+#         elif (self.type == 'Quinn'):
+#             self.E_loss = self.m_pl_e
+#
+#             # for plasmon scattering assume no change in direction
+#             self.c2_halfTheta = 1.
+#
+#             # save energy if we want it
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save polar angle if we want it
+#             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+#
+#         ##### diffraction ###########
+#         elif (self.type == 'diff'):
+#             self.E_loss = 0.       # no energy loss
+#             self.c2_halfTheta = 1. # no scattering deviation
+#
+#             # save energy if we want it
+#             self.scat_output.addToList('E', self.Ei)
+#
+#             # save energy loss if we want it
+#             self.scat_output.addToList('E_loss', self.E_loss)
+#
+#             # save polar angle if we want it
+#             self.scat_output.addToList('pol_angle', self.c2_halfTheta)
+#
+#         else:
+#             print (' I did not understand the type of scattering: %s in scatter.calculate_Eloss' %self.type)
+#
+#         # polar angle is the same for all scatterings
+#         self.halfPhi = pi*random.random()
+#
+#         # save azimuthal angle if we want it
+#         self.scat_output.addToList('az_angle', self.halfPhi)
+
 class scatter_discrete:
     ''' Scattering can be Rutherford or Mott, Moller, Gryzinski, Quinn
     Scattering is defined by
@@ -190,26 +434,29 @@ class scatter_discrete:
             - tables values
             - scattering parameters to be update by the functions in the class
     '''
+    # slots magic ensure attributes are not stored in a dinamical dict but rather a list
+    #__slots__ = ['Ei', 'm_Z', 'm_names', 'dir', 'outcome', 'diffracting', 'y_local', 'el_output', 'scat_output']
 
     def __init__(self, electron, material, free_param, elastic, tables, diffMFP):
         # incident particle params
         self.Ei  = electron.energy  # incident particle energy
 
         # material params
-        self.m_Z = material.params['Z']          # atomic number
-
-        self.m_names = material.params['name_s'] # names of the inner shells
-        self.m_ns    = material.params['ns']     # number of electrons per inner shell
-        self.m_Es    = material.params['Es']     # inner shells energies
-
-        self.m_nval = material.params['n_val']   # number of valence shell electrons
-        self.m_Eval = material.params['E_val']   # valence shell energy
-
-        self.m_atnd = material.atnd              # atomic number density
-        self.m_pl_e = material.plasmon_e         # plasmon energy
-        self.m_f_e  = material.fermi_e           # Fermi energy
-
-        self.xip_g = material.params['xip_g']    # absorbtion distance for 0,0,4
+        # self.m_Z = material.params['Z']          # atomic number
+        #
+        # self.m_names = material.params['name_s'] # names of the inner shells
+        # self.m_ns    = material.params['ns']     # number of electrons per inner shell
+        # self.m_Es    = material.params['Es']     # inner shells energies
+        #
+        # self.m_nval = material.params['n_val']   # number of valence shell electrons
+        # self.m_Eval = material.params['E_val']   # valence shell energy
+        #
+        # self.m_atnd = material.atnd              # atomic number density
+        # self.m_pl_e = material.plasmon_e         # plasmon energy
+        # self.m_f_e  = material.fermi_e           # Fermi energy
+        #
+        # self.xip_g = material.params['xip_g']    # absorption distance for 0,0,4
+        self.mat = material
 
         self.free_param = free_param     # the minimun energy for Moller scattering
 
@@ -235,32 +482,41 @@ class scatter_discrete:
         # set the elastic model used
         if 'Ruth' in elastic:
             if elastic == 'Ruth_vanilla':
-                self.sigma['Ruth'] = ruther_sigma(self.Ei, self.m_Z)
+                self.sigma['Ruth'] = ruther_sigma(self.Ei, self.mat.params['Z'])
             elif 'vanilla_wDefl' in elastic:
-                self.sigma['Ruth'] = ruther_sigma_wDefl(self.Ei, self.m_Z)
+                self.sigma['Ruth'] = ruther_sigma_wDefl(self.Ei, self.mat.params['Z'])
             elif elastic == 'Ruth_nigram':
-                self.sigma['Ruth'] = ruther_N_sigma(self.Ei, self.m_Z)
+                self.sigma['Ruth'] = ruther_N_sigma(self.Ei, self.mat.params['Z'])
             elif 'nigram_wDefl' in elastic:
-                self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.m_Z)
+                self.sigma['Ruth'] = ruther_N_sigma_wDefl(self.Ei, self.mat.params['Z'])
         else:
             self.sigma['Mott'] = self.tableMott.sigmas[bisect.bisect_left(self.tableMott.Es, self.Ei)]
 
         # if the energy is larger than the valence energy consider Moller scattering
-        self.sigma['Moller'] = moller_sigma(self.Ei, self.free_param, self.m_nval)
+        self.sigma['Moller'] = moller_sigma(self.Ei,
+                                            self.free_param,
+                                            self.mat.params['n_val'])
 
-        for shell in self.m_names:
-            self.sigma['Gryz' + shell] = gryz_sigma(self.Ei, self.m_Es[shell], self.m_ns[shell])
+        for shell in self.mat.params['name_s']:
+            self.sigma['Gryz' + shell] = gryz_sigma(self.Ei,
+                                                    self.mat.params['Es'][shell],
+                                                    self.mat.params['ns'][shell])
 
-        self.sigma['Quinn'] = quinn_sigma(self.Ei, self.m_pl_e, self.m_f_e, self.m_atnd)
+        self.sigma['Quinn'] = quinn_sigma(self.Ei,
+                                          self.mat.plasmon_e,
+                                          self.mat.fermi_e,
+                                          self.mat.atnd)
 
         # if accounting for diff mfp
         if diffMFP:
-            self.sigma['diff'] = diffr_sigma(self.xip_g, self.m_atnd,
+            self.sigma['diff'] = diffr_sigma(self.xip_g,
+                                            self.mat.atnd,
                                             sum([self.sigma['Moller'], self.sigma['Gryz2s'],
-                                              self.sigma['Gryz2p'], self.sigma['Gryz1s'], self.sigma['Quinn']]))
+                                              self.sigma['Gryz2p'], self.sigma['Gryz1s'], self.sigma['Quinn']])
+                                              )
 
         # compute mean free path
-        self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.m_atnd)
+        self.mfp_total = mfp_from_sigma(sum(self.sigma.values()), self.mat.atnd)
 
         # output lists object
         self.scat_output = electron.scat_output
@@ -318,7 +574,7 @@ class scatter_discrete:
         ######## Rutherford ########
         if 'Ruth' in self.type:
             self.E_loss = 0.
-            self.c2_halfTheta = Rutherford_halfPol(self.Ei, self.m_Z)
+            self.c2_halfTheta = Rutherford_halfPol(self.Ei, self.mat.params['Z'])
 
             # save energy if we want it
             self.scat_output.addToList('E', self.Ei)
@@ -350,7 +606,7 @@ class scatter_discrete:
             self.E_loss = E_loss
 
             # polar angle
-            self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.m_f_e)
+            self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.mat.fermi_e)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.Ei)
@@ -372,7 +628,7 @@ class scatter_discrete:
             self.E_loss = E_loss
 
             # polar angle
-            self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.m_f_e)
+            self.c2_halfTheta = binaryCollModel(self.Ei, self.E_loss, self.mat.fermi_e)
 
             # save energy if we want it
             self.scat_output.addToList('E', self.Ei)
@@ -385,7 +641,7 @@ class scatter_discrete:
 
         ##### Quinn ###########
         elif (self.type == 'Quinn'):
-            self.E_loss = self.m_pl_e
+            self.E_loss = self.mat.plasmon_e
 
             # for plasmon scattering assume no change in direction
             self.c2_halfTheta = 1.
@@ -421,7 +677,6 @@ class scatter_discrete:
 
         # save azimuthal angle if we want it
         self.scat_output.addToList('az_angle', self.halfPhi)
-
 
 
 #######################  with units  #########################################

@@ -118,6 +118,7 @@ class material:
     ''' material is a class containing all the necessary
         material parameters for a small predified subset of species
     '''
+    __slots__= ['species', 'params', 'atnd', 'plasmon_e', 'fermi_e', 'powell_c']
     def __init__(self, species):
         self.species = species
         self.params = scatter_params(species)
