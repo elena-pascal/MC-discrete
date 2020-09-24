@@ -10,9 +10,8 @@ __pycache__/
 data/*
 CASINO/
 testData/
-tables/integration/*
-tables/mott
-silly_tests/
+tables/
+logs/
 notebooks/
 notUsed
 

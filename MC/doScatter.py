@@ -3,9 +3,9 @@
 import numpy as np
 import pandas as pd
 import sys
-import os
+from os import path, makedirs
 import warnings
-import getopt
+from getopt import GetoptError, getopt
 
 import multiprocessing as mp
 #import multiprocess as mp
@@ -13,10 +13,10 @@ from functools import partial
 from tqdm import tqdm
 #from scimath.units.api import UnitScalar, UnitArray
 from memory_profiler import profile
-from MC.material import material
-from MC.probTables import genTables
-from MC.multiScatter import multiTraj_DS,  multiTraj_cont, retrieve
-from MC.fileTools import readInput, zipDict
+from tools.material import material
+from tools.probTables import genTables
+from tools.multiScatter import multiTraj_DS,  multiTraj_cont, retrieve
+from tools.fileTools import readInput, zipDict
 
 
 class MapScatterer(object):
@@ -132,8 +132,8 @@ def dealWithInput(argv):
         print ('doScatter.py -u -i <input file>, if you want to track units \n')
 
     try:
-        opts, _ = getopt.getopt(argv, "uhi:", ["ifile="])
-    except getopt.GetoptError as err:
+        opts, _ = getopt(argv, "uhi:", ["ifile="])
+    except GetoptError as err:
         print(err)
         usage()
         sys.exit()
@@ -168,26 +168,31 @@ def main():
     # generate integration tables instances
     my_tables = genTables(inputPar)
 
-
-
-    # name the hdf file that stores the results
-    storeFile = '../data/TRSM' +'_diff:'  + str(inputPar['diffMFP'])     +\
-                                '_thick:' + str(inputPar['thickness'])  +\
-                                '_mat:'   + str(inputPar['material'])   +\
-                                '_mode:' + str(inputPar['mode'])       +\
-                                '_elastic:' + str(inputPar['elastic']) +\
-                                '_tilt:' + str(inputPar['s_tilt'])     +\
-                                '_Emin:' + str(inputPar['Emin'])       +\
-                                '_E0:'   + str(inputPar['E0'])         +\
-                                '_tolE:' + str(inputPar['tol_E'])      +\
-                                '_tolW:' + str(inputPar['tol_W'])      +\
-                                '.h5'
-
     # pandas is going to complain about performace for the input string table
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
-    if os.path.exists(storeFile):
-        os.remove(storeFile)
+    # name the hdf file that stores the results
+    storePath = '../data/TRSM'
+    storeFile = '_diff:'  + str(inputPar['diffMFP'])     +\
+                '_thick:' + str(inputPar['thickness'])  +\
+                '_mat:'   + str(inputPar['material'])   +\
+                '_mode:' + str(inputPar['mode'])       +\
+                '_elastic:' + str(inputPar['elastic']) +\
+                '_tilt:' + str(inputPar['s_tilt'])     +\
+                '_Emin:' + str(inputPar['Emin'])       +\
+                '_E0:'   + str(inputPar['E0'])         +\
+                '_tolE:' + str(inputPar['tol_E'])      +\
+                '_tolW:' + str(inputPar['tol_W'])      +\
+                '.h5'
+
+
+    # check if storePath exists, if not create it
+    if not path.exists(storePath):
+        makedirs(storePath)
+
+    # if file already exists delete it
+    elif path.exists(storeFile):
+        remove(storeFile)
 
     # make a new store
     store = pd.HDFStore(storeFile, mode='w')

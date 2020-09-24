@@ -18,7 +18,7 @@ Bethe_model : classical # classical, JL or explicit
 # estimate diffraction mean free path to be extinction distance
 diffMFP    : no
 
-# generate new tables (or read from memory)?
+# generate new tables (`no` for reading from memory)?
 gen_tables : no
 
 # relative error tolerance for W and E integration tables
@@ -27,7 +27,7 @@ tol_E : 1e-4
 tol_W : 1e-7
 
 # maximum number of scattering events per electron to consider
-maxScatt: 100000000
+maxScatt: 1000
 
 # minimum transfer energy only relevant for discrete scattering
 Wc       : 10     # eV; Wc = Ec*E0

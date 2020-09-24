@@ -4,14 +4,14 @@ Discrete inelastic electron scattering Monte Carlo python implementation
 
 ## Required libraries
 
-Probably the easiest thing to do is to add a new `Python3` environment to conda and then
+Probably the easiest thing to do is to add a new `Python3` environment to `conda` and then
 
 `conda install`:
 * `dask`
 * `pandas`
 
 `conda install -c conda forge`:
-* `quaternions`
+* `quaternion`
 
 
 ## Set up
@@ -27,7 +27,7 @@ MC/`doScatter.py` calls the rest of the code according to the parameters set in 
 * material with which the electrons interact `material`; so far only free electron systems are implemented: Al, Si, Cu, Au
 * the tilt of the sample in degrees defined in the same way as in EMsoft: `s_tilt`
 * scattering mode, `mode`, can be _continuous_ or discrete (_DS_)
-* if continuous mode is chosen then three implementatins are available for the `Bethe_model`: _classical_, _JL_ or _explicit_
+* if continuous mode is chosen then three implementations are available for the `Bethe_model`: _classical_, _JL_ or _explicit_
 
 * two tolerances can be set for the determining the accuracy of the integration tables for the discrete model: `tol_E` for the accuracy of the trapezoidal  integrals and `tol_W` for the steps of energy loss determining the accuracy in that direction
 * `Wc` is a free parameter needed for Moller scattering and represents the minimum energy loss allowed for this channel.
