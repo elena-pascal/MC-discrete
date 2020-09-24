@@ -172,18 +172,18 @@ def main():
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
     # name the hdf file that stores the results
-    storePath = '../data/TRSM'
-    storeFile = '_diff:'  + str(inputPar['diffMFP'])     +\
-                '_thick:' + str(inputPar['thickness'])  +\
-                '_mat:'   + str(inputPar['material'])   +\
-                '_mode:' + str(inputPar['mode'])       +\
-                '_elastic:' + str(inputPar['elastic']) +\
-                '_tilt:' + str(inputPar['s_tilt'])     +\
-                '_Emin:' + str(inputPar['Emin'])       +\
-                '_E0:'   + str(inputPar['E0'])         +\
-                '_tolE:' + str(inputPar['tol_E'])      +\
-                '_tolW:' + str(inputPar['tol_W'])      +\
-                '.h5'
+    storePath = '../data/'
+    storeFile = storePath + 'TRSM_diff:'  + str(inputPar['diffMFP'])     +\
+                            '_thick:' + str(inputPar['thickness'])  +\
+                            '_mat:'   + str(inputPar['material'])   +\
+                            '_mode:' + str(inputPar['mode'])       +\
+                            '_elastic:' + str(inputPar['elastic']) +\
+                            '_tilt:' + str(inputPar['s_tilt'])     +\
+                            '_Emin:' + str(inputPar['Emin'])       +\
+                            '_E0:'   + str(inputPar['E0'])         +\
+                            '_tolE:' + str(inputPar['tol_E'])      +\
+                            '_tolW:' + str(inputPar['tol_W'])      +\
+                            '.h5'
 
 
     # check if storePath exists, if not create it
